@@ -647,7 +647,15 @@ equipCompanion = function(player, petId)
     PetService:RefreshHealing(player)
     local pet = PetService:Find(player, petId)
     if not data or not pet then return false, "Pet not found." end
-    if pet.Dead then return false, "That pet is dead. Heal it at your Barn first." end
+    if pet.Dead then
+        local readyAt = tonumber(pet.HealReadyAt) or 0
+        if readyAt > 0 and readyAt <= os.time() then
+            return false, "That pet is healed and waiting at your Barn. Collect it first."
+        elseif readyAt > os.time() then
+            return false, "That pet is still healing at your Barn."
+        end
+        return false, "That pet is dead. Heal it at your Barn first."
+    end
     if (tonumber(pet.CurrentHealth) or pet.Health) <= 0 then return false, "That pet needs healing." end
     unequipCompanion(player, true)
     local model, err = createCompanion(player, pet)
