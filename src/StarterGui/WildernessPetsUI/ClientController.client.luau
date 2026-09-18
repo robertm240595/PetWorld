@@ -19,7 +19,12 @@ local petsOpen=false
 local selectedPetId
 local showPets
 local showBeastTrader
+local showLassoKeeper
+local showPetMerchant
+local showBarn
 local backpackTab = "Pets"
+local beastTraderTab = "Sell"
+local lassoKeeperTab = "Buy"
 
 local gui = script.Parent
 
