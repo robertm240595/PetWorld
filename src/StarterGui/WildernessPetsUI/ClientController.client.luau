@@ -1368,31 +1368,79 @@ ShopRemote.OnClientEvent:Connect(function(action, ...)
     local args={...}
 
     if action=="OpenBeastTrader" then
-        showBeastTrader()
+        showBeastTrader("Sell")
+
+    elseif action=="OpenLassoKeeper" then
+        showLassoKeeper("Buy")
+
+    elseif action=="OpenPetMerchant" then
+        showPetMerchant()
+
+    elseif action=="OpenBarn" then
+        showBarn()
 
     elseif action=="Sold" then
         local success=args[1]==true
         local amount=tonumber(args[2]) or 0
         local message=args[3]
+        if success then
+            showBeastTrader(beastTraderTab)
+        end
+        notify(message or (success and ("Sold pet for "..tostring(amount).." Coins.") or "Could not sell that pet."))
+
+    elseif action=="PetBuybackResult" then
+        local success=args[1]==true
+        local message=args[2]
+        if success then showBeastTrader("Buyback") end
+        notify(message or (success and "Pet bought back." or "Could not buy that pet back."))
+
+    elseif action=="LassoShopResult" then
+        local success=args[1]==true
+        local message=args[2]
+        if success then showLassoKeeper(lassoKeeperTab) end
+        notify(message or (success and "Lasso transaction complete." or "Lasso transaction failed."))
+
+    elseif action=="LassoEquipped" then
+        local success=args[1]==true
+        local message=args[2]
+        local inKeeper=gui:FindFirstChild("LassoKeeper")~=nil
+        if success then
+            if inKeeper then
+                showLassoKeeper(lassoKeeperTab)
+            elseif petsOpen then
+                showPets("Inventory")
+            end
+        end
+        notify(message or (success and "Lasso equipped." or "Could not equip lasso."))
+
+    elseif action=="PotionResult" then
+        local success=args[1]==true
+        local message=args[2]
+        local inMerchant=gui:FindFirstChild("PetMerchant")~=nil
+        local inBarn=gui:FindFirstChild("HealingBarn")~=nil
+        local inBackpack=gui:FindFirstChild("PetBackpack")~=nil
 
         if success then
-            showBeastTrader()
-            notify(message or ("Sold pet for "..tostring(amount).." Coins."))
-        else
-            notify(message or "Could not sell that pet.")
+            if inMerchant then
+                showPetMerchant()
+            elseif inBarn then
+                showBarn()
+            elseif inBackpack then
+                showPets("Inventory")
+            end
         end
+        notify(message or (success and "Potion used." or "Potion action failed."))
+
+    elseif action=="BarnResult" then
+        local success=args[1]==true
+        local message=args[2]
+        if success then showBarn() end
+        notify(message or (success and "Barn updated." or "Could not heal that pet."))
 
     elseif action=="Purchase" then
         local success=args[1]==true
         local message=args[2]
         notify(message or (success and "Purchase complete." or "Purchase failed."))
-        if success and petsOpen then showPets(backpackTab) end
-
-    elseif action=="LassoEquipped" then
-        local success=args[1]==true
-        local message=args[2]
-        notify(message or (success and "Lasso equipped." or "Could not equip lasso."))
-        if success and petsOpen then showPets("Inventory") end
     end
 end)
 
