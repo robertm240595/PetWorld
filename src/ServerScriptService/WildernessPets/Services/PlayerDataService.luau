@@ -20,6 +20,9 @@ local function newData()
         Coins = Config.StartCoins,
         Gems = Config.StartGems,
         Lasso = "Rough Rope",
+        Inventory = {
+            {Type = "Lasso", Name = "Rough Rope", Quantity = 1}
+        },
         Pets = {},
         SelectedPlot = 0,
         DefencePetId = "",
@@ -87,6 +90,30 @@ function Service:Load(player)
                 data[k] = v
             end
         end
+    end
+
+    if type(data.Inventory) ~= "table" then
+        data.Inventory = {}
+    end
+
+    local equippedLasso = type(data.Lasso) == "string" and data.Lasso or "Rough Rope"
+    data.Lasso = equippedLasso
+
+    local ownsEquippedLasso = false
+    for _, item in ipairs(data.Inventory) do
+        if type(item) == "table" and item.Type == "Lasso" and item.Name == equippedLasso then
+            item.Quantity = math.max(1, tonumber(item.Quantity) or 1)
+            ownsEquippedLasso = true
+            break
+        end
+    end
+
+    if not ownsEquippedLasso and #data.Inventory < (Config.MaxInventory or 25) then
+        table.insert(data.Inventory, {
+            Type = "Lasso",
+            Name = equippedLasso,
+            Quantity = 1
+        })
     end
 
     self.Data[player] = data
