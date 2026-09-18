@@ -35,26 +35,34 @@ local activeCoroutines = {}
 -- Pick a valid roaming target near the monster's current position
 ------------------------------------------------------------
 local function pickRoamTarget(currentPos)
-    local angle = math.random() * math.pi * 2
-    local distance = math.random(MIN_ROAM_RADIUS, ROAM_RADIUS)
-    local targetX = currentPos.X + math.cos(angle) * distance
-    local targetZ = currentPos.Z + math.sin(angle) * distance
+    local params = RaycastParams.new()
+    params.FilterType = Enum.RaycastFilterType.Include
+    params.FilterDescendantsInstances = {workspace.Terrain}
 
-    -- Clamp to map bounds
-    targetX = math.clamp(targetX, MAP_MIN_X, MAP_MAX_X)
-    targetZ = math.clamp(targetZ, MAP_MIN_Z, MAP_MAX_Z)
+    for _ = 1, 12 do
+        local angle = math.random() * math.pi * 2
+        local distance = math.random(MIN_ROAM_RADIUS, ROAM_RADIUS)
+        local targetX = currentPos.X + math.cos(angle) * distance
+        local targetZ = currentPos.Z + math.sin(angle) * distance
 
-    -- If target is inside town center, push it outward
-    local distFromCenter = math.sqrt(targetX * targetX + targetZ * targetZ)
-    if distFromCenter < TOWN_CENTER_RADIUS then
-        local pushAngle = math.atan2(targetZ, targetX)
-        targetX = math.cos(pushAngle) * (TOWN_CENTER_RADIUS + 20)
-        targetZ = math.sin(pushAngle) * (TOWN_CENTER_RADIUS + 20)
         targetX = math.clamp(targetX, MAP_MIN_X, MAP_MAX_X)
         targetZ = math.clamp(targetZ, MAP_MIN_Z, MAP_MAX_Z)
+
+        local distFromCenter = math.sqrt(targetX * targetX + targetZ * targetZ)
+        if distFromCenter >= TOWN_CENTER_RADIUS then
+            local hit = workspace:Raycast(
+                Vector3.new(targetX, 300, targetZ),
+                Vector3.new(0, -650, 0),
+                params
+            )
+
+            if hit and hit.Normal.Y > 0.65 and hit.Material ~= Enum.Material.Water then
+                return hit.Position
+            end
+        end
     end
 
-    return Vector3.new(targetX, GROUND_Y, targetZ)
+    return Vector3.new(currentPos.X, GROUND_Y, currentPos.Z)
 end
 
 ------------------------------------------------------------
