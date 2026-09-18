@@ -568,6 +568,10 @@ remotes.Game.OnClientEvent:Connect(function(action,kind,...)
  elseif kind=="Error" then message((...))
  elseif kind=="Equipped" then rebuildAbilities() message(tostring((...)).." is ready.")
  elseif kind=="Unequipped" then rebuildAbilities()
+ elseif kind=="PetDefeated" then
+  rebuildAbilities()
+  clearTarget()
+  message(tostring((...)).." has fallen. Heal it at the Barn on your plot.")
  elseif kind=="CombatState" then local state=... if state=="Engaging" then message("Companion engaging your target") end
  end
 end)
@@ -600,8 +604,13 @@ remotes.Capture.OnClientEvent:Connect(function(action,...)
    tonumber(args[8]) or 4.5
   )
  elseif action=="Success" then
+  local species=args[1] or "Pet"
+  local imprint=tonumber(args[4])
   endCaptureGame(false)
   clearTarget()
+  if imprint then
+   message("Captured "..tostring(species).."  ·  Imprint "..tostring(imprint).."%")
+  end
  elseif action=="Failed" then
   endCaptureGame(true)
   message("Missed — the creature broke free!")
@@ -612,6 +621,18 @@ remotes.Capture.OnClientEvent:Connect(function(action,...)
 end)
 RunService.RenderStepped:Connect(function()
  hud.Enabled=player:GetAttribute("VillageReady")==true
+
+ local mainUI=playerGui:FindFirstChild("WildernessPetsUI")
+ local panelOpen=mainUI and mainUI:GetAttribute("InventoryOpen")==true
+ bar.Visible=not panelOpen
+ homeButton.Visible=not panelOpen
+ if panelOpen then
+  tooltip.Visible=false
+  targetPanel.Visible=false
+ elseif not captureGame and selectedTarget and selectedTarget.Parent and not selectedTarget:GetAttribute("Dead") and not selectedTarget:GetAttribute("Captured") then
+  targetPanel.Visible=true
+ end
+
  local width=18
  for _,b in ipairs(bar:GetChildren()) do if b:IsA("GuiButton") and b.Visible then width+=77 end end
  bar.Size=UDim2.fromOffset(width,84)
