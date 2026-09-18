@@ -1,5 +1,6 @@
 local Lighting=game:GetService("Lighting")
 local RunService=game:GetService("RunService")
+local TweenService=game:GetService("TweenService")
 local Players=game:GetService("Players")
 local world=workspace:WaitForChild("WildernessPets")
 local sky=Lighting:FindFirstChildOfClass("Sky")
@@ -304,7 +305,170 @@ local function setTarget(m)
  updateTarget()
 end
 
+local captureGame
+local function endCaptureGame(keepTarget)
+ local state=captureGame
+ if not state then return end
+ captureGame=nil
+ if state.renderConnection then state.renderConnection:Disconnect() end
+ if state.overlay and state.overlay.Parent then state.overlay:Destroy() end
+
+ local camera=workspace.CurrentCamera
+ if camera and state.camera then
+  camera.CameraType=Enum.CameraType.Scriptable
+  camera.CFrame=state.camera.cframe
+  camera.FieldOfView=state.camera.fieldOfView
+  camera.CameraType=state.camera.cameraType
+  if state.camera.subject and state.camera.subject.Parent then
+   camera.CameraSubject=state.camera.subject
+  else
+   local humanoid=player.Character and player.Character:FindFirstChildOfClass("Humanoid")
+   if humanoid then camera.CameraSubject=humanoid end
+  end
+ end
+
+ if keepTarget and selectedTarget and selectedTarget.Parent and not selectedTarget:GetAttribute("Captured") and not selectedTarget:GetAttribute("Dead") then
+  targetPanel.Visible=true
+ else
+  targetPanel.Visible=false
+ end
+end
+
+local function startCaptureGame(monster,challengeId,species,rarity,lassoName,zoneStart,zoneWidth,speed,startTime,duration)
+ if captureGame then endCaptureGame(true) end
+
+ local camera=workspace.CurrentCamera
+ if not camera or typeof(monster)~="Instance" or not monster.Parent then return end
+ local part=monster.PrimaryPart or monster:FindFirstChild("HumanoidRootPart") or monster:FindFirstChildWhichIsA("BasePart",true)
+ if not part then return end
+
+ local savedCamera={
+  cameraType=camera.CameraType,
+  subject=camera.CameraSubject,
+  cframe=camera.CFrame,
+  fieldOfView=camera.FieldOfView,
+ }
+
+ local overlay=Instance.new("TextButton")
+ overlay.Name="CaptureMinigame"
+ overlay.Text=""
+ overlay.AutoButtonColor=false
+ overlay.Modal=true
+ overlay.Active=true
+ overlay.Size=UDim2.fromScale(1,1)
+ overlay.BackgroundColor3=Color3.new(0,0,0)
+ overlay.BackgroundTransparency=.58
+ overlay.BorderSizePixel=0
+ overlay.ZIndex=80
+ overlay.Parent=hud
+
+ local card=Instance.new("Frame")
+ card.Name="CaptureCard"
+ card.AnchorPoint=Vector2.new(.5,1)
+ card.Position=UDim2.new(.5,0,1,-118)
+ card.Size=UDim2.fromOffset(560,132)
+ card.BackgroundColor3=palette.bg
+ card.BackgroundTransparency=.03
+ card.BorderSizePixel=0
+ card.ZIndex=81
+ card.Parent=overlay
+ round(card,12)
+ border(card)
+
+ local title=label(card,"Title","LASSO  ·  "..tostring(species).."  ·  "..tostring(rarity),UDim2.fromOffset(18,12),UDim2.fromOffset(524,24),15,palette.text)
+ title.ZIndex=82
+ title.TextXAlignment=Enum.TextXAlignment.Center
+ local instruction=label(card,"Instruction","CLICK when the marker is inside the green zone",UDim2.fromOffset(18,38),UDim2.fromOffset(524,20),12,palette.muted)
+ instruction.ZIndex=82
+ instruction.TextXAlignment=Enum.TextXAlignment.Center
+
+ local track=Instance.new("Frame")
+ track.Name="Track"
+ track.Position=UDim2.fromOffset(35,70)
+ track.Size=UDim2.fromOffset(490,28)
+ track.BackgroundColor3=Color3.fromRGB(55,58,62)
+ track.BorderSizePixel=0
+ track.ClipsDescendants=true
+ track.ZIndex=82
+ track.Parent=card
+ round(track,6)
+
+ local green=Instance.new("Frame")
+ green.Name="GreenZone"
+ green.Position=UDim2.fromScale(zoneStart,0)
+ green.Size=UDim2.fromScale(zoneWidth,1)
+ green.BackgroundColor3=Color3.fromRGB(80,170,95)
+ green.BorderSizePixel=0
+ green.ZIndex=83
+ green.Parent=track
+
+ local marker=Instance.new("Frame")
+ marker.Name="Marker"
+ marker.AnchorPoint=Vector2.new(.5,0)
+ marker.Position=UDim2.fromScale(0,0)
+ marker.Size=UDim2.fromOffset(5,28)
+ marker.BackgroundColor3=Color3.fromRGB(255,240,190)
+ marker.BorderSizePixel=0
+ marker.ZIndex=84
+ marker.Parent=track
+
+ local timer=label(card,"Timer","",UDim2.fromOffset(18,103),UDim2.fromOffset(524,18),11,palette.muted)
+ timer.ZIndex=82
+ timer.TextXAlignment=Enum.TextXAlignment.Center
+
+ local targetPos=part.Position
+ local offset=camera.CFrame.Position-targetPos
+ if offset.Magnitude<2 then offset=Vector3.new(0,4,10) end
+ local extent=monster:IsA("Model") and monster:GetExtentsSize().Magnitude or part.Size.Magnitude
+ local distance=math.clamp(extent*1.35,8,15)
+ local cameraPos=targetPos+offset.Unit*distance+Vector3.new(0,math.clamp(extent*.12,1,3),0)
+ local focus=targetPos+Vector3.new(0,math.clamp(extent*.08,.5,2),0)
+ camera.CameraType=Enum.CameraType.Scriptable
+ TweenService:Create(
+  camera,
+  TweenInfo.new(.32,Enum.EasingStyle.Quad,Enum.EasingDirection.Out),
+  {CFrame=CFrame.lookAt(cameraPos,focus),FieldOfView=38}
+ ):Play()
+
+ targetPanel.Visible=false
+
+ local state={
+  id=challengeId,
+  overlay=overlay,
+  marker=marker,
+  timer=timer,
+  startTime=startTime,
+  duration=duration,
+  speed=speed,
+  clicked=false,
+  camera=savedCamera,
+ }
+ captureGame=state
+
+ local function sliderPosition(atTime)
+  local elapsedTime=math.max(0,atTime-startTime)
+  local phase=(elapsedTime*speed)%2
+  return phase<=1 and phase or 2-phase
+ end
+
+ state.renderConnection=RunService.RenderStepped:Connect(function()
+  if captureGame~=state or not marker.Parent then return end
+  local now=workspace:GetServerTimeNow()
+  marker.Position=UDim2.fromScale(sliderPosition(now),0)
+  local remaining=math.max(0,(startTime+duration)-now)
+  timer.Text=state.clicked and "Checking lasso..." or string.format("%.1fs  ·  %s",remaining,tostring(lassoName))
+ end)
+
+ overlay.Activated:Connect(function()
+  if captureGame~=state or state.clicked then return end
+  state.clicked=true
+  overlay.Active=false
+  remotes.Capture:FireServer("Resolve",challengeId,workspace:GetServerTimeNow())
+ end)
+end
+
 local function selectAt(position) local main=playerGui:FindFirstChild("WildernessPetsUI")
+ if captureGame then return end
  if main and main:GetAttribute("InventoryOpen") then return end
 
  if not player:GetAttribute("VillageReady") then return end
@@ -323,14 +487,19 @@ local function selectAt(position) local main=playerGui:FindFirstChild("Wildernes
  local candidate=hit and hit.Instance
  -- Resolve segmented mesh children all the way to the wild creature root.
  while candidate and candidate.Parent~=wild do candidate=candidate.Parent end
- if candidate and candidate:IsA("Model") then remotes.Game:FireServer("CombatSelect",candidate) end
+ if candidate and candidate:IsA("Model") then
+  remotes.Game:FireServer("CombatSelect",candidate)
+ else
+  remotes.Game:FireServer("CombatSelect",nil)
+  clearTarget()
+ end
 end
 UIS.InputBegan:Connect(function(input,processed)
  if processed or UIS:GetFocusedTextBox() then return end
  if input.UserInputType==Enum.UserInputType.MouseButton1 then selectAt(UIS:GetMouseLocation()) return end
  if not player:GetAttribute("VillageReady") then return end
  local key=input.KeyCode
- if key==Enum.KeyCode.B then openBag:Fire()
+ if key==Enum.KeyCode.B then getOpenBag():Fire()
  elseif key==Enum.KeyCode.One then command("Lasso")
  elseif key==Enum.KeyCode.Two then command("Attack")
  elseif key==Enum.KeyCode.Three or key==Enum.KeyCode.Four or key==Enum.KeyCode.Five then
@@ -364,8 +533,31 @@ remotes.Game.OnClientEvent:Connect(function(action,kind,...)
  elseif kind=="CombatState" then local state=... if state=="Engaging" then message("Companion engaging your target") end
  end
 end)
-remotes.Capture.OnClientEvent:Connect(function(action)
- if action=="Success" then clearTarget() end
+remotes.Capture.OnClientEvent:Connect(function(action,...)
+ local args={...}
+ if action=="Challenge" then
+  startCaptureGame(
+   args[1],
+   args[2],
+   args[3],
+   args[4],
+   args[5],
+   tonumber(args[6]) or .2,
+   tonumber(args[7]) or .2,
+   tonumber(args[8]) or .8,
+   tonumber(args[9]) or workspace:GetServerTimeNow(),
+   tonumber(args[10]) or 8
+  )
+ elseif action=="Success" then
+  endCaptureGame(false)
+  clearTarget()
+ elseif action=="Failed" then
+  endCaptureGame(true)
+  message("Missed — the creature broke free!")
+ elseif action=="Error" then
+  endCaptureGame(true)
+  message(tostring(args[1] or "The lasso attempt failed."))
+ end
 end)
 RunService.RenderStepped:Connect(function()
  hud.Enabled=player:GetAttribute("VillageReady")==true
