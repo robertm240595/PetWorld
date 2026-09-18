@@ -307,6 +307,8 @@ function CaptureService:Resolve(player, challengeId, clickTime, timedOut)
 		return false, "Pet could not be saved.", true
 	end
 
+	player:SetAttribute("CombatTarget", "")
+
 	CaptureRemote:FireClient(
 		player,
 		"Success",
