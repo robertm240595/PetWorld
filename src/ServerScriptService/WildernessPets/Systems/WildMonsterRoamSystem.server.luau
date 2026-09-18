@@ -1,4 +1,5 @@
 local PetAnimator = require(script.Parent.PetAnimator)
+local Config = require(game.ReplicatedStorage.WildernessPets.Shared.Config)
 --[[
     WildMonsterRoamSystem
     Makes wild, uncaptured monsters roam freely around the map.
@@ -9,17 +10,19 @@ local PetAnimator = require(script.Parent.PetAnimator)
 local WildMonsters = workspace:WaitForChild("WildernessPets"):WaitForChild("WildMonsters")
 
 -- Map bounds for roaming (wilderness area outside town)
-local MAP_MIN_X = -500
-local MAP_MAX_X = 550
-local MAP_MIN_Z = -550
-local MAP_MAX_Z = 550
+local spawnTuning = Config.WildSpawn or {}
+local mapRadius = math.max(300, tonumber(spawnTuning.MaxRadius) or 640)
+local MAP_MIN_X = -mapRadius
+local MAP_MAX_X = mapRadius
+local MAP_MIN_Z = -mapRadius
+local MAP_MAX_Z = mapRadius
 
--- Keep monsters away from the town square center
-local TOWN_CENTER_RADIUS = 110
+-- Keep monsters distributed outside the town/plot hub instead of collapsing inward.
+local TOWN_CENTER_RADIUS = math.max(120, (tonumber(spawnTuning.MinRadius) or 190) - 20)
 
 -- Roaming parameters
-local ROAM_RADIUS = 80          -- max distance per wander step
-local MIN_ROAM_RADIUS = 30       -- min distance per wander step
+local ROAM_RADIUS = math.max(80, tonumber(spawnTuning.RoamMaxDistance) or 120)
+local MIN_ROAM_RADIUS = math.max(25, tonumber(spawnTuning.RoamMinDistance) or 45)
 local MOVE_STEPS = 24            -- movement interpolation steps
 local MOVE_STEP_DELAY = 0.08     -- seconds between steps
 local MIN_PAUSE = 1.5            -- min pause at destination
