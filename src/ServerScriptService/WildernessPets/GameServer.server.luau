@@ -241,14 +241,17 @@ ShopRemote.OnServerEvent:Connect(function(player, action, ...)
             return
         end
 
-        if data.EquippedPetId == value then
-            unequipCompanion(player, true)
-        end
+        local session = combatSessions and combatSessions[player]
+        local wasEquipped = (data.EquippedPetId == value)
+            or (session and session.petId == value)
 
         local amount, message = ShopService:SellPet(player, value)
         local success = type(amount) == "number" and amount > 0
 
         if success then
+            if wasEquipped then
+                unequipCompanion(player, true)
+            end
             local refresh = script.Parent.Systems:FindFirstChild("PetDisplayRefresh")
             if refresh then refresh:Fire(player) end
         end
