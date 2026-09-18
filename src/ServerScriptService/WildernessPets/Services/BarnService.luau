@@ -124,7 +124,7 @@ local function buildBarn(plot)
     prompt.Triggered:Connect(function(player)
         local owner = tonumber(plot:GetAttribute("OwnerUserId") or plot:GetAttribute("Owner"))
         if owner ~= player.UserId then return end
-        sessions[player] = {barn = barn, expiresAt = os.clock() + 30}
+        sessions[player] = {barn = barn, expiresAt = os.clock() + 3600}
         Service:RefreshVisuals(player)
         ShopRemote:FireClient(player, "OpenBarn")
     end)
@@ -163,13 +163,11 @@ function Service:CanUse(player)
         return false, "That is not your Pet Barn."
     end
 
-    session.expiresAt = os.clock() + 30
+    session.expiresAt = os.clock() + 3600
     return true
 end
 
 function Service:RefreshVisuals(player)
-    PetService:RefreshHealing(player)
-
     local barn = self:GetBarn(player)
     if not barn then return end
 
@@ -186,7 +184,7 @@ function Service:RefreshVisuals(player)
 
     local slot = 0
     for _, pet in ipairs(PetService:GetPets(player)) do
-        if pet.Dead and (tonumber(pet.HealReadyAt) or 0) > os.time() then
+        if pet.Dead and (tonumber(pet.HealReadyAt) or 0) > 0 then
             slot += 1
             if slot > 3 then break end
 
@@ -235,8 +233,12 @@ function Service:RefreshVisuals(player)
                     label.Font = Enum.Font.GothamSemibold
                     label.TextSize = 12
                     label.TextStrokeTransparency = 0.4
-                    label.TextColor3 = Color3.fromRGB(245, 225, 190)
-                    label.Text = tostring(pet.Name) .. "  ·  HEALING"
+                    local ready = (tonumber(pet.HealReadyAt) or 0) <= os.time()
+                    label.TextColor3 = ready
+                        and Color3.fromRGB(150, 235, 158)
+                        or Color3.fromRGB(245, 225, 190)
+                    label.Text = tostring(pet.Name)
+                        .. (ready and "  ·  READY TO COLLECT" or "  ·  HEALING")
                     label.Parent = gui
                 end
             end
