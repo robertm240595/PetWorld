@@ -71,7 +71,7 @@ local function roam(m,area,podium)
 end
 
 local function signature(p)
- return p and table.concat({p.Id,p.Name,p.Species,tostring(p.Level),tostring(p.XP),tostring(p.Rarity),tostring(p.Displayed)},":") or ""
+ return p and table.concat({p.Id,p.Name,p.Species,tostring(p.Level),tostring(p.XP),tostring(p.Rarity),tostring(p.Displayed),tostring(p.Dead),tostring(p.Imprint)},":") or ""
 end
 
 local function update(player)
@@ -84,7 +84,7 @@ local function update(player)
 
  while #displayed>10 do table.remove(displayed) end
  local podiumPet=PetService:Find(player,data.PodiumPetId)
- if podiumPet and podiumPet.Id==data.EquippedPetId then podiumPet=nil end
+ if podiumPet and (podiumPet.Id==data.EquippedPetId or podiumPet.Dead) then podiumPet=nil end
  local signatures={} for _,pet in ipairs(displayed) do table.insert(signatures,signature(pet)) end
  local sig=plot.Name.."|"..table.concat(signatures,";").."|P:"..signature(podiumPet)
  local previous=states[player]
