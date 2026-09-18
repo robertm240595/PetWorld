@@ -82,15 +82,43 @@ end
 local rarityColors={Common=Color3.fromRGB(220,228,218),Uncommon=Color3.fromRGB(114,220,142),Rare=Color3.fromRGB(109,181,255),Epic=Color3.fromRGB(193,136,255),Legendary=Color3.fromRGB(255,204,89),Mythic=Color3.fromRGB(255,126,189),Limited=Color3.fromRGB(141,250,239),Ancient=Color3.fromRGB(255,130,77)}
 local function label(model,info)
  local gui=Instance.new("BillboardGui")
- gui.Name="CreatureLabel" gui.Size=UDim2.fromOffset(190,44) gui.MaxDistance=65 gui.AlwaysOnTop=false
- gui.StudsOffsetWorldSpace=Vector3.new(0,model:GetExtentsSize().Y*.55+.7,0)
+ gui.Name="CreatureLabel" gui.Size=UDim2.fromOffset(190,62) gui.MaxDistance=65 gui.AlwaysOnTop=false
+ gui.StudsOffsetWorldSpace=Vector3.new(0,model:GetExtentsSize().Y*.55+.8,0)
  gui.Parent=model.PrimaryPart
+
  local text=Instance.new("TextLabel")
- text.Size=UDim2.fromScale(1,1) text.BackgroundTransparency=1
+ text.Name="CreatureName"
+ text.Position=UDim2.fromOffset(0,0) text.Size=UDim2.new(1,0,0,26) text.BackgroundTransparency=1
  text.Font=Enum.Font.GothamSemibold text.TextSize=15 text.TextStrokeTransparency=.35
  text.TextColor3=rarityColors[info.Rarity] or Color3.new(1,1,1)
  text.Text=model:GetAttribute("Species").."  ·  "..info.Rarity
  text.Parent=gui
+
+ local healthBack=Instance.new("Frame")
+ healthBack.Name="HealthBack" healthBack.Position=UDim2.fromOffset(12,31) healthBack.Size=UDim2.fromOffset(166,12)
+ healthBack.BackgroundColor3=Color3.fromRGB(58,34,34) healthBack.BorderSizePixel=0 healthBack.Parent=gui
+ local backCorner=Instance.new("UICorner") backCorner.CornerRadius=UDim.new(0,4) backCorner.Parent=healthBack
+
+ local fill=Instance.new("Frame")
+ fill.Name="Fill" fill.Size=UDim2.fromScale(1,1) fill.BackgroundColor3=Color3.fromRGB(82,183,101) fill.BorderSizePixel=0 fill.Parent=healthBack
+ local fillCorner=Instance.new("UICorner") fillCorner.CornerRadius=UDim.new(0,4) fillCorner.Parent=fill
+
+ local value=Instance.new("TextLabel")
+ value.Name="Value" value.Position=UDim2.fromOffset(0,45) value.Size=UDim2.new(1,0,0,15)
+ value.BackgroundTransparency=1 value.Font=Enum.Font.GothamMedium value.TextSize=10 value.TextStrokeTransparency=.45
+ value.TextColor3=Color3.fromRGB(242,232,206) value.Parent=gui
+
+ local function updateHealth()
+  if not model.Parent and not model:GetAttribute("Health") then return end
+  local hp=math.max(0,tonumber(model:GetAttribute("Health")) or 0)
+  local maximum=math.max(1,tonumber(model:GetAttribute("MaxHealth")) or hp)
+  fill.Size=UDim2.fromScale(math.clamp(hp/maximum,0,1),1)
+  value.Text=tostring(math.ceil(hp)).." / "..tostring(math.ceil(maximum)).." HP"
+ end
+
+ model:GetAttributeChangedSignal("Health"):Connect(updateHealth)
+ model:GetAttributeChangedSignal("MaxHealth"):Connect(updateHealth)
+ updateHealth()
 end
 local function watchDeath(model)
  local dying=false
