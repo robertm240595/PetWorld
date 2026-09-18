@@ -19,9 +19,16 @@ local ArenaService = require(script.Parent.Services.ArenaService)
 local CaptureService = require(script.Parent.Services.CaptureService)
 local ActionLockService = require(script.Parent.Services.ActionLockService)
 local BeastTraderService = require(script.Parent.Services.BeastTraderService)
+local LassoKeeperService = require(script.Parent.Services.LassoKeeperService)
+local PetMerchantService = require(script.Parent.Services.PetMerchantService)
+local PotionService = require(script.Parent.Services.PotionService)
+local BarnService = require(script.Parent.Services.BarnService)
 local MonsterService = require(script.Parent.Services.MonsterService)
 MonsterService:Init()
 BeastTraderService:Init()
+LassoKeeperService:Init()
+PetMerchantService:Init()
+BarnService:Init()
 local equipCompanion, unequipCompanion
 local plots = workspace.WildernessPets.Plots
 
@@ -49,15 +56,20 @@ end
 
 local function setupPlayer(player)
     DataService:Load(player)
+    PetService:RefreshHealing(player)
     ActionLockService:Initialize(player)
 
     player.CharacterAdded:Connect(function(character)
         teleportToPlot(player, character)
+        task.defer(function()
+            PotionService:ApplyCharacterEffects(player)
+        end)
     end)
 
     if player.Character then
         task.spawn(function()
             teleportToPlot(player, player.Character)
+            PotionService:ApplyCharacterEffects(player)
         end)
     end
 end
@@ -84,12 +96,22 @@ GetState.OnServerInvoke = function(player)
         return nil
     end
 
+    local healingChanged = PetService:RefreshHealing(player)
+    if healingChanged then
+        local refresh = script.Parent.Systems:FindFirstChild("PetDisplayRefresh")
+        if refresh then refresh:Fire(player) end
+        BarnService:RefreshVisuals(player)
+    end
+
     return {
         Coins = data.Coins,
         Gems = data.Gems,
         Lasso = data.Lasso,
         Inventory = data.Inventory or {},
-        Pets = data.Pets,
+        Pets = PetService:GetPets(player),
+        PetBuyback = data.PetBuyback or {},
+        LassoBuyback = data.LassoBuyback or {},
+        ActiveEffects = data.ActiveEffects or {},
         SelectedPlot = data.SelectedPlot,
         DefencePetId = data.DefencePetId,
         EquippedPetId = data.EquippedPetId,
@@ -126,6 +148,10 @@ PetsRemote.OnServerEvent:Connect(function(player, action, ...)
         local success = PetService:Upgrade(player, petId, stat)
 
         PetsRemote:FireClient(player, "Updated", success)
+
+    elseif action == "Favourite" then
+        local success, message = PetService:SetFavourite(player, args[1], args[2] == true)
+        PetsRemote:FireClient(player, "Updated", success, message)
 
     elseif action == "Display" or action == "Hide" then
         local success, message = PetService:SetDisplayed(player, args[1], action == "Display")
