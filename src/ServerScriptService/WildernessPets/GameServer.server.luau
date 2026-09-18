@@ -312,10 +312,14 @@ end
 local function syncCompanionLabel(model, pet)
     if not model or not model.Parent or not model.PrimaryPart or not pet then return end
 
-    local currentHealth = math.max(0, tonumber(pet.Health) or 1)
-    local maximumHealth = math.max(1, tonumber(pet.Health) or currentHealth)
-    model:SetAttribute("Health", currentHealth)
-    model:SetAttribute("MaxHealth", maximumHealth)
+    local maximumHealth = math.max(1, tonumber(pet.Health) or 1)
+    if model:GetAttribute("MaxHealth") ~= maximumHealth then
+        model:SetAttribute("MaxHealth", maximumHealth)
+    end
+    if model:GetAttribute("Health") == nil then
+        model:SetAttribute("Health", maximumHealth)
+    end
+    local currentHealth = math.clamp(tonumber(model:GetAttribute("Health")) or maximumHealth, 0, maximumHealth)
 
     local gui = model.PrimaryPart:FindFirstChild("CompanionName")
     if not gui then
