@@ -437,10 +437,22 @@ function CaptureService:Capture(player, monster)
 		return false, "Too far away!"
 	end
 
-	lastAttempt[player] = attemptTime
-
 	local species, rarity, difficulty = getMonsterInfo(monster)
 	local lassoName, lassoStrength = getLassoStats(player)
+	local minimumStrength = tonumber((Config.RarityMinLassoStrength or {})[rarity]) or 0
+
+	if lassoStrength < minimumStrength then
+		return false,
+			tostring(lassoName)
+			.. " is too weak to capture "
+			.. tostring(rarity)
+			.. " pets. Use a lasso with at least "
+			.. tostring(minimumStrength)
+			.. " Strength."
+	end
+
+	lastAttempt[player] = attemptTime
+
 	local zoneWidth, speed, requiredHits, roundDuration, clockTolerance = challengeSettings(rarity, lassoStrength, difficulty)
 
 	local activeEffects = type(data.ActiveEffects) == "table" and data.ActiveEffects or {}
