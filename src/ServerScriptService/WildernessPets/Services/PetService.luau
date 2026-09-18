@@ -40,10 +40,11 @@ local function ensurePetDefaults(pet)
         pet.CurrentHealth = 0
         pet.Displayed = false
     else
-        pet.CurrentHealth = math.max(0, tonumber(pet.CurrentHealth) or pet.Health)
-        if pet.CurrentHealth <= 0 then
-            pet.CurrentHealth = pet.Health
+        local currentHealth = tonumber(pet.CurrentHealth)
+        if currentHealth == nil then
+            currentHealth = pet.Health
         end
+        pet.CurrentHealth = math.max(0, currentHealth)
     end
 
     return pet
