@@ -1,0 +1,196 @@
+local PetAnimator = require(script.Parent.PetAnimator)
+local Players = game:GetService("Players")
+
+local DataService = require(script.Parent.Parent.Services.PlayerDataService)
+local PetService = require(script.Parent.Parent.Services.PetService)
+
+local systems = script.Parent
+local refreshEvent = systems:FindFirstChild("PetDisplayRefresh")
+if not refreshEvent then
+    refreshEvent = Instance.new("BindableEvent")
+    refreshEvent.Name = "PetDisplayRefresh"
+    refreshEvent.Parent = systems
+end
+
+local models = {}
+local roamCoroutines = {}
+
+------------------------------------------------------------
+-- Per-pet roaming coroutine
+-- Each displayed pet roams independently within its plot's
+-- PetRoamingArea, so multiple pets move simultaneously.
+------------------------------------------------------------
+local function roamPet(player, model)
+    local part = model.PrimaryPart
+    if not part then return end
+
+    -- Small random initial delay so pets don't sync up
+    task.wait(math.random(0, 2))
+
+    while model and model.Parent and model.PrimaryPart do
+        local plot = model.Parent
+        local roaming = plot and plot:FindFirstChild("PetRoamingArea")
+
+        if not roaming then
+            task.wait(2)
+        else
+            local halfX = roaming.Size.X / 2 - 6
+            local halfZ = roaming.Size.Z / 2 - 6
+
+            local target = roaming.Position + Vector3.new(
+                math.random(-halfX, halfX),
+                5,
+                math.random(-halfZ, halfZ)
+            )
+
+            PetAnimator:PlayWalkTo(model, target)
+
+            -- Pause at destination before picking a new target
+            task.wait(math.random(15, 40) / 10)
+        end
+    end
+end
+
+local function createPetModel(player, pet)
+    local plot = workspace.WildernessPets.Plots:FindFirstChild(
+        "Plot_" .. tostring(DataService:Get(player).SelectedPlot)
+    )
+
+    if not plot then
+        return
+    end
+
+    local roaming = plot:FindFirstChild("PetRoamingArea")
+    if not roaming then
+        return
+    end
+
+    local templates = game.ServerStorage.WildernessPets.Monsters
+    local template = templates:FindFirstChild(pet.Species)
+
+    local model
+    local bodyPart
+
+    if template then
+        model = template:Clone()
+        model.Name = "DisplayedPet"
+        model.Parent = plot
+        model:PivotTo(CFrame.new(roaming.Position + Vector3.new(0,5,0)))
+        bodyPart = model.PrimaryPart
+    else
+        -- Fallback if a species has no model yet
+        model = Instance.new("Model")
+        model.Name = "DisplayedPet"
+        model.Parent = plot
+
+        bodyPart = Instance.new("Part")
+        bodyPart.Name = "Body"
+        bodyPart.Shape = Enum.PartType.Ball
+        bodyPart.Size = Vector3.new(6,6,6)
+        bodyPart.Anchored = true
+        bodyPart.CanCollide = false
+        bodyPart.Material = Enum.Material.SmoothPlastic
+        bodyPart.Position = roaming.Position + Vector3.new(0,5,0)
+        bodyPart.Parent = model
+
+        model.PrimaryPart = bodyPart
+    end
+
+    model:SetAttribute("Species", pet.Species)
+    PetAnimator:_getRig(model)
+    bodyPart = model.PrimaryPart
+
+    local gui = Instance.new("BillboardGui")
+    gui.Size = UDim2.fromOffset(180,50)
+    gui.StudsOffset = Vector3.new(0,5,0)
+    gui.AlwaysOnTop = true
+    gui.Parent = bodyPart
+
+    local text = Instance.new("TextLabel")
+    text.BackgroundTransparency = 1
+    text.Size = UDim2.fromScale(1,1)
+    text.Text = pet.Name .. "  Lv." .. pet.Level
+    text.TextScaled = true
+    text.Font = Enum.Font.GothamBold
+    text.TextColor3 = Color3.new(1,1,1)
+    text.TextStrokeTransparency = 0
+    text.Parent = gui
+
+    -- Start independent roaming for this pet
+    roamCoroutines[player] = task.spawn(function()
+        roamPet(player, model)
+    end)
+
+    return model
+end
+
+local function clearPlayerModel(player)
+    local old = models[player]
+
+    if old then
+        old:Destroy()
+        models[player] = nil
+    end
+
+    -- Stop the roaming coroutine for this player
+    if roamCoroutines[player] then
+        local co = roamCoroutines[player]
+        if coroutine.status(co) ~= "dead" then
+            -- The coroutine will exit naturally when the model is destroyed,
+            -- but we clear the reference here.
+        end
+        roamCoroutines[player] = nil
+    end
+end
+
+local function refresh(player)
+    clearPlayerModel(player)
+
+    local data = DataService:Get(player)
+    if not data then return end
+
+    local displayed
+
+    for _, pet in ipairs(data.Pets) do
+        if pet.Displayed then
+            displayed = pet
+            break
+        end
+    end
+
+    if not displayed then
+        displayed = PetService:GetBestPet(player)
+    end
+
+    if displayed then
+        models[player] = createPetModel(player, displayed)
+    end
+end
+
+refreshEvent.Event:Connect(function(player)
+    task.defer(refresh, player)
+end)
+
+local function setupPlayer(player)
+    player:GetAttributeChangedSignal("SelectedPlot"):Connect(function()
+        task.defer(refresh, player)
+    end)
+
+    task.wait(2)
+    refresh(player)
+end
+
+for _, player in ipairs(Players:GetPlayers()) do
+    task.spawn(setupPlayer, player)
+end
+
+Players.PlayerAdded:Connect(setupPlayer)
+
+Players.PlayerRemoving:Connect(function(player)
+    clearPlayerModel(player)
+end)
+
+-- Roaming is now handled per-pet by roamCoroutines (see roamPet function).
+-- No central loop needed - each pet moves independently.
+
+return {}

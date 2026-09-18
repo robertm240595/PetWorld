@@ -1,0 +1,204 @@
+local Config = {}
+
+Config.GameName = "Wilderness Pets"
+
+Config.StartCoins = 500
+Config.StartGems = 25
+
+Config.MaxPets = 30
+Config.MaxPetNameLength = 18
+
+Config.PlotCount = 12
+Config.PlotSize = 108
+Config.PlotSpacing = 285
+
+Config.WildMonsterCount = 36
+
+Config.Rarities = {
+    Common = {
+        Rank = 1,
+        CaptureDifficulty = 10,
+        SellMultiplier = 1,
+        Weight = 55
+    },
+
+    Uncommon = {
+        Rank = 2,
+        CaptureDifficulty = 23,
+        SellMultiplier = 2,
+        Weight = 25
+    },
+
+    Rare = {
+        Rank = 3,
+        CaptureDifficulty = 40,
+        SellMultiplier = 5,
+        Weight = 11
+    },
+
+    Epic = {
+        Rank = 4,
+        CaptureDifficulty = 58,
+        SellMultiplier = 10,
+        Weight = 5
+    },
+
+    Legendary = {
+        Rank = 5,
+        CaptureDifficulty = 74,
+        SellMultiplier = 25,
+        Weight = 2.5
+    },
+
+    Mythic = {
+        Rank = 6,
+        CaptureDifficulty = 86,
+        SellMultiplier = 60,
+        Weight = 1
+    },
+
+    Limited = {
+        Rank = 7,
+        CaptureDifficulty = 80,
+        SellMultiplier = 75,
+        Weight = 0.4
+    },
+
+    Ancient = {
+        Rank = 8,
+        CaptureDifficulty = 96,
+        SellMultiplier = 150,
+        Weight = 0.1
+    }
+}
+
+Config.Lassos = {
+    ["Rough Rope"] = {
+        Strength = 15,
+        Coins = 0,
+        Gems = 0
+    },
+
+    ["Hunter's Lasso"] = {
+        Strength = 30,
+        Coins = 1000,
+        Gems = 0
+    },
+
+    ["Iron Lasso"] = {
+        Strength = 50,
+        Coins = 5000,
+        Gems = 0
+    },
+
+    ["Steel Lasso"] = {
+        Strength = 70,
+        Coins = 15000,
+        Gems = 0
+    },
+
+    ["Mystic Lasso"] = {
+        Strength = 90,
+        Coins = 50000,
+        Gems = 250
+    },
+
+    ["Ancient Lasso"] = {
+        Strength = 125,
+        Coins = 150000,
+        Gems = 750
+    }
+}
+
+Config.Pets = {
+    Wolf = {
+        Rarity = "Common",
+        Health = 100,
+        Power = 20,
+        Defence = 12,
+        SellValue = 50
+    },
+
+    Boar = {
+        Rarity = "Common",
+        Health = 125,
+        Power = 17,
+        Defence = 20,
+        SellValue = 60
+    },
+
+    Fox = {
+        Rarity = "Uncommon",
+        Health = 110,
+        Power = 28,
+        Defence = 15,
+        SellValue = 120
+    },
+
+    Bear = {
+        Rarity = "Rare",
+        Health = 220,
+        Power = 45,
+        Defence = 32,
+        SellValue = 300
+    },
+
+    Griffin = {
+        Rarity = "Epic",
+        Health = 300,
+        Power = 65,
+        Defence = 45,
+        SellValue = 800
+    },
+
+    Dragon = {
+        Rarity = "Legendary",
+        Health = 500,
+        Power = 100,
+        Defence = 70,
+        SellValue = 2200
+    },
+
+    Leviathan = {
+        Rarity = "Mythic",
+        Health = 800,
+        Power = 145,
+        Defence = 100,
+        SellValue = 6500
+    },
+
+    Starling = {
+        Rarity = "Limited",
+        Health = 650,
+        Power = 160,
+        Defence = 80,
+        SellValue = 8000
+    },
+
+    AncientTitan = {
+        Rarity = "Ancient",
+        Health = 1200,
+        Power = 210,
+        Defence = 150,
+        SellValue = 15000
+    }
+}
+
+Config.RobuxPets = {
+    ["Celestial Wolf"] = {
+        Species = "Wolf",
+        ProductId = 0
+    },
+
+    ["Void Dragon"] = {
+        Species = "Dragon",
+        ProductId = 0
+    }
+}
+
+Config.WeeklyReward = {
+    Coins = 5000,
+    Gems = 250
+}
+
+return Config

@@ -1,0 +1,42 @@
+local Config = require(game.ReplicatedStorage.WildernessPets.Shared.Config)
+
+local Service = {}
+
+function Service:GetRarity()
+    local total = 0
+
+    for _, info in pairs(Config.Rarities) do
+        total += info.Weight
+    end
+
+    local roll = math.random() * total
+    local running = 0
+
+    for rarity, info in pairs(Config.Rarities) do
+        running += info.Weight
+
+        if roll <= running then
+            return rarity
+        end
+    end
+
+    return "Common"
+end
+
+function Service:GetSpecies(rarity)
+    local candidates = {}
+
+    for species, info in pairs(Config.Pets) do
+        if info.Rarity == rarity then
+            table.insert(candidates, species)
+        end
+    end
+
+    if #candidates == 0 then
+        return "Wolf"
+    end
+
+    return candidates[math.random(1, #candidates)]
+end
+
+return Service

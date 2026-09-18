@@ -1,0 +1,544 @@
+local PetAnimator = require(script.Parent.Parent.Systems.PetAnimator)
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Debris = game:GetService("Debris")
+
+local Root = ReplicatedStorage:WaitForChild("WildernessPets")
+local Remotes = Root:WaitForChild("Remotes")
+local CaptureRemote = Remotes:WaitForChild("Capture")
+
+local Services = script.Parent
+local DataService = require(Services:WaitForChild("PlayerDataService"))
+local PetService = require(Services:WaitForChild("PetService"))
+
+local Config = require(Root:WaitForChild("Shared"):WaitForChild("Config"))
+
+local CaptureService = {}
+
+local MAX_RANGE = 42
+local COOLDOWN = 1.35
+local CAPTURE_ANIMATION_TIME = 0.75
+local FAILURE_DAMAGE = 999999
+
+local lastAttempt = {}
+
+------------------------------------------------------------
+-- Helpers
+------------------------------------------------------------
+
+local function getMonsterFolder()
+	local world = workspace:FindFirstChild("WildernessPets")
+	if not world then
+		return nil
+	end
+
+	return world:FindFirstChild("WildMonsters")
+end
+
+local function getCharacterRoot(player)
+	local character = player.Character
+	if not character then
+		return nil
+	end
+
+	return character:FindFirstChild("HumanoidRootPart")
+end
+
+local function getHumanoid(player)
+	local character = player.Character
+	if not character then
+		return nil
+	end
+
+	return character:FindFirstChildOfClass("Humanoid")
+end
+
+local function getPlayerData(player)
+	-- Try common getter names so this patch works with the generated
+	-- first-pass data service.
+
+	local attempts = {
+		function()
+			if DataService.Get then
+				return DataService:Get(player)
+			end
+		end,
+
+		function()
+			if DataService.GetData then
+				return DataService:GetData(player)
+			end
+		end,
+
+		function()
+			if DataService.GetProfile then
+				return DataService:GetProfile(player)
+			end
+		end,
+
+		function()
+			if DataService.Profiles then
+				return DataService.Profiles[player]
+			end
+		end,
+	}
+
+	for _, attempt in ipairs(attempts) do
+		local ok, result = pcall(attempt)
+		if ok and type(result) == "table" then
+			return result
+		end
+	end
+
+	return nil
+end
+
+local function getLassoName(player)
+	local data = getPlayerData(player)
+
+	if data then
+		if type(data.Lasso) == "string" then
+			return data.Lasso
+		end
+
+		if type(data.LassoName) == "string" then
+			return data.LassoName
+		end
+
+		if type(data.EquippedLasso) == "string" then
+			return data.EquippedLasso
+		end
+	end
+
+	local attribute = player:GetAttribute("Lasso")
+	if type(attribute) == "string" then
+		return attribute
+	end
+
+	local attribute2 = player:GetAttribute("LassoName")
+	if type(attribute2) == "string" then
+		return attribute2
+	end
+
+	return "Rough Rope"
+end
+
+local function getLassoStats(player)
+	local lassoName = getLassoName(player)
+
+	local lassos = Config.Lassos or {}
+
+	local stats = lassos[lassoName]
+
+	if not stats then
+		for name, info in pairs(lassos) do
+			if tostring(name):lower() == tostring(lassoName):lower() then
+				stats = info
+				lassoName = name
+				break
+			end
+		end
+	end
+
+	if not stats then
+		stats = {
+			Strength = 15,
+			Cost = 0
+		}
+		lassoName = "Rough Rope"
+	end
+
+	local strength =
+		stats.Strength
+		or stats.Power
+		or stats.CaptureStrength
+		or 15
+
+	return lassoName, strength
+end
+
+local function getMonsterInfo(monster)
+	local species = monster:GetAttribute("Species")
+		or monster:GetAttribute("Monster")
+		or monster.Name
+
+	local rarity = monster:GetAttribute("Rarity") or "Common"
+
+	local difficulty = monster:GetAttribute("CaptureDifficulty")
+
+	if not difficulty then
+		local rarityData = Config.Rarities and Config.Rarities[rarity]
+		if rarityData then
+			difficulty =
+				rarityData.CaptureDifficulty
+				or rarityData.Difficulty
+				or rarityData.LassoDifficulty
+		end
+	end
+
+	if not difficulty then
+		local fallback = {
+			Common = 10,
+			Uncommon = 20,
+			Rare = 35,
+			Epic = 50,
+			Legendary = 65,
+			Mythic = 80,
+			Limited = 72,
+			Ancient = 92
+		}
+
+		difficulty = fallback[rarity] or 20
+	end
+
+	return tostring(species), tostring(rarity), tonumber(difficulty) or 20
+end
+
+local function getPosition(instance)
+	if instance:IsA("Model") then
+		if instance.PrimaryPart then
+			return instance.PrimaryPart.Position
+		end
+
+		local root = instance:FindFirstChild("HumanoidRootPart")
+		if root and root:IsA("BasePart") then
+			return root.Position
+		end
+
+		local part = instance:FindFirstChildWhichIsA("BasePart", true)
+		if part then
+			return part.Position
+		end
+	elseif instance:IsA("BasePart") then
+		return instance.Position
+	end
+
+	return nil
+end
+
+local function getMonsterPart(monster)
+	if monster:IsA("BasePart") then
+		return monster
+	end
+
+	if monster:IsA("Model") then
+		if monster.PrimaryPart then
+			return monster.PrimaryPart
+		end
+
+		local root = monster:FindFirstChild("HumanoidRootPart")
+		if root and root:IsA("BasePart") then
+			return root
+		end
+
+		return monster:FindFirstChildWhichIsA("BasePart", true)
+	end
+
+	return nil
+end
+
+local function isValidMonster(monster)
+	if typeof(monster) ~= "Instance" then
+		return false
+	end
+
+	local folder = getMonsterFolder()
+	if not folder then
+		return false
+	end
+
+	if not monster:IsDescendantOf(folder) then
+		return false
+	end
+
+	if not monster:IsA("Model") and not monster:IsA("BasePart") then
+		return false
+	end
+
+	if monster:GetAttribute("Captured") or monster:GetAttribute("BeingCaptured") or monster:GetAttribute("InCombat") then
+		return false
+	end
+
+	return true
+end
+
+------------------------------------------------------------
+-- Rope visual
+------------------------------------------------------------
+
+local function createRopeEffect(player, monster)
+	local character = player.Character
+	if not character then
+		return
+	end
+
+	local hand =
+		character:FindFirstChild("RightHand")
+		or character:FindFirstChild("Right Arm")
+		or character:FindFirstChild("HumanoidRootPart")
+
+	local target = getMonsterPart(monster)
+
+	if not hand or not target then
+		return
+	end
+
+	local a0 = Instance.new("Attachment")
+	a0.Name = "LassoStart"
+	a0.Parent = hand
+
+	local a1 = Instance.new("Attachment")
+	a1.Name = "LassoTarget"
+	a1.Parent = target
+
+	local beam = Instance.new("Beam")
+	beam.Name = "LassoRope"
+	beam.Attachment0 = a0
+	beam.Attachment1 = a1
+	beam.Width0 = 0.16
+	beam.Width1 = 0.10
+	beam.FaceCamera = true
+	beam.LightEmission = 0.1
+	beam.Parent = hand
+
+	Debris:AddItem(beam, CAPTURE_ANIMATION_TIME + 0.15)
+	Debris:AddItem(a0, CAPTURE_ANIMATION_TIME + 0.15)
+	Debris:AddItem(a1, CAPTURE_ANIMATION_TIME + 0.15)
+end
+
+------------------------------------------------------------
+-- Pet creation
+------------------------------------------------------------
+
+local function createCapturedPet(player, species, rarity)
+	-- First try the generated PetService API.
+
+	local attempts = {
+		function()
+			if PetService.Create then
+				return PetService:Create(player, species)
+			end
+		end,
+
+		function()
+			if PetService.CreatePet then
+				return PetService:CreatePet(player, species)
+			end
+		end,
+
+		function()
+			if PetService.AddPet then
+				return PetService:AddPet(player, species, rarity)
+			end
+		end,
+	}
+
+	for _, attempt in ipairs(attempts) do
+		local ok, result = pcall(attempt)
+
+		if ok and result then
+			return result
+		end
+	end
+
+	return nil
+end
+
+------------------------------------------------------------
+-- Public capture function
+------------------------------------------------------------
+
+function CaptureService:Capture(player, monster)
+	if not player or not player:IsA("Player") then
+		return false, "Invalid player."
+	end
+
+	local now = os.clock()
+
+	if lastAttempt[player] and now - lastAttempt[player] < COOLDOWN then
+		return false, "Slow down!"
+	end
+
+	lastAttempt[player] = now
+
+	local humanoid = getHumanoid(player)
+
+	if not humanoid or humanoid.Health <= 0 then
+		return false, "You are defeated."
+	end
+
+	if not isValidMonster(monster) then
+		return false, "Invalid target."
+	end
+
+	local playerRoot = getCharacterRoot(player)
+	local monsterPosition = getPosition(monster)
+
+	if not playerRoot or not monsterPosition then
+		return false, "Target unavailable."
+	end
+
+	local distance = (playerRoot.Position - monsterPosition).Magnitude
+
+	if distance > MAX_RANGE then
+		return false, "Too far away!"
+	end
+
+	local species, rarity, difficulty = getMonsterInfo(monster)
+	local lassoName, lassoStrength = getLassoStats(player)
+
+	--------------------------------------------------------
+	-- Capture calculation
+	--
+	-- A weak lasso STILL affects the monster.
+	-- The weaker the lasso compared with the difficulty,
+	-- the lower the chance.
+	--------------------------------------------------------
+
+	local chance =
+		0.30
+		+ ((lassoStrength - difficulty) / 100)
+
+	-- Rarity slightly reduces capture chance.
+	local rarityPenalty = {
+		Common = 0,
+		Uncommon = 0.02,
+		Rare = 0.05,
+		Epic = 0.08,
+		Legendary = 0.12,
+		Mythic = 0.16,
+		Limited = 0.14,
+		Ancient = 0.20
+	}
+
+	chance -= rarityPenalty[rarity] or 0
+
+	chance = math.clamp(chance, 0.05, 0.95)
+
+	--------------------------------------------------------
+	-- Lasso visual
+	--------------------------------------------------------
+
+	createRopeEffect(player, monster)
+
+	monster:SetAttribute("BeingCaptured", true)
+
+	--------------------------------------------------------
+	-- Give the player a short reaction window.
+	--------------------------------------------------------
+
+	CaptureRemote:FireClient(
+		player,
+		"Attempt",
+		monster,
+		species,
+		rarity,
+		lassoName,
+		chance
+	)
+
+	PetAnimator:PlayStruggle(monster, CAPTURE_ANIMATION_TIME)
+
+	if not monster or not monster.Parent then
+		return false, "Monster escaped."
+	end
+
+	--------------------------------------------------------
+	-- Random capture result
+	--------------------------------------------------------
+
+	local roll = math.random()
+
+	if roll <= chance then
+		monster:SetAttribute("Captured", true)
+
+		local pet = createCapturedPet(player, species, rarity)
+
+		-- If PetService successfully created the pet,
+		-- remove the wild monster.
+		if pet then
+			CaptureRemote:FireClient(
+				player,
+				"Success",
+				species,
+				rarity,
+				lassoName,
+				chance
+			)
+
+			monster:Destroy()
+
+			local refreshEvent = Services.Parent.Systems:FindFirstChild("PetDisplayRefresh")
+			if refreshEvent and refreshEvent:IsA("BindableEvent") then
+				refreshEvent:Fire(player)
+			end
+
+			return true, "Captured " .. species .. "!"
+		end
+
+		-- Safety fallback: don't permanently delete a monster
+		-- if the pet couldn't be stored.
+		monster:SetAttribute("Captured", false)
+		monster:SetAttribute("BeingCaptured", false)
+		PetAnimator:PlayIdle(monster)
+
+		CaptureRemote:FireClient(
+			player,
+			"Error",
+			"Your pet could not be saved. Try again."
+		)
+
+		return false, "Pet could not be saved."
+	end
+
+	--------------------------------------------------------
+	-- FAILED CAPTURE
+	--
+	-- This is intentional:
+	-- weak lasso does NOT simply say "not strong enough".
+	-- The monster gets a chance to defeat the player.
+	--------------------------------------------------------
+
+	monster:SetAttribute("InCombat", true)
+	monster:SetAttribute("BeingCaptured", false)
+
+	CaptureRemote:FireClient(
+		player,
+		"Failed",
+		species,
+		rarity,
+		lassoName,
+		chance
+	)
+
+	PetAnimator:PlayAttack(monster, playerRoot.Position, 0.75, function()
+        local currentHumanoid = getHumanoid(player)
+        if currentHumanoid and currentHumanoid.Health > 0 then
+            currentHumanoid:TakeDamage(FAILURE_DAMAGE)
+        end
+    end)
+    if monster.Parent then
+        monster:SetAttribute("InCombat", false)
+        PetAnimator:PlayIdle(monster)
+    end
+
+	return false, "The " .. species .. " broke free!"
+end
+
+------------------------------------------------------------
+-- Remote security layer
+------------------------------------------------------------
+
+CaptureRemote.OnServerEvent:Connect(function(player, action, monster)
+	if action ~= "Throw" then
+		return
+	end
+
+	CaptureService:Capture(player, monster)
+end)
+
+Players.PlayerRemoving:Connect(function(player)
+	lastAttempt[player] = nil
+end)
+
+return CaptureService

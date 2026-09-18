@@ -1,0 +1,519 @@
+--[[
+	PetAnimator
+
+	Procedural limb animation for the AI-generated pet/monster models.
+	These models are plain grouped MeshParts (no Motor6D rig), so instead of
+	using KeyframeSequences/Animator, this poses every limb directly each
+	tick as: part.CFrame = currentRootCFrame * restOffset * poseAdjustment.
+
+	Works generically across every species because it classifies parts by
+	name keywords ("leg", "tail", "head", "wing", "body") rather than
+	assuming a fixed skeleton, so it degrades gracefully for simpler models
+	(e.g. a single-mesh model just gets a body bob, no limb swing).
+
+	Public API (all take the pet Model as first arg):
+		PlayIdle(model)
+		PlayWalkTo(model, targetPosition, duration)      -- yields
+		PlayStruggle(model, duration)                    -- yields
+		PlayCaptured(model, duration)                    -- yields
+		PlayAttack(model, targetPosition, duration)      -- yields
+		PlayHit(model, duration)                         -- yields
+		PlayFaint(model, duration)                       -- yields
+		PlayVictory(model, duration)                     -- yields
+		Stop(model)
+]]
+
+local PetAnimator = {}
+
+local IDLE_TICK = 0.15
+local ACTION_TICK = 0.05
+
+local rigs = setmetatable({}, { __mode = "k" })
+
+------------------------------------------------------------
+-- Rig building
+------------------------------------------------------------
+
+local function classify(name)
+	local lower = name:lower()
+
+	local kind = "other"
+	if lower:find("tail") then
+		kind = "tail"
+	elseif lower:find("head") then
+		kind = "head"
+	elseif lower:find("wing") then
+		kind = "wing"
+	elseif lower:find("leg") then
+		kind = "leg"
+	elseif lower:find("body") then
+		kind = "body"
+	end
+
+	local side = 1
+	if lower:find("left") then
+		side = -1
+	elseif lower:find("right") then
+		side = 1
+	end
+
+	local frontRear = 1
+	if lower:find("rear") or lower:find("back") then
+		frontRear = -1
+	elseif lower:find("front") then
+		frontRear = 1
+	end
+
+	return kind, side, frontRear
+end
+
+function PetAnimator:_getRig(model)
+	local rig = rigs[model]
+
+	if rig and rig.root and rig.root.Parent then
+		return rig
+	end
+
+	local root = model.PrimaryPart or model:FindFirstChildWhichIsA("BasePart", true)
+
+	if not root then
+		return nil
+	end
+
+	local parts = {}
+
+	for _, d in ipairs(model:GetDescendants()) do
+		if d:IsA("BasePart") and d ~= root then
+			local kind, side, frontRear = classify(d.Name)
+
+			parts[d] = {
+				offset = root.CFrame:ToObjectSpace(d.CFrame),
+				kind = kind,
+				phase = side * frontRear,
+			}
+		end
+	end
+
+	rig = {
+		root = root,
+		parts = parts,
+		gen = 0,
+	}
+
+	rigs[model] = rig
+
+	return rig
+end
+
+------------------------------------------------------------
+-- Pose application
+------------------------------------------------------------
+
+function PetAnimator:_applyPose(rig, rootCFrame, params)
+	params = params or {}
+
+	for part, info in pairs(rig.parts) do
+		if part.Parent then
+			local extra = CFrame.new()
+
+			if info.kind == "leg" then
+				local swing = (params.legSwing or 0) * info.phase
+				extra = CFrame.Angles(math.rad(swing * 25), 0, 0)
+			elseif info.kind == "tail" then
+				extra = CFrame.Angles(0, math.rad((params.tailWag or 0) * 30), 0)
+			elseif info.kind == "wing" then
+				local flap = (params.wingFlap or 0) * info.phase
+				extra = CFrame.Angles(0, 0, math.rad(flap * 20))
+			elseif info.kind == "head" then
+				extra = CFrame.Angles(
+					math.rad((params.headLook or 0) * 15),
+					math.rad((params.headTurn or 0) * 10),
+					0
+				)
+			end
+
+			part.CFrame = rootCFrame * info.offset * extra
+		end
+	end
+end
+
+local function flatFacing(fromPos, toPos)
+	local dir = Vector3.new(toPos.X - fromPos.X, 0, toPos.Z - fromPos.Z)
+
+	if dir.Magnitude > 0.05 then
+		return CFrame.lookAt(Vector3.new(), dir.Unit)
+	end
+
+	return CFrame.new()
+end
+
+------------------------------------------------------------
+-- Idle
+------------------------------------------------------------
+
+function PetAnimator:PlayIdle(model)
+	local rig = self:_getRig(model)
+	if not rig then
+		return
+	end
+
+	rig.gen += 1
+	local myGen = rig.gen
+
+	task.spawn(function()
+		local t = math.random() * 10
+
+		while rig.gen == myGen and model.Parent do
+			local root = rig.root
+
+			if not root.Parent then
+				return
+			end
+
+			local bob = math.sin(t * 2) * 0.05
+			local poseRoot = root.CFrame * CFrame.new(0, bob, 0)
+
+			self:_applyPose(rig, poseRoot, {
+				tailWag = math.sin(t * 1.2) * 0.5,
+				headLook = math.sin(t * 0.8) * 0.6,
+				headTurn = math.sin(t * 0.5) * 0.8,
+				wingFlap = math.sin(t * 1.5) * 0.3,
+			})
+
+			t += IDLE_TICK
+			task.wait(IDLE_TICK)
+		end
+	end)
+end
+
+------------------------------------------------------------
+-- Walk
+------------------------------------------------------------
+
+function PetAnimator:PlayWalkTo(model, target, duration)
+	local rig = self:_getRig(model)
+	if not rig then
+		return
+	end
+
+	rig.gen += 1
+	local myGen = rig.gen
+
+	duration = duration or 1.6
+
+	local root = rig.root
+	local start = root.CFrame.Position
+	local face = flatFacing(start, target)
+
+	local steps = math.max(1, math.floor(duration / ACTION_TICK))
+
+	for i = 1, steps do
+		if rig.gen ~= myGen or not root.Parent then
+			return
+		end
+
+		local alpha = i / steps
+		local pos = start:Lerp(target, alpha)
+		local swing = math.sin(alpha * math.pi * 8)
+
+		local rootCFrame = CFrame.new(pos) * face
+		root.CFrame = rootCFrame
+
+		self:_applyPose(rig, rootCFrame, {
+			legSwing = swing,
+			tailWag = math.sin(alpha * math.pi * 6) * 0.6,
+			headLook = 0.2,
+		})
+
+		task.wait(ACTION_TICK)
+	end
+
+	if rig.gen == myGen then
+		self:PlayIdle(model)
+	end
+end
+
+------------------------------------------------------------
+-- Capture struggle / capture success
+------------------------------------------------------------
+
+function PetAnimator:PlayStruggle(model, duration)
+	local rig = self:_getRig(model)
+	if not rig then
+		return
+	end
+
+	rig.gen += 1
+	local myGen = rig.gen
+
+	duration = duration or 0.75
+
+	local root = rig.root
+	local baseCFrame = root.CFrame
+	local steps = math.max(1, math.floor(duration / ACTION_TICK))
+
+	for i = 1, steps do
+		if rig.gen ~= myGen or not root.Parent then
+			return
+		end
+
+		local shakeX = (math.random() - 0.5) * 0.5
+		local shakeZ = (math.random() - 0.5) * 0.5
+		local wobble = math.sin(i * 3) * 0.08
+
+		local rootCFrame = baseCFrame * CFrame.new(shakeX, wobble, shakeZ)
+		root.CFrame = rootCFrame
+
+		self:_applyPose(rig, rootCFrame, {
+			legSwing = math.sin(i * 4) * 0.7,
+			tailWag = math.sin(i * 5) * 0.8,
+			headTurn = math.sin(i * 2) * 1.0,
+			wingFlap = math.sin(i * 4) * 0.8,
+		})
+
+		task.wait(ACTION_TICK)
+	end
+
+	if rig.gen == myGen and root.Parent then
+		root.CFrame = baseCFrame
+		self:_applyPose(rig, baseCFrame, {})
+	end
+end
+
+function PetAnimator:PlayCaptured(model, duration)
+	local rig = self:_getRig(model)
+	if not rig then
+		return
+	end
+
+	rig.gen += 1
+
+	duration = duration or 0.4
+
+	local root = rig.root
+	local startCFrame = root.CFrame
+
+	local originalSizes = { [root] = root.Size }
+	for part in pairs(rig.parts) do
+		originalSizes[part] = part.Size
+	end
+
+	local steps = math.max(1, math.floor(duration / ACTION_TICK))
+
+	for i = 1, steps do
+		if not root.Parent then
+			return
+		end
+
+		local alpha = i / steps
+		local scale = math.max(0.02, 1 - alpha)
+
+		local rootCFrame = startCFrame * CFrame.Angles(0, alpha * math.pi * 4, 0)
+		root.CFrame = rootCFrame
+		root.Size = originalSizes[root] * scale
+
+		for part, info in pairs(rig.parts) do
+			if part.Parent then
+				part.Size = originalSizes[part] * scale
+				part.CFrame = rootCFrame * info.offset:Lerp(CFrame.new(), alpha)
+			end
+		end
+
+		task.wait(ACTION_TICK)
+	end
+end
+
+------------------------------------------------------------
+-- Combat: attack / hit / faint / victory
+------------------------------------------------------------
+
+function PetAnimator:PlayAttack(model, targetPosition, duration)
+	local rig = self:_getRig(model)
+	if not rig then
+		return
+	end
+
+	rig.gen += 1
+	local myGen = rig.gen
+
+	duration = duration or 0.5
+
+	local root = rig.root
+	local startCFrame = root.CFrame
+	local face = flatFacing(startCFrame.Position, targetPosition)
+
+	local flatDist = Vector3.new(
+		targetPosition.X - startCFrame.Position.X,
+		0,
+		targetPosition.Z - startCFrame.Position.Z
+	).Magnitude
+
+	local lungeDistance = math.min(6, flatDist * 0.4)
+	local steps = math.max(2, math.floor(duration / ACTION_TICK))
+	local half = math.max(1, math.floor(steps / 2))
+
+	for i = 1, steps do
+		if rig.gen ~= myGen or not root.Parent then
+			return
+		end
+
+		local alpha
+		if i <= half then
+			alpha = i / half
+		else
+			alpha = 1 - ((i - half) / (steps - half))
+		end
+
+		local pos = startCFrame.Position + (face.LookVector * (lungeDistance * alpha))
+		local rootCFrame = CFrame.new(pos) * face
+		root.CFrame = rootCFrame
+
+		self:_applyPose(rig, rootCFrame, {
+			legSwing = math.sin(alpha * math.pi) * 0.9,
+			tailWag = math.sin(alpha * math.pi * 2) * 0.6,
+			headLook = alpha * 0.4,
+			wingFlap = alpha * 0.9,
+		})
+
+		task.wait(ACTION_TICK)
+	end
+
+	if rig.gen == myGen and root.Parent then
+		root.CFrame = startCFrame
+		self:_applyPose(rig, startCFrame, {})
+	end
+end
+
+function PetAnimator:PlayHit(model, duration)
+	local rig = self:_getRig(model)
+	if not rig then
+		return
+	end
+
+	duration = duration or 0.3
+
+	local root = rig.root
+	local startCFrame = root.CFrame
+
+	local originalColors = { [root] = root.Color }
+	for part in pairs(rig.parts) do
+		originalColors[part] = part.Color
+	end
+
+	root.Color = Color3.fromRGB(255, 90, 90)
+	for part in pairs(rig.parts) do
+		if part.Parent then
+			part.Color = Color3.fromRGB(255, 90, 90)
+		end
+	end
+
+	local steps = math.max(1, math.floor(duration / ACTION_TICK))
+
+	for i = 1, steps do
+		if not root.Parent then
+			return
+		end
+
+		local alpha = i / steps
+		local kick = math.sin(alpha * math.pi) * -1.2
+
+		root.CFrame = startCFrame * CFrame.new(0, 0, kick)
+
+		task.wait(ACTION_TICK)
+	end
+
+	if root.Parent then
+		root.CFrame = startCFrame
+		root.Color = originalColors[root]
+
+		for part, color in pairs(originalColors) do
+			if part ~= root and part.Parent then
+				part.Color = color
+			end
+		end
+	end
+end
+
+function PetAnimator:PlayFaint(model, duration)
+	local rig = self:_getRig(model)
+	if not rig then
+		return
+	end
+
+	rig.gen += 1
+	local myGen = rig.gen
+
+	duration = duration or 0.6
+
+	local root = rig.root
+	local startCFrame = root.CFrame
+	local steps = math.max(1, math.floor(duration / ACTION_TICK))
+
+	for i = 1, steps do
+		if rig.gen ~= myGen or not root.Parent then
+			return
+		end
+
+		local alpha = i / steps
+		local rootCFrame = startCFrame * CFrame.new(0, -1.2 * alpha, 0) * CFrame.Angles(0, 0, math.rad(85) * alpha)
+		root.CFrame = rootCFrame
+
+		self:_applyPose(rig, rootCFrame, {})
+
+		task.wait(ACTION_TICK)
+	end
+end
+
+function PetAnimator:PlayVictory(model, duration)
+	local rig = self:_getRig(model)
+	if not rig then
+		return
+	end
+
+	rig.gen += 1
+	local myGen = rig.gen
+
+	duration = duration or 0.7
+
+	local root = rig.root
+	local startCFrame = root.CFrame
+	local steps = math.max(1, math.floor(duration / ACTION_TICK))
+
+	for i = 1, steps do
+		if rig.gen ~= myGen or not root.Parent then
+			return
+		end
+
+		local alpha = i / steps
+		local hop = math.sin(alpha * math.pi) * 2.5
+		local rootCFrame = startCFrame * CFrame.new(0, hop, 0)
+		root.CFrame = rootCFrame
+
+		self:_applyPose(rig, rootCFrame, {
+			legSwing = math.sin(alpha * math.pi * 4) * 0.6,
+			tailWag = math.sin(alpha * math.pi * 6) * 0.8,
+			wingFlap = math.sin(alpha * math.pi * 5) * 1.0,
+		})
+
+		task.wait(ACTION_TICK)
+	end
+
+	if rig.gen == myGen and root.Parent then
+		root.CFrame = startCFrame
+		self:PlayIdle(model)
+	end
+end
+
+------------------------------------------------------------
+-- Stop
+------------------------------------------------------------
+
+function PetAnimator:Stop(model)
+	local rig = rigs[model]
+
+	if rig then
+		rig.gen += 1
+	end
+end
+
+return PetAnimator

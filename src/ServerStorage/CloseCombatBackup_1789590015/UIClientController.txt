@@ -1,0 +1,522 @@
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local player = Players.LocalPlayer
+
+local Root = ReplicatedStorage:WaitForChild("WildernessPets")
+local Remotes = Root:WaitForChild("Remotes")
+
+local GameRemote = Remotes:WaitForChild("Game")
+local CaptureRemote = Remotes:WaitForChild("Capture")
+local PetsRemote = Remotes:WaitForChild("Pets")
+local ShopRemote = Remotes:WaitForChild("Shop")
+local ArenaRemote = Remotes:WaitForChild("Arena")
+local GetState = Remotes:WaitForChild("GetState")
+
+local state
+
+local gui = script.Parent
+
+--------------------------------------------------------------
+-- UI HELPERS
+--------------------------------------------------------------
+
+local function clear()
+    for _, child in ipairs(gui:GetChildren()) do
+        if child:IsA("Frame") or child:IsA("TextButton") or child:IsA("TextLabel") then
+            child:Destroy()
+        end
+    end
+end
+
+local function frame(size, position)
+    local f = Instance.new("Frame")
+    f.Size = size
+    f.Position = position
+    f.BackgroundColor3 = Color3.fromRGB(25,25,30)
+    f.BackgroundTransparency = 0.08
+    f.BorderSizePixel = 0
+    f.Parent = gui
+
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0,12)
+    corner.Parent = f
+
+    return f
+end
+
+local function button(parent, text, position, size)
+    local b = Instance.new("TextButton")
+    b.Text = text
+    b.Size = size or UDim2.fromOffset(170,45)
+    b.Position = position or UDim2.new()
+    b.BackgroundColor3 = Color3.fromRGB(55,70,90)
+    b.TextColor3 = Color3.new(1,1,1)
+    b.Font = Enum.Font.GothamBold
+    b.TextScaled = true
+    b.BorderSizePixel = 0
+    b.Parent = parent
+
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0,8)
+    corner.Parent = b
+
+    return b
+end
+
+local function text(parent, value, position, size)
+    local t = Instance.new("TextLabel")
+    t.Text = value
+    t.Size = size or UDim2.fromOffset(300,40)
+    t.Position = position or UDim2.new()
+    t.BackgroundTransparency = 1
+    t.TextColor3 = Color3.new(1,1,1)
+    t.Font = Enum.Font.GothamBold
+    t.TextScaled = true
+    t.Parent = parent
+
+    return t
+end
+
+local function notify(message)
+    local n = text(
+        gui,
+        tostring(message),
+        UDim2.new(0.5,-250,0.08,0),
+        UDim2.fromOffset(500,50)
+    )
+
+    n.BackgroundColor3 = Color3.fromRGB(20,20,25)
+    n.BackgroundTransparency = 0.1
+
+    task.delay(3,function()
+        if n then
+            n:Destroy()
+        end
+    end)
+end
+
+--------------------------------------------------------------
+-- PET UI
+--------------------------------------------------------------
+
+local function showPets()
+    clear()
+
+    local panel = frame(
+        UDim2.fromOffset(760,560),
+        UDim2.new(0.5,-380,0.5,-280)
+    )
+
+    text(
+        panel,
+        "MY PETS",
+        UDim2.fromOffset(20,15),
+        UDim2.fromOffset(720,45)
+    )
+
+    state = GetState:InvokeServer()
+
+    for i, pet in ipairs(state.Pets or {}) do
+        local row = math.floor((i - 1) / 2)
+        local column = (i - 1) % 2
+
+        local b = button(
+            panel,
+            pet.Name .. " | " .. pet.Rarity .. " | Lv." .. pet.Level,
+            UDim2.fromOffset(
+                25 + column * 360,
+                75 + row * 70
+            ),
+            UDim2.fromOffset(335,55)
+        )
+
+        b.MouseButton1Click:Connect(function()
+            local detail = frame(
+                UDim2.fromOffset(500,400),
+                UDim2.new(0.5,-250,0.5,-200)
+            )
+
+            text(
+                detail,
+                pet.Name,
+                UDim2.fromOffset(20,20),
+                UDim2.fromOffset(460,45)
+            )
+
+            text(
+                detail,
+                "Species: " .. pet.Species ..
+                "\nRarity: " .. pet.Rarity ..
+                "\nLevel: " .. pet.Level ..
+                "\nEXP: " .. pet.XP ..
+                "\nHealth: " .. pet.Health ..
+                "\nPower: " .. pet.Power ..
+                "\nDefence: " .. pet.Defence ..
+                "\nUpgrade Points: " .. pet.UpgradePoints,
+                UDim2.fromOffset(25,80),
+                UDim2.fromOffset(450,190)
+            )
+
+            local health = button(
+                detail,
+                "+ HEALTH",
+                UDim2.fromOffset(25,290)
+            )
+
+            health.MouseButton1Click:Connect(function()
+                PetsRemote:FireServer("Upgrade",pet.Id,"Health")
+            end)
+
+            local power = button(
+                detail,
+                "+ POWER",
+                UDim2.fromOffset(165,290)
+            )
+
+            power.MouseButton1Click:Connect(function()
+                PetsRemote:FireServer("Upgrade",pet.Id,"Power")
+            end)
+
+            local defence = button(
+                detail,
+                "+ DEFENCE",
+                UDim2.fromOffset(305,290)
+            )
+
+            defence.MouseButton1Click:Connect(function()
+                PetsRemote:FireServer("Upgrade",pet.Id,"Defence")
+            end)
+
+            local display = button(
+                detail,
+                "DISPLAY AT VILLAGE",
+                UDim2.fromOffset(115,345),
+                UDim2.fromOffset(270,45)
+            )
+
+            display.MouseButton1Click:Connect(function()
+                PetsRemote:FireServer("Display",pet.Id)
+                notify("Pet displayed at your village!")
+            end)
+        end)
+    end
+
+    local close = button(
+        panel,
+        "CLOSE",
+        UDim2.fromOffset(295,510),
+        UDim2.fromOffset(170,40)
+    )
+
+    close.MouseButton1Click:Connect(function()
+        showHUD()
+    end)
+end
+
+--------------------------------------------------------------
+-- SHOPS
+--------------------------------------------------------------
+
+local function showLassoShop()
+    clear()
+
+    local panel = frame(
+        UDim2.fromOffset(650,500),
+        UDim2.new(0.5,-325,0.5,-250)
+    )
+
+    text(
+        panel,
+        "LASSO SHOP",
+        UDim2.fromOffset(20,15),
+        UDim2.fromOffset(610,50)
+    )
+
+    local Config = require(Root.Shared.Config)
+
+    local i = 0
+
+    for name, info in pairs(Config.Lassos) do
+        i += 1
+
+        local b = button(
+            panel,
+            name ..
+            "\nStrength " .. info.Strength ..
+            " | " .. info.Coins .. " Coins" ..
+            (info.Gems > 0 and (" | " .. info.Gems .. " Gems") or ""),
+            UDim2.fromOffset(30,65 + (i-1)*65),
+            UDim2.fromOffset(590,55)
+        )
+
+        b.MouseButton1Click:Connect(function()
+            ShopRemote:FireServer("BuyLasso",name)
+        end)
+    end
+
+    local close = button(
+        panel,
+        "CLOSE",
+        UDim2.fromOffset(240,445)
+    )
+
+    close.MouseButton1Click:Connect(function()
+        showHUD()
+    end)
+end
+
+--------------------------------------------------------------
+-- ARENA
+--------------------------------------------------------------
+
+local function showArena()
+    clear()
+
+    local panel = frame(
+        UDim2.fromOffset(700,540),
+        UDim2.new(0.5,-350,0.5,-270)
+    )
+
+    text(
+        panel,
+        "VILLAGE ARENA",
+        UDim2.fromOffset(20,15),
+        UDim2.fromOffset(660,45)
+    )
+
+    state = GetState:InvokeServer()
+
+    text(
+        panel,
+        "Rating: " .. tostring(state.ArenaRating) ..
+        "    Wins: " .. tostring(state.ArenaWins) ..
+        "    Losses: " .. tostring(state.ArenaLosses),
+        UDim2.fromOffset(20,65),
+        UDim2.fromOffset(660,35)
+    )
+
+    text(
+        panel,
+        "Select your defensive pet:",
+        UDim2.fromOffset(20,110),
+        UDim2.fromOffset(660,35)
+    )
+
+    for i, pet in ipairs(state.Pets or {}) do
+        local b = button(
+            panel,
+            "DEFEND: " .. pet.Name .. " Lv." .. pet.Level,
+            UDim2.fromOffset(25,145 + (i-1)*55),
+            UDim2.fromOffset(300,45)
+        )
+
+        b.MouseButton1Click:Connect(function()
+            ArenaRemote:FireServer("SetDefence",pet.Id)
+            notify("Defensive pet selected.")
+        end)
+    end
+
+    local opponents = button(
+        panel,
+        "FIND VILLAGES TO CHALLENGE",
+        UDim2.fromOffset(350,145),
+        UDim2.fromOffset(320,55)
+    )
+
+    opponents.MouseButton1Click:Connect(function()
+        ArenaRemote:FireServer("GetOpponents")
+    end)
+
+    local close = button(
+        panel,
+        "CLOSE",
+        UDim2.fromOffset(265,475)
+    )
+
+    close.MouseButton1Click:Connect(function()
+        showHUD()
+    end)
+end
+
+--------------------------------------------------------------
+-- HUD
+--------------------------------------------------------------
+
+function showHUD()
+    clear()
+
+    state = GetState:InvokeServer()
+
+    local top = frame(
+        UDim2.fromOffset(520,65),
+        UDim2.new(0.5,-260,0,15)
+    )
+
+    text(
+        top,
+        "Coins: " .. tostring(state.Coins),
+        UDim2.fromOffset(10,10),
+        UDim2.fromOffset(150,45)
+    )
+
+    text(
+        top,
+        "Gems: " .. tostring(state.Gems),
+        UDim2.fromOffset(175,10),
+        UDim2.fromOffset(140,45)
+    )
+
+    text(
+        top,
+        "Lasso: " .. tostring(state.Lasso),
+        UDim2.fromOffset(320,10),
+        UDim2.fromOffset(190,45)
+    )
+
+    local menu = frame(
+        UDim2.fromOffset(210,255),
+        UDim2.new(0,15,0.5,-125)
+    )
+
+    local pets = button(
+        menu,
+        "MY PETS",
+        UDim2.fromOffset(20,15)
+    )
+
+    pets.MouseButton1Click:Connect(showPets)
+
+    local lassos = button(
+        menu,
+        "LASSO SHOP",
+        UDim2.fromOffset(20,70)
+    )
+
+    lassos.MouseButton1Click:Connect(showLassoShop)
+
+    local arena = button(
+        menu,
+        "ARENA",
+        UDim2.fromOffset(20,125)
+    )
+
+    arena.MouseButton1Click:Connect(showArena)
+
+    local refresh = button(
+        menu,
+        "REFRESH",
+        UDim2.fromOffset(20,180)
+    )
+
+    refresh.MouseButton1Click:Connect(showHUD)
+end
+
+--------------------------------------------------------------
+-- CAPTURE FEEDBACK
+--------------------------------------------------------------
+
+CaptureRemote.OnClientEvent:Connect(function(action, value)
+    if action == "Captured" then
+        notify(
+            "CAPTURED! " ..
+            tostring(value.Name) ..
+            " joined your pets."
+        )
+
+    elseif action == "Failed" then
+        notify(
+            "The monster broke free and attacked you!"
+        )
+
+    elseif action == "Error" then
+        notify(tostring(value))
+    end
+end)
+
+--------------------------------------------------------------
+-- ARENA FEEDBACK
+--------------------------------------------------------------
+
+ArenaRemote.OnClientEvent:Connect(function(action, value)
+    if action == "DefenceSet" then
+        if value then
+            notify("Village defence updated.")
+        else
+            notify("Could not set defensive pet.")
+        end
+
+    elseif action == "Opponents" then
+        local opponents = value or {}
+
+        local panel = frame(
+            UDim2.fromOffset(650,500),
+            UDim2.new(0.5,-325,0.5,-250)
+        )
+
+        text(
+            panel,
+            "CHOOSE A VILLAGE",
+            UDim2.fromOffset(20,15),
+            UDim2.fromOffset(610,45)
+        )
+
+        local row = 0
+
+        for _, opponent in ipairs(opponents) do
+            if opponent.UserId ~= player.UserId then
+                local b = button(
+                    panel,
+                    opponent.Name ..
+                    " | Rating " ..
+                    tostring(opponent.Rating),
+                    UDim2.fromOffset(25,70 + row*55),
+                    UDim2.fromOffset(600,45)
+                )
+
+                b.MouseButton1Click:Connect(function()
+                    ArenaRemote:FireServer(
+                        "Attack",
+                        opponent.UserId
+                    )
+
+                    notify("Battle started!")
+                end)
+
+                row += 1
+            end
+        end
+    end
+end)
+
+--------------------------------------------------------------
+-- START
+--------------------------------------------------------------
+
+GameRemote.OnClientEvent:Connect(function(action)
+    if action == "GameStarted" then
+        showHUD()
+    end
+end)
+
+task.wait(2)
+
+local initialState = GetState:InvokeServer()
+
+if initialState and initialState.SelectedPlot and initialState.SelectedPlot > 0 then
+    showHUD()
+else
+    -- VillageIntroController handles village selection with spectating camera.
+    -- Wait for the server to set VillageReady, then build the HUD.
+    local conn
+    conn = player:GetAttributeChangedSignal("VillageReady"):Connect(function()
+        if player:GetAttribute("VillageReady") then
+            if conn then
+                conn:Disconnect()
+                conn = nil
+            end
+            task.wait(0.5)
+            showHUD()
+        end
+    end)
+end

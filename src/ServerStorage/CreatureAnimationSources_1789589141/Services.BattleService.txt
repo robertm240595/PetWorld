@@ -1,0 +1,58 @@
+local Service = {}
+
+local function damage(attacker, defender)
+    local amount = math.max(1, attacker.Power - defender.Defence * 0.45)
+
+    if math.random() < 0.08 then
+        amount *= 2
+    end
+
+    return math.floor(amount)
+end
+
+function Service:Fight(petA, petB)
+    if not petA or not petB then
+        return nil
+    end
+
+    local hpA = petA.Health
+    local hpB = petB.Health
+
+    local turn = 1
+
+    while hpA > 0 and hpB > 0 and turn <= 100 do
+        hpB -= damage(petA, petB)
+
+        if hpB <= 0 then
+            return {
+                Winner = "A",
+                Turns = turn
+            }
+        end
+
+        hpA -= damage(petB, petA)
+
+        if hpA <= 0 then
+            return {
+                Winner = "B",
+                Turns = turn
+            }
+        end
+
+        turn += 1
+    end
+
+    if hpA > hpB then
+        return {
+            Winner = "A",
+            Turns = turn
+        }
+    end
+
+    return {
+        Winner = "B",
+        Turns = turn
+    }
+end
+
+return Service

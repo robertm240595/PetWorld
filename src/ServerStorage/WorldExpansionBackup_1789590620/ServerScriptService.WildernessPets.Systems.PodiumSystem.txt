@@ -1,0 +1,32 @@
+local Players = game:GetService("Players")
+
+local DataService = require(script.Parent.Parent.Services.PlayerDataService)
+local PetService = require(script.Parent.Parent.Services.PetService)
+
+local function update(player)
+    local data = DataService:Get(player)
+    if not data then return end
+
+    local plot = workspace.WildernessPets.Plots:FindFirstChild(
+        "Plot_" .. tostring(data.SelectedPlot)
+    )
+
+    if not plot then return end
+
+    local podium = plot:FindFirstChild("BestPetPodium")
+    if not podium then return end
+
+    local best = PetService:GetBestPet(player)
+
+    if best then
+        podium:SetAttribute("PetName", best.Name)
+        podium:SetAttribute("PetSpecies", best.Species)
+        podium:SetAttribute("PetRarity", best.Rarity)
+        podium:SetAttribute("PetLevel", best.Level)
+    end
+end
+
+Players.PlayerAdded:Connect(function(player)
+    task.wait(3)
+    update(player)
+end)

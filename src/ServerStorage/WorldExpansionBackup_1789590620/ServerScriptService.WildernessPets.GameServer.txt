@@ -1,0 +1,203 @@
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Root = ReplicatedStorage:WaitForChild("WildernessPets")
+local Remotes = Root:WaitForChild("Remotes")
+
+local PetsRemote = Remotes:WaitForChild("Pets")
+local ShopRemote = Remotes:WaitForChild("Shop")
+local ArenaRemote = Remotes:WaitForChild("Arena")
+local GetState = Remotes:WaitForChild("GetState")
+
+local DataService = require(script.Parent.Services.PlayerDataService)
+local PetService = require(script.Parent.Services.PetService)
+local PlotService = require(script.Parent.Services.PlotService)
+local ShopService = require(script.Parent.Services.ShopService)
+local ArenaService = require(script.Parent.Services.ArenaService)
+local CaptureService = require(script.Parent.Services.CaptureService)
+
+local plots = workspace.WildernessPets.Plots
+
+for _, plot in ipairs(plots:GetChildren()) do
+    if plot:IsA("Folder") then
+        PlotService:Register(plot)
+    end
+end
+
+local function teleportToPlot(player, character)
+    task.wait(0.2)
+
+    local plot = PlotService:GetPlayerPlot(player)
+
+    if not plot then
+        return
+    end
+
+    local spawn = plot:FindFirstChild("Spawn")
+
+    if spawn and character.PrimaryPart then
+        character:PivotTo(spawn.CFrame + Vector3.new(0, 4, 0))
+    end
+end
+
+local function setupPlayer(player)
+    DataService:Load(player)
+
+    player.CharacterAdded:Connect(function(character)
+        teleportToPlot(player, character)
+    end)
+
+    if player.Character then
+        task.spawn(function()
+            teleportToPlot(player, player.Character)
+        end)
+    end
+end
+
+for _, player in ipairs(Players:GetPlayers()) do
+    task.spawn(setupPlayer, player)
+end
+
+Players.PlayerAdded:Connect(setupPlayer)
+
+Players.PlayerRemoving:Connect(function(player)
+    PlotService:Release(player)
+    DataService:Cleanup(player)
+end)
+
+----------------------------------------------------------------
+-- STATE
+----------------------------------------------------------------
+
+GetState.OnServerInvoke = function(player)
+    local data = DataService:Get(player)
+
+    if not data then
+        return nil
+    end
+
+    return {
+        Coins = data.Coins,
+        Gems = data.Gems,
+        Lasso = data.Lasso,
+        Pets = data.Pets,
+        SelectedPlot = data.SelectedPlot,
+        DefencePetId = data.DefencePetId,
+        ArenaRating = data.ArenaRating,
+        ArenaWins = data.ArenaWins,
+        ArenaLosses = data.ArenaLosses
+    }
+end
+
+-- CaptureService owns the Capture remote, including validation, cooldowns, and outcomes.
+
+----------------------------------------------------------------
+-- PETS
+----------------------------------------------------------------
+
+PetsRemote.OnServerEvent:Connect(function(player, action, ...)
+    local args = {...}
+
+    if action == "Rename" then
+        local petId = args[1]
+        local name = args[2]
+
+        local success = PetService:Rename(player, petId, name)
+
+        PetsRemote:FireClient(player, "Updated", success)
+
+    elseif action == "Upgrade" then
+        local petId = args[1]
+        local stat = args[2]
+
+        local success = PetService:Upgrade(player, petId, stat)
+
+        PetsRemote:FireClient(player, "Updated", success)
+
+    elseif action == "Display" then
+        local petId = args[1]
+
+        local pet = PetService:Find(player, petId)
+
+        if pet then
+            pet.Displayed = true
+
+            for _, other in ipairs(PetService:GetPets(player)) do
+                if other.Id ~= petId then
+                    other.Displayed = false
+                end
+            end
+
+            local refreshEvent = script.Parent.Systems:FindFirstChild("PetDisplayRefresh")
+            if refreshEvent and refreshEvent:IsA("BindableEvent") then
+                refreshEvent:Fire(player)
+            end
+
+            PetsRemote:FireClient(player, "Updated", true)
+        end
+    end
+end)
+
+----------------------------------------------------------------
+-- SHOPS
+----------------------------------------------------------------
+
+ShopRemote.OnServerEvent:Connect(function(player, action, value)
+    if action == "BuyLasso" then
+        local success = ShopService:BuyLasso(player, value)
+        ShopRemote:FireClient(player, "Purchase", success)
+
+    elseif action == "SellPet" then
+        local amount = ShopService:SellPet(player, value)
+
+        ShopRemote:FireClient(
+            player,
+            "Sold",
+            amount or 0
+        )
+    end
+end)
+
+----------------------------------------------------------------
+-- ARENA
+----------------------------------------------------------------
+
+ArenaRemote.OnServerEvent:Connect(function(player, action, value)
+    if action == "SetDefence" then
+        local success = ArenaService:SetDefence(player, value)
+
+        ArenaRemote:FireClient(
+            player,
+            "DefenceSet",
+            success
+        )
+
+    elseif action == "GetOpponents" then
+        ArenaRemote:FireClient(
+            player,
+            "Opponents",
+            ArenaService:GetPlayers()
+        )
+
+    elseif action == "Attack" then
+        local targetUserId = tonumber(value)
+
+        if not targetUserId then
+            return
+        end
+
+        local target = Players:GetPlayerByUserId(targetUserId)
+
+        if not target then
+            return
+        end
+
+        local result = ArenaService:Attack(player, target)
+
+        ArenaRemote:FireClient(
+            player,
+            "BattleResult",
+            result
+        )
+    end
+end)

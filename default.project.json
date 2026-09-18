@@ -1,0 +1,46 @@
+{
+  "name": "PetWorld",
+  "tree": {
+    "$className": "DataModel",
+    "ReplicatedFirst": {
+      "$className": "ReplicatedFirst",
+      "$ignoreUnknownInstances": true,
+      "$path": "src/ReplicatedFirst"
+    },
+    "ReplicatedStorage": {
+      "$className": "ReplicatedStorage",
+      "$ignoreUnknownInstances": true,
+      "$path": "src/ReplicatedStorage"
+    },
+    "ServerScriptService": {
+      "$className": "ServerScriptService",
+      "$ignoreUnknownInstances": true,
+      "$path": "src/ServerScriptService"
+    },
+    "ServerStorage": {
+      "$className": "ServerStorage",
+      "$ignoreUnknownInstances": true,
+      "$path": "src/ServerStorage"
+    },
+    "StarterGui": {
+      "$className": "StarterGui",
+      "$ignoreUnknownInstances": true,
+      "$path": "src/StarterGui"
+    },
+    "StarterPack": {
+      "$className": "StarterPack",
+      "$ignoreUnknownInstances": true,
+      "$path": "src/StarterPack"
+    },
+    "StarterPlayer": {
+      "$className": "StarterPlayer",
+      "$properties": {
+        "AvatarJointUpgrade": "Enabled",
+        "CharacterBreakJointsOnDeath": false,
+        "CharacterUseJumpPower": false
+      },
+      "$ignoreUnknownInstances": true,
+      "$path": "src/StarterPlayer"
+    }
+  }
+}
