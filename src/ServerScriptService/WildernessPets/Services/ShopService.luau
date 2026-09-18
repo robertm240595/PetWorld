@@ -47,6 +47,22 @@ function Service:BuyLasso(player, name)
     return true, "Lasso purchased and equipped."
 end
 
+function Service:EquipLasso(player, name)
+    local data = DataService:Get(player)
+    if not data or type(data.Inventory) ~= "table" then
+        return false, "Inventory unavailable."
+    end
+
+    for _, owned in ipairs(data.Inventory) do
+        if type(owned) == "table" and owned.Type == "Lasso" and owned.Name == name then
+            data.Lasso = name
+            return true, tostring(name) .. " equipped."
+        end
+    end
+
+    return false, "You do not own that lasso."
+end
+
 function Service:GetPetSellValue(pet)
     if not pet then return nil end
 
