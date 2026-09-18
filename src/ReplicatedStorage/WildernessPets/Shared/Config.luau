@@ -20,13 +20,13 @@ Config.CaptureMinigame = {
     MaxGreenWidth = 0.40,
     Rarities = {
         Common = {GreenWidth = 0.32, Speed = 0.70, Hits = 3},
-        Uncommon = {GreenWidth = 0.28, Speed = 0.76, Hits = 3},
-        Rare = {GreenWidth = 0.24, Speed = 0.83, Hits = 4},
-        Epic = {GreenWidth = 0.20, Speed = 0.91, Hits = 4},
-        Legendary = {GreenWidth = 0.16, Speed = 1.00, Hits = 5},
-        Mythic = {GreenWidth = 0.13, Speed = 1.08, Hits = 5},
-        Limited = {GreenWidth = 0.11, Speed = 1.14, Hits = 6},
-        Ancient = {GreenWidth = 0.09, Speed = 1.22, Hits = 7}
+        Uncommon = {GreenWidth = 0.28, Speed = 0.76, Hits = 4},
+        Rare = {GreenWidth = 0.24, Speed = 0.83, Hits = 5},
+        Epic = {GreenWidth = 0.20, Speed = 0.91, Hits = 6},
+        Legendary = {GreenWidth = 0.16, Speed = 1.00, Hits = 7},
+        Mythic = {GreenWidth = 0.13, Speed = 1.08, Hits = 8},
+        Limited = {GreenWidth = 0.11, Speed = 1.14, Hits = 9},
+        Ancient = {GreenWidth = 0.09, Speed = 1.22, Hits = 10}
     }
 }
 
