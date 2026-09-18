@@ -29,15 +29,18 @@ local function ensurePetDefaults(pet)
     pet.Wins = math.max(0, math.floor(tonumber(pet.Wins) or 0))
     pet.Displayed = pet.Displayed == true
 
+    pet.HealthBoostUntil = tonumber(pet.HealthBoostUntil) or 0
+    pet.HealthBoostPercent = math.max(0, tonumber(pet.HealthBoostPercent) or 0)
+    pet.PowerBoostUntil = tonumber(pet.PowerBoostUntil) or 0
+    pet.PowerBoostPercent = math.max(0, tonumber(pet.PowerBoostPercent) or 0)
+    pet.DefenceBoostUntil = tonumber(pet.DefenceBoostUntil) or 0
+    pet.DefenceBoostPercent = math.max(0, tonumber(pet.DefenceBoostPercent) or 0)
+
     if pet.Dead then
         pet.CurrentHealth = 0
         pet.Displayed = false
     else
-        pet.CurrentHealth = math.clamp(
-            tonumber(pet.CurrentHealth) or pet.Health,
-            0,
-            pet.Health
-        )
+        pet.CurrentHealth = math.max(0, tonumber(pet.CurrentHealth) or pet.Health)
         if pet.CurrentHealth <= 0 then
             pet.CurrentHealth = pet.Health
         end
@@ -46,13 +49,71 @@ local function ensurePetDefaults(pet)
     return pet
 end
 
+local function timedMultiplier(untilTime, percent, atTime)
+    if (tonumber(untilTime) or 0) > atTime then
+        return 1 + math.max(0, tonumber(percent) or 0)
+    end
+    return 1
+end
+
+function Service:GetEffectiveStats(pet, atTime)
+    if type(pet) ~= "table" then
+        return {Health = 1, Power = 1, Defence = 0}
+    end
+
+    ensurePetDefaults(pet)
+    atTime = tonumber(atTime) or nowUnix()
+
+    local effectiveHealth = math.max(
+        1,
+        math.floor(
+            pet.Health
+            * timedMultiplier(pet.HealthBoostUntil, pet.HealthBoostPercent, atTime)
+            + 0.5
+        )
+    )
+    local effectivePower = math.max(
+        1,
+        math.floor(
+            pet.Power
+            * timedMultiplier(pet.PowerBoostUntil, pet.PowerBoostPercent, atTime)
+            + 0.5
+        )
+    )
+    local effectiveDefence = math.max(
+        0,
+        math.floor(
+            pet.Defence
+            * timedMultiplier(pet.DefenceBoostUntil, pet.DefenceBoostPercent, atTime)
+            + 0.5
+        )
+    )
+
+    if not pet.Dead then
+        pet.CurrentHealth = math.clamp(
+            tonumber(pet.CurrentHealth) or effectiveHealth,
+            0,
+            effectiveHealth
+        )
+    end
+
+    return {
+        Health = effectiveHealth,
+        Power = effectivePower,
+        Defence = effectiveDefence
+    }
+end
+
 function Service:GetPets(player)
     local data = DataService:Get(player)
     if not data then return {} end
+
     data.Pets = type(data.Pets) == "table" and data.Pets or {}
     for _, pet in ipairs(data.Pets) do
         ensurePetDefaults(pet)
+        self:GetEffectiveStats(pet)
     end
+
     return data.Pets
 end
 
@@ -77,6 +138,7 @@ function Service:Create(player, species, options)
     local data = DataService:Get(player)
     local template = Config.Pets[species]
     if not data or not template then return nil end
+
     data.Pets = type(data.Pets) == "table" and data.Pets or {}
     if #data.Pets >= (Config.MaxPets or 60) then return nil end
 
@@ -111,7 +173,13 @@ function Service:Create(player, species, options)
         Favourite = false,
         Dead = false,
         HealReadyAt = 0,
-        RenameCount = 0
+        RenameCount = 0,
+        HealthBoostUntil = 0,
+        HealthBoostPercent = 0,
+        PowerBoostUntil = 0,
+        PowerBoostPercent = 0,
+        DefenceBoostUntil = 0,
+        DefenceBoostPercent = 0
     }
 
     table.insert(data.Pets, pet)
@@ -127,34 +195,46 @@ function Service:Find(player, petId)
 end
 
 function Service:RefreshHealing(player)
-    local changed = false
-    local currentTime = nowUnix()
-
+    -- Healing no longer auto-collects pets. A completed timer means the pet is
+    -- ready at the Barn, but it stays unavailable until the owner returns.
     for _, pet in ipairs(self:GetPets(player)) do
-        if pet.Dead and pet.HealReadyAt > 0 and pet.HealReadyAt <= currentTime then
-            pet.Dead = false
-            pet.HealReadyAt = 0
-            pet.CurrentHealth = pet.Health
-            changed = true
-        end
+        ensurePetDefaults(pet)
     end
+    return false
+end
 
-    return changed
+function Service:IsHealingReady(pet)
+    if not pet then return false end
+    ensurePetDefaults(pet)
+    return pet.Dead
+        and pet.HealReadyAt > 0
+        and pet.HealReadyAt <= nowUnix()
 end
 
 function Service:GetHealingSeconds(pet)
     if not pet then return 0 end
     local rarity = Config.Rarities[pet.Rarity]
     local rank = rarity and tonumber(rarity.Rank) or 1
-    return math.max(1, math.floor((Config.HealingBaseSeconds or 30) * math.max(1, pet.Level or 1) * math.max(1, rank)))
+
+    return math.max(
+        1,
+        math.floor(
+            (Config.HealingBaseSeconds or 30)
+            * math.max(1, pet.Level or 1)
+            * math.max(1, rank)
+        )
+    )
 end
 
 function Service:StartHealing(player, petId)
-    self:RefreshHealing(player)
     local pet = self:Find(player, petId)
     if not pet then return false, "Pet not found." end
     if not pet.Dead then return false, "That pet is not dead." end
-    if pet.HealReadyAt > nowUnix() then
+
+    if pet.HealReadyAt > 0 then
+        if pet.HealReadyAt <= nowUnix() then
+            return false, "That pet is healed. Collect it from the Barn."
+        end
         return false, "That pet is already healing."
     end
 
@@ -163,17 +243,39 @@ function Service:StartHealing(player, petId)
     return true, "Healing started.", seconds
 end
 
-function Service:ReviveNow(player, petId)
+function Service:CollectHealed(player, petId)
     local pet = self:Find(player, petId)
     if not pet then return false, "Pet not found." end
-    if not pet.Dead then return false, "That pet does not need reviving." end
-    if pet.HealReadyAt <= nowUnix() then
-        return false, "Place the pet in your Barn first."
+    if not pet.Dead then return false, "That pet has already been collected." end
+    if pet.HealReadyAt <= 0 then return false, "Place the pet in your Barn first." end
+    if pet.HealReadyAt > nowUnix() then
+        return false, "That pet is still healing."
     end
 
     pet.Dead = false
     pet.HealReadyAt = 0
-    pet.CurrentHealth = pet.Health
+    local stats = self:GetEffectiveStats(pet)
+    pet.CurrentHealth = stats.Health
+
+    return true, tostring(pet.Name or pet.Species) .. " has been collected from the Barn."
+end
+
+function Service:ReviveNow(player, petId)
+    local pet = self:Find(player, petId)
+    if not pet then return false, "Pet not found." end
+    if not pet.Dead then return false, "That pet does not need reviving." end
+    if pet.HealReadyAt <= 0 then
+        return false, "Place the pet in your Barn first."
+    end
+    if pet.HealReadyAt <= nowUnix() then
+        return false, "That pet is already healed. Collect it from the Barn instead."
+    end
+
+    pet.Dead = false
+    pet.HealReadyAt = 0
+    local stats = self:GetEffectiveStats(pet)
+    pet.CurrentHealth = stats.Health
+
     return true, "Pet revived."
 end
 
@@ -197,6 +299,7 @@ end
 function Service:SetFavourite(player, petId, favourite)
     local pet = self:Find(player, petId)
     if not pet then return false, "Pet not found." end
+
     pet.Favourite = favourite == true
     return true, pet.Favourite and "Pet favourited." or "Pet removed from favourites."
 end
@@ -210,7 +313,11 @@ function Service:AddXP(player, petId, amount)
 
     local effects = type(data.ActiveEffects) == "table" and data.ActiveEffects or {}
     if (tonumber(effects.XPBoostUntil) or 0) > nowUnix() then
-        amount = math.floor(amount * (1 + math.max(0, tonumber(effects.XPBoostPercent) or 0)) + 0.5)
+        amount = math.floor(
+            amount
+            * (1 + math.max(0, tonumber(effects.XPBoostPercent) or 0))
+            + 0.5
+        )
     end
 
     pet.XP += amount
@@ -227,29 +334,31 @@ function Service:AddXP(player, petId, amount)
 end
 
 function Service:SetDisplayed(player, petId, displayed)
-    self:RefreshHealing(player)
     local pet = self:Find(player, petId)
     if not pet then return false, "Pet not found." end
-    if pet.Dead then return false, "Dead pets must be healed at your Barn first." end
+    if pet.Dead then return false, "Dead pets must be collected from your Barn first." end
 
     if displayed then
         local count = 0
         for _, other in ipairs(self:GetPets(player)) do
             if other.Displayed and not other.Dead then count += 1 end
         end
+
         if not pet.Displayed and count >= 10 then
             return false, "Your plot can host 10 roaming pets."
         end
     end
 
     local data = DataService:Get(player)
-    if displayed and data.PodiumPetId == petId then data.PodiumPetId = "" end
+    if displayed and data.PodiumPetId == petId then
+        data.PodiumPetId = ""
+    end
+
     pet.Displayed = displayed == true
     return true
 end
 
 function Service:GetDisplayed(player)
-    self:RefreshHealing(player)
     local result = {}
     local data = DataService:Get(player)
     if not data then return result end
@@ -267,7 +376,6 @@ function Service:GetDisplayed(player)
 end
 
 function Service:SetPodium(player, petId)
-    self:RefreshHealing(player)
     local data = DataService:Get(player)
     local pet = self:Find(player, petId)
     if not data or not pet then return false, "Pet not found." end
@@ -299,9 +407,11 @@ function Service:Rename(player, petId, name)
             local filterResult = TextService:FilterStringAsync(name, player.UserId)
             return filterResult:GetNonChatStringForBroadcastAsync()
         end)
+
         if not ok or type(result) ~= "string" or result == "" then
             return false, "That name could not be used. Try another."
         end
+
         filteredName = string.sub(result, 1, Config.MaxPetNameLength)
     end
 
@@ -318,6 +428,7 @@ function Service:Rename(player, petId, name)
     if cost > 0 then
         return true, "Pet renamed for " .. tostring(cost) .. " Gems.", cost
     end
+
     return true, "Pet renamed. Your first rename was free.", 0
 end
 
@@ -327,7 +438,11 @@ function Service:Upgrade(player, petId, stat)
 
     if stat == "Health" then
         pet.Health += 25
-        pet.CurrentHealth = math.min(pet.Health, (pet.CurrentHealth or pet.Health) + 25)
+        local stats = self:GetEffectiveStats(pet)
+        pet.CurrentHealth = math.min(
+            stats.Health,
+            (tonumber(pet.CurrentHealth) or pet.Health) + 25
+        )
     elseif stat == "Power" then
         pet.Power += 5
     elseif stat == "Defence" then
@@ -341,16 +456,17 @@ function Service:Upgrade(player, petId, stat)
 end
 
 function Service:GetBestPet(player)
-    self:RefreshHealing(player)
     local best
 
     for _, pet in ipairs(self:GetPets(player)) do
         if not pet.Dead then
+            local stats = self:GetEffectiveStats(pet)
             if not best then
                 best = pet
             else
-                local a = pet.Power + pet.Health + pet.Defence
-                local b = best.Power + best.Health + best.Defence
+                local bestStats = self:GetEffectiveStats(best)
+                local a = stats.Power + stats.Health + stats.Defence
+                local b = bestStats.Power + bestStats.Health + bestStats.Defence
                 if a > b then best = pet end
             end
         end
