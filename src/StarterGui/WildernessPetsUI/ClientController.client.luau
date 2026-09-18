@@ -563,55 +563,340 @@ showPets = function(tab)
 end
 
 --------------------------------------------------------------
--- SHOPS
+-- NPC SHOPS
 --------------------------------------------------------------
 
-local function showLassoShop()
+showLassoKeeper = function(tab)
+    if tab=="Buy" or tab=="Sell" or tab=="Buyback" then
+        lassoKeeperTab=tab
+    end
+
     clear()
+    gui:SetAttribute("InventoryOpen",true)
+    state=GetState:InvokeServer()
+    if not state then return end
 
-    local panel = frame(
-        UDim2.fromOffset(650,500),
-        UDim2.new(0.5,-325,0.5,-250)
-    )
+    local panel=frame(UDim2.fromOffset(760,590),UDim2.new(.5,-380,.5,-295))
+    panel.Name="LassoKeeper"
+    panel.AnchorPoint=Vector2.new(.5,.5)
+    panel.Position=UDim2.new(.5,0,.5,0)
 
-    text(
-        panel,
-        "LASSO SHOP",
-        UDim2.fromOffset(20,15),
-        UDim2.fromOffset(610,50)
-    )
+    local viewport=workspace.CurrentCamera and workspace.CurrentCamera.ViewportSize or Vector2.new(1280,720)
+    local fit=Instance.new("UIScale")
+    fit.Scale=math.min(1,(viewport.X-30)/760,(viewport.Y-40)/590)
+    fit.Parent=panel
 
-    local Config = require(Root.Shared.Config)
+    local title=text(panel,"LASSO KEEPER",UDim2.fromOffset(20,12),UDim2.fromOffset(520,30))
+    title.TextScaled=false
+    title.TextSize=22
+    title.TextXAlignment=Enum.TextXAlignment.Left
 
-    local i = 0
+    local close=button(panel,"×",UDim2.fromOffset(704,10),UDim2.fromOffset(38,34))
+    close.TextScaled=false
+    close.TextSize=24
+    close.MouseButton1Click:Connect(showHUD)
 
-    for name, info in pairs(Config.Lassos) do
-        i += 1
-
-        local b = button(
+    for i,tabName in ipairs({"Buy","Sell","Buyback"}) do
+        local tabButton=button(
             panel,
-            name ..
-            "\nStrength " .. info.Strength ..
-            " | " .. info.Coins .. " Coins" ..
-            (info.Gems > 0 and (" | " .. info.Gems .. " Gems") or ""),
-            UDim2.fromOffset(30,65 + (i-1)*65),
-            UDim2.fromOffset(590,55)
+            string.upper(tabName),
+            UDim2.fromOffset(20+(i-1)*150,52),
+            UDim2.fromOffset(140,42)
         )
-
-        b.MouseButton1Click:Connect(function()
-            ShopRemote:FireServer("BuyLasso",name)
+        tabButton.TextScaled=false
+        tabButton.TextSize=12
+        tabButton.BackgroundColor3=lassoKeeperTab==tabName and Color3.fromRGB(75,92,117) or Color3.fromRGB(45,51,61)
+        tabButton.MouseButton1Click:Connect(function()
+            showLassoKeeper(tabName)
         end)
     end
 
-    local close = button(
+    local hint=text(
         panel,
-        "CLOSE",
-        UDim2.fromOffset(240,445)
+        lassoKeeperTab=="Buy" and "Stronger lassos make capture timing slower and easier."
+            or lassoKeeperTab=="Sell" and "Lassos sell back for their full original purchase value."
+            or "Recently sold lassos can be recovered here.",
+        UDim2.fromOffset(20,102),
+        UDim2.fromOffset(710,30)
     )
+    hint.TextScaled=false
+    hint.TextSize=12
+    hint.TextXAlignment=Enum.TextXAlignment.Left
 
-    close.MouseButton1Click:Connect(function()
-        showHUD()
+    local list=Instance.new("ScrollingFrame")
+    list.Position=UDim2.fromOffset(20,140)
+    list.Size=UDim2.fromOffset(720,425)
+    list.BackgroundTransparency=1
+    list.BorderSizePixel=0
+    list.ScrollBarThickness=5
+    list.AutomaticCanvasSize=Enum.AutomaticSize.Y
+    list.CanvasSize=UDim2.new()
+    list.Parent=panel
+    local layout=Instance.new("UIListLayout")
+    layout.Padding=UDim.new(0,8)
+    layout.Parent=list
+
+    local owned={}
+    local ownedLassos={}
+    for _,item in ipairs(state.Inventory or {}) do
+        if type(item)=="table" and item.Type=="Lasso" then
+            owned[item.Name]=true
+            table.insert(ownedLassos,item.Name)
+        end
+    end
+
+    if lassoKeeperTab=="Buy" then
+        local names={}
+        for name in pairs(Config.Lassos or {}) do table.insert(names,name) end
+        table.sort(names,function(a,b)
+            return (Config.Lassos[a].Strength or 0)<(Config.Lassos[b].Strength or 0)
+        end)
+
+        for _,name in ipairs(names) do
+            local info=Config.Lassos[name]
+            local row=Instance.new("Frame")
+            row.Size=UDim2.fromOffset(700,64)
+            row.BackgroundColor3=Color3.fromRGB(38,43,52)
+            row.BorderSizePixel=0
+            row.Parent=list
+            local corner=Instance.new("UICorner")
+            corner.CornerRadius=UDim.new(0,8)
+            corner.Parent=row
+
+            local label=text(
+                row,
+                name.."  ·  Strength "..tostring(info.Strength),
+                UDim2.fromOffset(14,8),
+                UDim2.fromOffset(430,22)
+            )
+            label.TextScaled=false
+            label.TextSize=14
+            label.TextXAlignment=Enum.TextXAlignment.Left
+
+            local price=text(
+                row,
+                tostring(info.Coins or 0).." Coins"..((info.Gems or 0)>0 and ("  ·  "..tostring(info.Gems).." Gems") or ""),
+                UDim2.fromOffset(14,34),
+                UDim2.fromOffset(430,18)
+            )
+            price.TextScaled=false
+            price.TextSize=11
+            price.TextColor3=Color3.fromRGB(190,195,205)
+            price.TextXAlignment=Enum.TextXAlignment.Left
+
+            local action
+            if owned[name] then
+                action=state.Lasso==name and "EQUIPPED" or "EQUIP"
+            else
+                action="BUY"
+            end
+
+            local buy=button(row,action,UDim2.fromOffset(540,14),UDim2.fromOffset(145,36))
+            buy.TextScaled=false
+            buy.TextSize=12
+            if action=="EQUIPPED" then
+                buy.Active=false
+                buy.BackgroundColor3=Color3.fromRGB(45,50,55)
+            else
+                buy.MouseButton1Click:Connect(function()
+                    if owned[name] then
+                        ShopRemote:FireServer("EquipLasso",name)
+                    else
+                        ShopRemote:FireServer("BuyLasso",name)
+                    end
+                end)
+            end
+        end
+
+    elseif lassoKeeperTab=="Sell" then
+        if #ownedLassos==0 then
+            local empty=text(list,"You do not own any lassos.",UDim2.new(),UDim2.fromOffset(680,55))
+            empty.TextScaled=false
+            empty.TextSize=15
+        end
+
+        table.sort(ownedLassos,function(a,b)
+            return ((Config.Lassos[a] or {}).Strength or 0)<((Config.Lassos[b] or {}).Strength or 0)
+        end)
+
+        for _,name in ipairs(ownedLassos) do
+            local info=Config.Lassos[name] or {}
+            local row=Instance.new("Frame")
+            row.Size=UDim2.fromOffset(700,64)
+            row.BackgroundColor3=Color3.fromRGB(38,43,52)
+            row.BorderSizePixel=0
+            row.Parent=list
+            local corner=Instance.new("UICorner")
+            corner.CornerRadius=UDim.new(0,8)
+            corner.Parent=row
+
+            local label=text(row,name,UDim2.fromOffset(14,8),UDim2.fromOffset(430,22))
+            label.TextScaled=false
+            label.TextSize=14
+            label.TextXAlignment=Enum.TextXAlignment.Left
+
+            local refund=text(
+                row,
+                "Refund: "..tostring(info.Coins or 0).." Coins"..((info.Gems or 0)>0 and ("  ·  "..tostring(info.Gems).." Gems") or ""),
+                UDim2.fromOffset(14,34),
+                UDim2.fromOffset(430,18)
+            )
+            refund.TextScaled=false
+            refund.TextSize=11
+            refund.TextColor3=Color3.fromRGB(190,195,205)
+            refund.TextXAlignment=Enum.TextXAlignment.Left
+
+            local sell=button(row,"SELL",UDim2.fromOffset(540,14),UDim2.fromOffset(145,36))
+            sell.TextScaled=false
+            sell.TextSize=12
+            sell.MouseButton1Click:Connect(function()
+                ShopRemote:FireServer("SellLasso",name)
+            end)
+        end
+
+    else
+        local buybacks=state.LassoBuyback or {}
+        if #buybacks==0 then
+            local empty=text(list,"No recently sold lassos are available for buyback.",UDim2.new(),UDim2.fromOffset(680,55))
+            empty.TextScaled=false
+            empty.TextSize=15
+        end
+
+        for index,entry in ipairs(buybacks) do
+            local row=Instance.new("Frame")
+            row.Size=UDim2.fromOffset(700,64)
+            row.BackgroundColor3=Color3.fromRGB(38,43,52)
+            row.BorderSizePixel=0
+            row.Parent=list
+            local corner=Instance.new("UICorner")
+            corner.CornerRadius=UDim.new(0,8)
+            corner.Parent=row
+
+            local label=text(row,tostring(entry.Name),UDim2.fromOffset(14,8),UDim2.fromOffset(430,22))
+            label.TextScaled=false
+            label.TextSize=14
+            label.TextXAlignment=Enum.TextXAlignment.Left
+
+            local price=text(
+                row,
+                tostring(entry.Coins or 0).." Coins"..((entry.Gems or 0)>0 and ("  ·  "..tostring(entry.Gems).." Gems") or ""),
+                UDim2.fromOffset(14,34),
+                UDim2.fromOffset(430,18)
+            )
+            price.TextScaled=false
+            price.TextSize=11
+            price.TextColor3=Color3.fromRGB(190,195,205)
+            price.TextXAlignment=Enum.TextXAlignment.Left
+
+            local buyback=button(row,"BUY BACK",UDim2.fromOffset(540,14),UDim2.fromOffset(145,36))
+            buyback.TextScaled=false
+            buyback.TextSize=11
+            buyback.MouseButton1Click:Connect(function()
+                ShopRemote:FireServer("BuybackLasso",index)
+            end)
+        end
+    end
+end
+
+showPetMerchant = function()
+    clear()
+    gui:SetAttribute("InventoryOpen",true)
+    state=GetState:InvokeServer()
+    if not state then return end
+
+    local panel=frame(UDim2.fromOffset(760,590),UDim2.new(.5,-380,.5,-295))
+    panel.Name="PetMerchant"
+    panel.AnchorPoint=Vector2.new(.5,.5)
+    panel.Position=UDim2.new(.5,0,.5,0)
+
+    local viewport=workspace.CurrentCamera and workspace.CurrentCamera.ViewportSize or Vector2.new(1280,720)
+    local fit=Instance.new("UIScale")
+    fit.Scale=math.min(1,(viewport.X-30)/760,(viewport.Y-40)/590)
+    fit.Parent=panel
+
+    local title=text(panel,"PET MERCHANT",UDim2.fromOffset(20,12),UDim2.fromOffset(520,30))
+    title.TextScaled=false
+    title.TextSize=22
+    title.TextXAlignment=Enum.TextXAlignment.Left
+
+    local subtitle=text(
+        panel,
+        "Potions are stored in your backpack inventory. Select a pet in your Pets tab before using pet-targeted potions.",
+        UDim2.fromOffset(20,50),
+        UDim2.fromOffset(680,42)
+    )
+    subtitle.TextScaled=false
+    subtitle.TextSize=12
+    subtitle.TextWrapped=true
+    subtitle.TextXAlignment=Enum.TextXAlignment.Left
+
+    local close=button(panel,"×",UDim2.fromOffset(704,10),UDim2.fromOffset(38,34))
+    close.TextScaled=false
+    close.TextSize=24
+    close.MouseButton1Click:Connect(showHUD)
+
+    local list=Instance.new("ScrollingFrame")
+    list.Position=UDim2.fromOffset(20,104)
+    list.Size=UDim2.fromOffset(720,460)
+    list.BackgroundTransparency=1
+    list.BorderSizePixel=0
+    list.ScrollBarThickness=5
+    list.AutomaticCanvasSize=Enum.AutomaticSize.Y
+    list.CanvasSize=UDim2.new()
+    list.Parent=panel
+    local layout=Instance.new("UIListLayout")
+    layout.Padding=UDim.new(0,8)
+    layout.Parent=list
+
+    local names={}
+    for name in pairs(Config.Potions or {}) do table.insert(names,name) end
+    table.sort(names,function(a,b)
+        local pa=Config.Potions[a]
+        local pb=Config.Potions[b]
+        if (pa.Coins or 0)==(pb.Coins or 0) then return a<b end
+        return (pa.Coins or 0)<(pb.Coins or 0)
     end)
+
+    for _,name in ipairs(names) do
+        local info=Config.Potions[name]
+        local row=Instance.new("Frame")
+        row.Size=UDim2.fromOffset(700,76)
+        row.BackgroundColor3=Color3.fromRGB(38,43,52)
+        row.BorderSizePixel=0
+        row.Parent=list
+        local corner=Instance.new("UICorner")
+        corner.CornerRadius=UDim.new(0,8)
+        corner.Parent=row
+
+        local label=text(row,name,UDim2.fromOffset(14,7),UDim2.fromOffset(470,22))
+        label.TextScaled=false
+        label.TextSize=14
+        label.TextXAlignment=Enum.TextXAlignment.Left
+
+        local description=text(
+            row,
+            tostring(info.Description or ""),
+            UDim2.fromOffset(14,30),
+            UDim2.fromOffset(480,35)
+        )
+        description.TextScaled=false
+        description.TextSize=11
+        description.TextWrapped=true
+        description.TextColor3=Color3.fromRGB(190,195,205)
+        description.TextXAlignment=Enum.TextXAlignment.Left
+
+        local buy=button(
+            row,
+            "BUY\n"..tostring(info.Coins or 0).." COINS",
+            UDim2.fromOffset(525,14),
+            UDim2.fromOffset(160,46)
+        )
+        buy.TextScaled=false
+        buy.TextSize=11
+        buy.MouseButton1Click:Connect(function()
+            ShopRemote:FireServer("BuyPotion",name)
+        end)
+    end
 end
 
 --------------------------------------------------------------
