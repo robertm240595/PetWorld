@@ -9,6 +9,24 @@ Config.MaxPets = 60
 Config.MaxPetNameLength = 18
 Config.MaxInventory = 25
 Config.BeastTraderSellMultiplier = 1.35
+Config.BeastTraderBuybackMultiplier = 1.25
+Config.LassoBuybackMultiplier = 1.0
+Config.AttackCommandRange = 50
+Config.LassoRange = 42
+Config.HealingBaseSeconds = 30
+
+Config.Imprinting = {
+    Min = 20,
+    Max = 100,
+    CurveExponent = 2.25,
+    LuckRolls = 3
+}
+
+Config.Combat = {
+    WildAttackInterval = 1.05,
+    WildDamageDefenceScale = 0.45
+}
+
 -- First rename is free. Further renames spend gems; gem packs can later be sold for Robux.
 Config.PetRenameGemCost = 50
 
@@ -16,6 +34,8 @@ Config.CaptureMinigame = {
     RoundDurationSeconds = 4.5,
     ClickClockTolerance = 0.65,
     LassoWidthBonusPerStrength = 0.001,
+    LassoSpeedReductionPerStrength = 0.0035,
+    MinSpeedMultiplier = 0.55,
     MinGreenWidth = 0.07,
     MaxGreenWidth = 0.40,
     Rarities = {
@@ -129,6 +149,67 @@ Config.Lassos = {
         Strength = 125,
         Coins = 150000,
         Gems = 750
+    }
+}
+
+Config.Potions = {
+    ["XP Tonic"] = {
+        Coins = 1200,
+        Type = "XPBoost",
+        Percent = 0.25,
+        Duration = 600,
+        Description = "+25% pet XP from wild-pet kills for 10 minutes."
+    },
+    ["Vitality Elixir"] = {
+        Coins = 1800,
+        Type = "StatBoost",
+        Stat = "Health",
+        Amount = 25,
+        Description = "Permanently increases one pet's Health by 25."
+    },
+    ["Power Elixir"] = {
+        Coins = 1800,
+        Type = "StatBoost",
+        Stat = "Power",
+        Amount = 5,
+        Description = "Permanently increases one pet's Power by 5."
+    },
+    ["Defence Elixir"] = {
+        Coins = 1800,
+        Type = "StatBoost",
+        Stat = "Defence",
+        Amount = 5,
+        Description = "Permanently increases one pet's Defence by 5."
+    },
+    ["Battle Health Potion"] = {
+        Coins = 900,
+        Type = "BattleHeal",
+        Percent = 0.35,
+        Description = "Restores 35% of your equipped pet's maximum Health."
+    },
+    ["Instant Revive Potion"] = {
+        Coins = 3500,
+        Type = "InstantRevive",
+        Description = "Instantly revives a dead pet that has been placed in its Barn."
+    },
+    ["Tranquiliser Potion"] = {
+        Coins = 2200,
+        Type = "Tranquiliser",
+        SpeedMultiplier = 0.50,
+        Description = "Halves the lasso minigame speed on your next capture attempt."
+    },
+    ["Swiftness Potion"] = {
+        Coins = 1800,
+        Type = "SpeedBoost",
+        PlayerMultiplier = 1.25,
+        PetMultiplier = 1.25,
+        Duration = 300,
+        Description = "+25% player and equipped-pet movement speed for 5 minutes."
+    },
+    ["Luck Potion"] = {
+        Coins = 2800,
+        Type = "Luck",
+        Description = "Improves your imprint roll on your next successful capture."
     }
 }
 
