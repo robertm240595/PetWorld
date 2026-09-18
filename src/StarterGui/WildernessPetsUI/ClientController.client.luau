@@ -569,6 +569,130 @@ local function showArena()
 end
 
 --------------------------------------------------------------
+-- BEAST TRADER
+--------------------------------------------------------------
+
+showBeastTrader = function()
+    clear()
+    gui:SetAttribute("InventoryOpen",true)
+
+    state=GetState:InvokeServer()
+    if not state then return end
+
+    local panel=frame(UDim2.fromOffset(720,560),UDim2.new(.5,-360,.5,-280))
+    panel.Name="BeastTrader"
+    panel.AnchorPoint=Vector2.new(.5,.5)
+    panel.Position=UDim2.new(.5,0,.5,-20)
+
+    local viewport=workspace.CurrentCamera and workspace.CurrentCamera.ViewportSize or Vector2.new(1280,720)
+    local fit=Instance.new("UIScale")
+    fit.Scale=math.min(1,(viewport.X-24)/720,(viewport.Y-100)/560)
+    fit.Parent=panel
+
+    local title=text(panel,"BEAST TRADER",UDim2.fromOffset(20,14),UDim2.fromOffset(520,30))
+    title.TextScaled=false
+    title.TextSize=22
+    title.TextXAlignment=Enum.TextXAlignment.Left
+
+    local subtitle=text(
+        panel,
+        "Sell captured pets for Coins. Beast Trader prices include a bonus. Selling gives NO pet XP.",
+        UDim2.fromOffset(20,48),
+        UDim2.fromOffset(660,42)
+    )
+    subtitle.TextScaled=false
+    subtitle.TextSize=12
+    subtitle.TextWrapped=true
+    subtitle.TextXAlignment=Enum.TextXAlignment.Left
+
+    local close=button(panel,"×",UDim2.fromOffset(664,12),UDim2.fromOffset(36,32))
+    close.TextScaled=false
+    close.TextSize=24
+    close.MouseButton1Click:Connect(showHUD)
+
+    local list=Instance.new("ScrollingFrame")
+    list.Name="TradePets"
+    list.Position=UDim2.fromOffset(20,100)
+    list.Size=UDim2.fromOffset(680,430)
+    list.BackgroundTransparency=1
+    list.BorderSizePixel=0
+    list.ScrollBarThickness=5
+    list.AutomaticCanvasSize=Enum.AutomaticSize.Y
+    list.CanvasSize=UDim2.new()
+    list.Parent=panel
+
+    local layout=Instance.new("UIListLayout")
+    layout.Padding=UDim.new(0,8)
+    layout.Parent=list
+
+    local pets=state.Pets or {}
+    if #pets==0 then
+        local empty=text(list,"You do not have any captured pets to trade.",UDim2.new(),UDim2.fromOffset(660,60))
+        empty.TextScaled=false
+        empty.TextSize=15
+        return
+    end
+
+    for _,pet in ipairs(pets) do
+        local info=Config.Pets[pet.Species]
+        local rarity=Config.Rarities[pet.Rarity]
+        local value=0
+        if info and rarity then
+            value=math.floor(
+                (info.SellValue or 0)
+                * (rarity.SellMultiplier or 1)
+                * (1 + ((math.max(1,tonumber(pet.Level) or 1)-1)*0.10))
+                * (tonumber(Config.BeastTraderSellMultiplier) or 1)
+            )
+        end
+
+        local row=Instance.new("Frame")
+        row.Size=UDim2.fromOffset(660,68)
+        row.BackgroundColor3=Color3.fromRGB(38,43,52)
+        row.BorderSizePixel=0
+        row.Parent=list
+        local corner=Instance.new("UICorner")
+        corner.CornerRadius=UDim.new(0,8)
+        corner.Parent=row
+
+        local name=text(
+            row,
+            tostring(pet.Name).."  ·  Lv."..tostring(pet.Level),
+            UDim2.fromOffset(14,8),
+            UDim2.fromOffset(390,23)
+        )
+        name.TextScaled=false
+        name.TextSize=14
+        name.TextXAlignment=Enum.TextXAlignment.Left
+
+        local meta=text(
+            row,
+            tostring(pet.Species).."  ·  "..tostring(pet.Rarity).."  ·  Coins only",
+            UDim2.fromOffset(14,34),
+            UDim2.fromOffset(390,20)
+        )
+        meta.TextScaled=false
+        meta.TextSize=11
+        meta.TextColor3=Color3.fromRGB(190,195,205)
+        meta.TextXAlignment=Enum.TextXAlignment.Left
+
+        local sell=button(
+            row,
+            "SELL  "..tostring(value).." COINS",
+            UDim2.fromOffset(432,15),
+            UDim2.fromOffset(210,38)
+        )
+        sell.TextScaled=false
+        sell.TextSize=12
+        sell.MouseButton1Click:Connect(function()
+            sell.Active=false
+            sell.Text="SELLING..."
+            ShopRemote:FireServer("SellPet",pet.Id)
+        end)
+    end
+end
+
+--------------------------------------------------------------
 -- HUD
 --------------------------------------------------------------
 
@@ -576,56 +700,32 @@ function showHUD()
     clear()
 
     state = GetState:InvokeServer()
-
     if not state then return end
-    local top=frame(UDim2.fromOffset(210,90),UDim2.new(1,-228,0,45))
+
+    local top=frame(UDim2.fromOffset(220,68),UDim2.new(1,-238,0,45))
     top.Name="PlayerStats"
-    local title=text(top,player.DisplayName,UDim2.fromOffset(10,7),UDim2.fromOffset(190,22))
-    title.TextScaled=false title.TextSize=14
-    local coins=text(top,"Coins  "..tostring(state.Coins).."    Gems  "..tostring(state.Gems),UDim2.fromOffset(10,33),UDim2.fromOffset(190,20))
-    coins.TextScaled=false coins.TextSize=12
-    local lasso=text(top,state.Lasso,UDim2.fromOffset(10,57),UDim2.fromOffset(190,20))
-    lasso.TextScaled=false lasso.TextSize=12
-    local menu = frame(
-        UDim2.fromOffset(152,193),
-        UDim2.new(0,15,0.5,-96)
+
+    local title=text(top,player.DisplayName,UDim2.fromOffset(10,7),UDim2.fromOffset(200,20))
+    title.TextScaled=false
+    title.TextSize=14
+
+    local coins=text(
+        top,
+        "Coins  "..tostring(state.Coins).."    Gems  "..tostring(state.Gems),
+        UDim2.fromOffset(10,29),
+        UDim2.fromOffset(200,18)
     )
+    coins.TextScaled=false
+    coins.TextSize=11
 
-    local pets = button(
-        menu,
-        "MY PETS",
-        UDim2.fromOffset(20,15)
+    local lasso=text(
+        top,
+        "Lasso  ·  "..tostring(state.Lasso),
+        UDim2.fromOffset(10,47),
+        UDim2.fromOffset(200,16)
     )
-
-    pets.Size=UDim2.fromOffset(128,34) pets.Position=UDim2.fromOffset(12,12) pets.TextScaled=false pets.TextSize=13
-    pets.MouseButton1Click:Connect(showPets)
-
-    local lassos = button(
-        menu,
-        "LASSO SHOP",
-        UDim2.fromOffset(20,70)
-    )
-
-    lassos.Size=UDim2.fromOffset(128,34) lassos.Position=UDim2.fromOffset(12,57) lassos.TextScaled=false lassos.TextSize=13
-    lassos.MouseButton1Click:Connect(showLassoShop)
-
-    local arena = button(
-        menu,
-        "ARENA",
-        UDim2.fromOffset(20,125)
-    )
-
-    arena.Size=UDim2.fromOffset(128,34) arena.Position=UDim2.fromOffset(12,102) arena.TextScaled=false arena.TextSize=13
-    arena.MouseButton1Click:Connect(showArena)
-
-    local refresh = button(
-        menu,
-        "REFRESH",
-        UDim2.fromOffset(20,180)
-    )
-
-    refresh.Size=UDim2.fromOffset(128,34) refresh.Position=UDim2.fromOffset(12,147) refresh.TextScaled=false refresh.TextSize=13
-    refresh.MouseButton1Click:Connect(showHUD)
+    lasso.TextScaled=false
+    lasso.TextSize=10
 end
 
 --------------------------------------------------------------
@@ -647,6 +747,38 @@ CaptureRemote.OnClientEvent:Connect(function(action, value)
 
     elseif action == "Error" then
         notify(tostring(value))
+    end
+end)
+
+ShopRemote.OnClientEvent:Connect(function(action, ...)
+    local args={...}
+
+    if action=="OpenBeastTrader" then
+        showBeastTrader()
+
+    elseif action=="Sold" then
+        local success=args[1]==true
+        local amount=tonumber(args[2]) or 0
+        local message=args[3]
+
+        if success then
+            showBeastTrader()
+            notify(message or ("Sold pet for "..tostring(amount).." Coins."))
+        else
+            notify(message or "Could not sell that pet.")
+        end
+
+    elseif action=="Purchase" then
+        local success=args[1]==true
+        local message=args[2]
+        notify(message or (success and "Purchase complete." or "Purchase failed."))
+        if success and petsOpen then showPets(backpackTab) end
+
+    elseif action=="LassoEquipped" then
+        local success=args[1]==true
+        local message=args[2]
+        notify(message or (success and "Lasso equipped." or "Could not equip lasso."))
+        if success and petsOpen then showPets("Inventory") end
     end
 end)
 
