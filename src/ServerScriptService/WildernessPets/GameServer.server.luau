@@ -17,6 +17,7 @@ local PlotService = require(script.Parent.Services.PlotService)
 local ShopService = require(script.Parent.Services.ShopService)
 local ArenaService = require(script.Parent.Services.ArenaService)
 local CaptureService = require(script.Parent.Services.CaptureService)
+local ActionLockService = require(script.Parent.Services.ActionLockService)
 local MonsterService = require(script.Parent.Services.MonsterService)
 MonsterService:Init()
 local equipCompanion, unequipCompanion
@@ -46,6 +47,7 @@ end
 
 local function setupPlayer(player)
     DataService:Load(player)
+    ActionLockService:Initialize(player)
 
     player.CharacterAdded:Connect(function(character)
         teleportToPlot(player, character)
@@ -195,7 +197,20 @@ ArenaRemote.OnServerEvent:Connect(function(player, action, value)
             return
         end
 
-        local result = ArenaService:Attack(player, target)
+        ActionLockService:Begin(player, "ArenaCombat")
+        ActionLockService:Begin(target, "ArenaCombat")
+
+        local ok, result = pcall(function()
+            return ArenaService:Attack(player, target)
+        end)
+
+        ActionLockService:End(player, "ArenaCombat")
+        ActionLockService:End(target, "ArenaCombat")
+
+        if not ok then
+            warn("[WildernessPets] Arena attack: " .. tostring(result))
+            return
+        end
 
         ArenaRemote:FireClient(
             player,
@@ -330,6 +345,7 @@ end
 unequipCompanion = function(player, silent)
     local session = combatSessions[player]
     if session then
+        local wasAttacking = session.attacking
         session.attacking = false
         session.attackToken = (session.attackToken or 0) + 1
         local target = session.target
@@ -339,6 +355,9 @@ unequipCompanion = function(player, silent)
         end
         session.followToken = (session.followToken or 0) + 1
         destroyCompanion(session)
+        if wasAttacking then
+            ActionLockService:End(player, "CompanionCombat")
+        end
     end
     combatSessions[player] = nil
     local data = DataService:Get(player)
@@ -408,6 +427,7 @@ local function lassoTarget(player)
     session.target = nil
     player:SetAttribute("CombatTarget", "")
     local ok, success, message, alreadyNotified = pcall(function() return CaptureService:Capture(player, target) end)
+    ActionLockService:End(player, "Capture")
     if not ok then combatTell(player, "Error", "The lasso could not complete the throw.") return false end
     if not success and message and not alreadyNotified then combatTell(player, "Error", message) end
     return success
@@ -468,6 +488,7 @@ local function attackTarget(player)
     if not root or not targetPart then return false end
     if (root.Position - targetPart.Position).Magnitude > 180 then combatTell(player, "Error", "Move closer to that creature first.") return false end
     session.attacking = true
+    ActionLockService:Begin(player, "CompanionCombat")
     target:SetAttribute("InCombat", true)
     target:SetAttribute("CombatOwnerUserId", player.UserId)
     local token = (session.attackToken or 0) + 1
@@ -511,6 +532,7 @@ local function attackTarget(player)
             target:SetAttribute("CombatOwnerUserId", nil)
         end
         session.attacking = false
+        ActionLockService:End(player, "CompanionCombat")
         if combatSessions[player] == session and session.companion and session.companion.Parent then PetAnimator:PlayIdle(session.companion) end
         if combatSessions[player] == session then combatTell(player, "CombatState", "Ready", target) end
     end)
@@ -533,6 +555,7 @@ local function recallCompanion(player)
     end
     session.attacking = false
     session.attackToken = (session.attackToken or 0) + 1
+    ActionLockService:End(player, "CompanionCombat")
     local target = session.target
     if target and target.Parent and target:GetAttribute("CombatOwnerUserId") == player.UserId then
         target:SetAttribute("InCombat", false)
@@ -542,6 +565,63 @@ local function recallCompanion(player)
     PetAnimator:PlayIdle(session.companion)
     combatTell(player, "CombatState", "Ready", target)
     combatTell(player, "Recalled")
+    return true
+end
+
+local function getOwnedPlot(player)
+    local registered = PlotService:GetPlayerPlot(player)
+    if registered then
+        return registered
+    end
+
+    for _, plot in ipairs(plots:GetChildren()) do
+        local owner = tonumber(plot:GetAttribute("OwnerUserId") or plot:GetAttribute("Owner"))
+        if owner == player.UserId then
+            return plot
+        end
+    end
+
+    return nil
+end
+
+local function returnToPlot(player)
+    local allowed, message, remaining = ActionLockService:CanReturnHome(player)
+    if not allowed then
+        GameRemote:FireClient(player, "HomeTeleport", false, message, remaining)
+        return false
+    end
+
+    local character = player.Character
+    local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+    local root = character and character:FindFirstChild("HumanoidRootPart")
+    if not character or not humanoid or humanoid.Health <= 0 or not root then
+        GameRemote:FireClient(player, "HomeTeleport", false, "Your character is not ready.", 0)
+        return false
+    end
+
+    local plot = getOwnedPlot(player)
+    if not plot then
+        GameRemote:FireClient(player, "HomeTeleport", false, "You do not have a plot yet.", 0)
+        return false
+    end
+
+    local spawn = plot:FindFirstChild("Spawn", true) or plot:FindFirstChild("SpawnLocation", true)
+    if not spawn or not spawn:IsA("BasePart") then
+        local land = plot:FindFirstChild("Land", true)
+        if land and land:IsA("BasePart") then
+            spawn = land
+        end
+    end
+
+    if not spawn or not spawn:IsA("BasePart") then
+        GameRemote:FireClient(player, "HomeTeleport", false, "Your plot spawn is unavailable.", 0)
+        return false
+    end
+
+    root.AssemblyLinearVelocity = Vector3.zero
+    root.AssemblyAngularVelocity = Vector3.zero
+    character:PivotTo(spawn.CFrame + Vector3.new(0, 5, 0))
+    GameRemote:FireClient(player, "HomeTeleport", true, "Returned to your plot.", 0)
     return true
 end
 
@@ -556,6 +636,8 @@ GameRemote.OnServerEvent:Connect(function(player, action, value)
         elseif value == "Ability2" then abilityTarget(player, 2)
         elseif value == "Ability3" then abilityTarget(player, 3)
         end
+    elseif action == "ReturnToPlot" then
+        returnToPlot(player)
     end
 end)
 Players.PlayerRemoving:Connect(function(player)
