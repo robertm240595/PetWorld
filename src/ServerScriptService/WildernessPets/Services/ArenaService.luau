@@ -87,7 +87,8 @@ function Service:Attack(attacker, target)
         attackerData.WeeklyWins += 1
         attackerData.ArenaRating += 25
 
-        PetService:AddXP(attacker, attackingPet.Id, 50)
+        -- Arena battles affect arena records only. Pet XP is reserved for
+        -- defeating wild pets in overworld companion combat.
     else
         attackerData.ArenaLosses += 1
         attackerData.ArenaRating = math.max(0, attackerData.ArenaRating - 15)
