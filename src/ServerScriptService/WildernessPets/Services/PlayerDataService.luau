@@ -23,6 +23,17 @@ local function newData()
         Inventory = {
             {Type = "Lasso", Name = "Rough Rope", Quantity = 1}
         },
+        PetBuyback = {},
+        LassoBuyback = {},
+        ActiveEffects = {
+            XPBoostUntil = 0,
+            XPBoostPercent = 0,
+            SpeedBoostUntil = 0,
+            PlayerSpeedMultiplier = 1,
+            PetSpeedMultiplier = 1,
+            NextCaptureTranquiliser = false,
+            NextCaptureLuck = false
+        },
         Pets = {},
         SelectedPlot = 0,
         DefencePetId = "",
@@ -95,6 +106,23 @@ function Service:Load(player)
     if type(data.Inventory) ~= "table" then
         data.Inventory = {}
     end
+    if type(data.PetBuyback) ~= "table" then
+        data.PetBuyback = {}
+    end
+    if type(data.LassoBuyback) ~= "table" then
+        data.LassoBuyback = {}
+    end
+    if type(data.ActiveEffects) ~= "table" then
+        data.ActiveEffects = {}
+    end
+
+    data.ActiveEffects.XPBoostUntil = tonumber(data.ActiveEffects.XPBoostUntil) or 0
+    data.ActiveEffects.XPBoostPercent = tonumber(data.ActiveEffects.XPBoostPercent) or 0
+    data.ActiveEffects.SpeedBoostUntil = tonumber(data.ActiveEffects.SpeedBoostUntil) or 0
+    data.ActiveEffects.PlayerSpeedMultiplier = tonumber(data.ActiveEffects.PlayerSpeedMultiplier) or 1
+    data.ActiveEffects.PetSpeedMultiplier = tonumber(data.ActiveEffects.PetSpeedMultiplier) or 1
+    data.ActiveEffects.NextCaptureTranquiliser = data.ActiveEffects.NextCaptureTranquiliser == true
+    data.ActiveEffects.NextCaptureLuck = data.ActiveEffects.NextCaptureLuck == true
 
     local equippedLasso = type(data.Lasso) == "string" and data.Lasso or "Rough Rope"
     data.Lasso = equippedLasso
