@@ -10,6 +10,8 @@ Config.MaxPetNameLength = 18
 Config.MaxInventory = 25
 Config.BeastTraderSellMultiplier = 1.10
 Config.WildKillCoinRatio = 0.15
+Config.PetSellLevelBonusPerLevel = 0.025
+Config.PetSellLevelBonusCap = 1.50
 Config.BeastTraderBuybackMultiplier = 1.25
 Config.LassoBuybackMultiplier = 1.0
 Config.AttackCommandRange = 50
@@ -355,8 +357,8 @@ for name,v in pairs(Config.NightVariants) do
  local original=Config.Pets[v.Base]
  Config.Pets[name]={Rarity=v.Rarity,Health=math.floor(original.Health*1.1),Power=math.floor(original.Power*1.08),Defence=original.Defence,SellValue=math.floor(original.SellValue*1.1),TimeOfDay="Night",AnimationSpecies=v.Base}
 end
-Config.Pets.MoonBat={Rarity="Common",Health=85,Power=23,Defence=9,SellValue=55,TimeOfDay="Night",AnimationSpecies="MoonBat"}
-Config.Pets.ShadowStag={Rarity="Rare",Health=200,Power=49,Defence=29,SellValue=330,TimeOfDay="Night",AnimationSpecies="ShadowStag"}
+Config.Pets.MoonBat={Rarity="Common",Health=85,Power=23,Defence=9,SellValue=40,TimeOfDay="Night",AnimationSpecies="MoonBat"}
+Config.Pets.ShadowStag={Rarity="Rare",Health=200,Power=49,Defence=29,SellValue=120,TimeOfDay="Night",AnimationSpecies="ShadowStag"}
 for _,info in pairs(Config.Pets) do info.TimeOfDay=info.TimeOfDay or "Day" end
 
 return Config
