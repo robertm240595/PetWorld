@@ -268,7 +268,11 @@ function Service:GetPetSellValue(pet)
     return math.floor(
         template.SellValue
         * rarity.SellMultiplier
-        * (1 + ((math.max(1, tonumber(pet.Level) or 1) - 1) * 0.10))
+        * (1 + math.min(
+            tonumber(Config.PetSellLevelBonusCap) or 1.5,
+            (math.max(1, tonumber(pet.Level) or 1) - 1)
+                * (tonumber(Config.PetSellLevelBonusPerLevel) or 0.025)
+        ))
         * (tonumber(Config.BeastTraderSellMultiplier) or 1)
     )
 end
