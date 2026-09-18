@@ -5,26 +5,28 @@ Config.GameName = "Wilderness Pets"
 Config.StartCoins = 500
 Config.StartGems = 25
 
-Config.MaxPets = 30
+Config.MaxPets = 60
 Config.MaxPetNameLength = 18
+Config.MaxInventory = 25
+Config.BeastTraderSellMultiplier = 1.35
 -- First rename is free. Further renames spend gems; gem packs can later be sold for Robux.
 Config.PetRenameGemCost = 50
 
 Config.CaptureMinigame = {
-    DurationSeconds = 8,
+    RoundDurationSeconds = 4.5,
     ClickClockTolerance = 0.65,
     LassoWidthBonusPerStrength = 0.001,
     MinGreenWidth = 0.07,
     MaxGreenWidth = 0.40,
     Rarities = {
-        Common = {GreenWidth = 0.32, Speed = 0.70},
-        Uncommon = {GreenWidth = 0.28, Speed = 0.76},
-        Rare = {GreenWidth = 0.24, Speed = 0.83},
-        Epic = {GreenWidth = 0.20, Speed = 0.91},
-        Legendary = {GreenWidth = 0.16, Speed = 1.00},
-        Mythic = {GreenWidth = 0.13, Speed = 1.08},
-        Limited = {GreenWidth = 0.11, Speed = 1.14},
-        Ancient = {GreenWidth = 0.09, Speed = 1.22}
+        Common = {GreenWidth = 0.32, Speed = 0.70, Hits = 3},
+        Uncommon = {GreenWidth = 0.28, Speed = 0.76, Hits = 3},
+        Rare = {GreenWidth = 0.24, Speed = 0.83, Hits = 4},
+        Epic = {GreenWidth = 0.20, Speed = 0.91, Hits = 4},
+        Legendary = {GreenWidth = 0.16, Speed = 1.00, Hits = 5},
+        Mythic = {GreenWidth = 0.13, Speed = 1.08, Hits = 5},
+        Limited = {GreenWidth = 0.11, Speed = 1.14, Hits = 6},
+        Ancient = {GreenWidth = 0.09, Speed = 1.22, Hits = 7}
     }
 }
 
