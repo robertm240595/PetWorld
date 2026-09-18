@@ -168,8 +168,8 @@ Config.Lassos = {
 
     ["Mystic Lasso"] = {
         Strength = 100,
-        Coins = 0,
-        Gems = 600,
+        Coins = 150000,
+        Gems = 0,
         DisplayColor = Color3.fromRGB(151, 102, 232),
         DisplayMaterial = "Neon"
     },
