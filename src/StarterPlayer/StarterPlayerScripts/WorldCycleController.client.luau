@@ -334,7 +334,7 @@ local function endCaptureGame(keepTarget)
  end
 end
 
-local function startCaptureGame(monster,challengeId,species,rarity,lassoName,zoneStart,zoneWidth,speed,startTime,duration)
+local function startCaptureGame(monster,challengeId,species,rarity,lassoName,zoneStart,zoneWidth,speed,startTime,duration,requiredHits,completedHits)
  if captureGame then endCaptureGame(true) end
 
  local camera=workspace.CurrentCamera
@@ -375,7 +375,7 @@ local function startCaptureGame(monster,challengeId,species,rarity,lassoName,zon
  round(card,12)
  border(card)
 
- local title=label(card,"Title","LASSO  ·  "..tostring(species).."  ·  "..tostring(rarity),UDim2.fromOffset(18,12),UDim2.fromOffset(524,24),15,palette.text)
+ local title=label(card,"Title","LASSO  ·  "..tostring(species).."  ·  "..tostring(rarity).."  ·  "..tostring(completedHits or 0).."/"..tostring(requiredHits or 3),UDim2.fromOffset(18,12),UDim2.fromOffset(524,24),15,palette.text)
  title.ZIndex=82
  title.TextXAlignment=Enum.TextXAlignment.Center
  local instruction=label(card,"Instruction","CLICK when the marker is inside the green zone",UDim2.fromOffset(18,38),UDim2.fromOffset(524,20),12,palette.muted)
@@ -434,20 +434,30 @@ local function startCaptureGame(monster,challengeId,species,rarity,lassoName,zon
 
  local state={
   id=challengeId,
+  species=species,
+  rarity=rarity,
+  lassoName=lassoName,
   overlay=overlay,
+  title=title,
+  instruction=instruction,
+  green=green,
   marker=marker,
   timer=timer,
+  zoneStart=zoneStart,
+  zoneWidth=zoneWidth,
   startTime=startTime,
   duration=duration,
   speed=speed,
+  requiredHits=requiredHits or 3,
+  completedHits=completedHits or 0,
   clicked=false,
   camera=savedCamera,
  }
  captureGame=state
 
  local function sliderPosition(atTime)
-  local elapsedTime=math.max(0,atTime-startTime)
-  local phase=(elapsedTime*speed)%2
+  local elapsedTime=math.max(0,atTime-state.startTime)
+  local phase=(elapsedTime*state.speed)%2
   return phase<=1 and phase or 2-phase
  end
 
@@ -455,16 +465,44 @@ local function startCaptureGame(monster,challengeId,species,rarity,lassoName,zon
   if captureGame~=state or not marker.Parent then return end
   local now=workspace:GetServerTimeNow()
   marker.Position=UDim2.fromScale(sliderPosition(now),0)
-  local remaining=math.max(0,(startTime+duration)-now)
-  timer.Text=state.clicked and "Checking lasso..." or string.format("%.1fs  ·  %s",remaining,tostring(lassoName))
+  local remaining=math.max(0,(state.startTime+state.duration)-now)
+  timer.Text=state.clicked and "Checking lasso..." or string.format("%.1fs  ·  %s  ·  %d/%d",remaining,tostring(state.lassoName),state.completedHits,state.requiredHits)
  end)
 
  overlay.Activated:Connect(function()
   if captureGame~=state or state.clicked then return end
   state.clicked=true
   overlay.Active=false
-  remotes.Capture:FireServer("Resolve",challengeId,workspace:GetServerTimeNow())
+  remotes.Capture:FireServer("Resolve",state.id,workspace:GetServerTimeNow())
  end)
+end
+
+local function advanceCaptureGame(challengeId,completedHits,requiredHits,zoneStart,zoneWidth,speed,startTime,duration)
+ local state=captureGame
+ if not state or state.id~=challengeId then return end
+
+ state.completedHits=completedHits
+ state.requiredHits=requiredHits
+ state.zoneStart=zoneStart
+ state.zoneWidth=zoneWidth
+ state.speed=speed
+ state.startTime=startTime
+ state.duration=duration
+ state.clicked=false
+
+ if state.green and state.green.Parent then
+  state.green.Position=UDim2.fromScale(zoneStart,0)
+  state.green.Size=UDim2.fromScale(zoneWidth,1)
+ end
+ if state.title then
+  state.title.Text="LASSO  ·  "..tostring(state.species).."  ·  "..tostring(state.rarity).."  ·  "..tostring(completedHits).."/"..tostring(requiredHits)
+ end
+ if state.instruction then
+  state.instruction.Text="GOOD!  "..tostring(requiredHits-completedHits).." more  ·  click inside the next green zone"
+ end
+ if state.overlay then
+  state.overlay.Active=true
+ end
 end
 
 local function selectAt(position) local main=playerGui:FindFirstChild("WildernessPetsUI")
@@ -546,7 +584,20 @@ remotes.Capture.OnClientEvent:Connect(function(action,...)
    tonumber(args[7]) or .2,
    tonumber(args[8]) or .8,
    tonumber(args[9]) or workspace:GetServerTimeNow(),
-   tonumber(args[10]) or 8
+   tonumber(args[10]) or 4.5,
+   tonumber(args[11]) or 3,
+   tonumber(args[12]) or 0
+  )
+ elseif action=="Progress" then
+  advanceCaptureGame(
+   args[1],
+   tonumber(args[2]) or 1,
+   tonumber(args[3]) or 3,
+   tonumber(args[4]) or .2,
+   tonumber(args[5]) or .2,
+   tonumber(args[6]) or .8,
+   tonumber(args[7]) or workspace:GetServerTimeNow(),
+   tonumber(args[8]) or 4.5
   )
  elseif action=="Success" then
   endCaptureGame(false)
