@@ -5,6 +5,17 @@ local PetService = require(script.Parent.PetService)
 
 local Service = {}
 
+local function setEquippedLasso(player, data, name)
+    data.Lasso = name
+    player:SetAttribute("EquippedLassoName", name)
+end
+
+local function validSingleCurrencyPrice(item)
+    local coins = math.max(0, tonumber(item and item.Coins) or 0)
+    local gems = math.max(0, tonumber(item and item.Gems) or 0)
+    return not (coins > 0 and gems > 0), coins, gems
+end
+
 local function ensureInventory(data)
     data.Inventory = type(data.Inventory) == "table" and data.Inventory or {}
     return data.Inventory
@@ -106,7 +117,7 @@ function Service:BuyLasso(player, name)
 
     for _, owned in ipairs(inventory) do
         if type(owned) == "table" and owned.Type == "Lasso" and owned.Name == name then
-            data.Lasso = name
+            setEquippedLasso(player, data, name)
             return true, "Lasso equipped."
         end
     end
@@ -115,8 +126,10 @@ function Service:BuyLasso(player, name)
         return false, "Your inventory is full."
     end
 
-    local coinCost = math.max(0, tonumber(item.Coins) or 0)
-    local gemCost = math.max(0, tonumber(item.Gems) or 0)
+    local validPrice, coinCost, gemCost = validSingleCurrencyPrice(item)
+    if not validPrice then
+        return false, "That lasso has an invalid mixed-currency price."
+    end
 
     if data.Coins < coinCost or data.Gems < gemCost then
         return false, "You cannot afford that lasso."
@@ -136,7 +149,7 @@ function Service:BuyLasso(player, name)
         Quantity = 1
     })
 
-    data.Lasso = name
+    setEquippedLasso(player, data, name)
     return true, "Lasso purchased and equipped."
 end
 
@@ -148,7 +161,7 @@ function Service:EquipLasso(player, name)
 
     for _, owned in ipairs(ensureInventory(data)) do
         if type(owned) == "table" and owned.Type == "Lasso" and owned.Name == name then
-            data.Lasso = name
+            setEquippedLasso(player, data, name)
             return true, tostring(name) .. " equipped."
         end
     end
@@ -176,15 +189,17 @@ function Service:SellLasso(player, name)
     if not foundIndex then return false, "You do not own that lasso." end
     if lassoCount <= 1 then return false, "You must keep at least one lasso." end
 
-    local coins = math.max(0, tonumber(config.Coins) or 0)
-    local gems = math.max(0, tonumber(config.Gems) or 0)
+    local validPrice, coins, gems = validSingleCurrencyPrice(config)
+    if not validPrice then
+        return false, "That lasso has an invalid mixed-currency price."
+    end
 
     table.remove(inventory, foundIndex)
 
     if data.Lasso == name then
         for _, item in ipairs(inventory) do
             if type(item) == "table" and item.Type == "Lasso" then
-                data.Lasso = item.Name
+                setEquippedLasso(player, data, item.Name)
                 break
             end
         end
@@ -237,7 +252,7 @@ function Service:BuybackLasso(player, index)
     end
 
     table.insert(inventory, {Type = "Lasso", Name = entry.Name, Quantity = 1})
-    data.Lasso = entry.Name
+    setEquippedLasso(player, data, entry.Name)
     table.remove(data.LassoBuyback, tonumber(index))
 
     return true, tostring(entry.Name) .. " bought back and equipped."
