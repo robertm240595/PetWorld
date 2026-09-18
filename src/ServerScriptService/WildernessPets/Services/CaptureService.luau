@@ -10,6 +10,7 @@ local CaptureRemote = Remotes:WaitForChild("Capture")
 local Services = script.Parent
 local DataService = require(Services:WaitForChild("PlayerDataService"))
 local PetService = require(Services:WaitForChild("PetService"))
+local ActionLockService = require(Services:WaitForChild("ActionLockService"))
 
 local Config = require(Root:WaitForChild("Shared"):WaitForChild("Config"))
 
@@ -384,6 +385,10 @@ function CaptureService:Capture(player, monster)
 		return false, "Too far away!"
 	end
 
+	-- From this point on this is a real capture action. Keep return-to-plot
+	-- disabled through the throw, struggle, and any failed-capture retaliation.
+	ActionLockService:Begin(player, "Capture")
+
 	local species, rarity, difficulty = getMonsterInfo(monster)
 	local lassoName, lassoStrength = getLassoStats(player)
 
@@ -553,6 +558,7 @@ CaptureRemote.OnServerEvent:Connect(function(player, action, monster)
 	local ok, success, message, alreadyNotified = pcall(function()
         return CaptureService:Capture(player, monster)
     end)
+    ActionLockService:End(player, "Capture")
     if not ok then
         warn("[WildernessPets] Capture error: " .. tostring(success))
         CaptureRemote:FireClient(player, "Error", "The lasso could not complete the throw. Please try again.")
