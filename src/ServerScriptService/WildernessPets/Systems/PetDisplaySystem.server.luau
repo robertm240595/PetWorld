@@ -39,10 +39,10 @@ local function make(pet,plot,surface,limit,name,position)
  if not r then m:Destroy() return nil end
  r.base=CFrame.new(position.X,surface+r.clearance+.06,position.Z)*CFrame.Angles(0,rng:NextNumber()*math.pi*2,0)
  Animator:Stop(m)
- local gui=Instance.new("BillboardGui") gui.Name="PetName" gui.Size=UDim2.fromOffset(190,45) gui.MaxDistance=70 gui.AlwaysOnTop=false gui.SizeOffset=Vector2.new(0,0) gui.DistanceStep=0
- gui.StudsOffsetWorldSpace=Vector3.new(0,m:GetExtentsSize().Y*.55+.8,0) gui.Parent=m.PrimaryPart
- local label=Instance.new("TextLabel") label.BackgroundTransparency=1 label.Size=UDim2.fromScale(1,1) label.Font=Enum.Font.GothamSemibold label.TextSize=15 label.TextStrokeTransparency=.3 label.TextColor3=Color3.fromRGB(247,235,185)
- label.Text=pet.Name.."  Lv."..tostring(pet.Level)..string.char(10)..tostring(pet.Rarity) label.Parent=gui
+ local gui=Instance.new("BillboardGui") gui.Name="PetName" gui.Size=UDim2.fromOffset(160,30) gui.MaxDistance=65 gui.AlwaysOnTop=false gui.SizeOffset=Vector2.new(0,0) gui.DistanceStep=0
+ gui.StudsOffsetWorldSpace=Vector3.new(0,m:GetExtentsSize().Y*.55+.7,0) gui.Parent=m.PrimaryPart
+ local label=Instance.new("TextLabel") label.BackgroundTransparency=1 label.Size=UDim2.fromScale(1,1) label.Font=Enum.Font.GothamSemibold label.TextSize=14 label.TextStrokeTransparency=.35 label.TextColor3=Color3.fromRGB(247,235,185)
+ label.Text=pet.Name.."  Lv."..tostring(pet.Level) label.Parent=gui
  Animator:PlayIdle(m)
  return m
 end
