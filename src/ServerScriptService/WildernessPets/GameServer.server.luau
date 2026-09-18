@@ -110,9 +110,11 @@ PetsRemote.OnServerEvent:Connect(function(player, action, ...)
         local petId = args[1]
         local name = args[2]
 
-        local success = PetService:Rename(player, petId, name)
+        local success, message = PetService:Rename(player, petId, name)
+        local refresh = script.Parent.Systems:FindFirstChild("PetDisplayRefresh")
+        if success and refresh then refresh:Fire(player) end
 
-        PetsRemote:FireClient(player, "Updated", success)
+        PetsRemote:FireClient(player, "Updated", success, message)
 
     elseif action == "Upgrade" then
         local petId = args[1]
@@ -275,6 +277,37 @@ end
 local function destroyCompanion(session)
     if session and session.companion and session.companion.Parent then session.companion:Destroy() end
 end
+
+local function syncCompanionLabel(model, pet)
+    if not model or not model.Parent or not model.PrimaryPart or not pet then return end
+
+    local gui = model.PrimaryPart:FindFirstChild("CompanionName")
+    if not gui then
+        gui = Instance.new("BillboardGui")
+        gui.Name = "CompanionName"
+        gui.Size = UDim2.fromOffset(160, 30)
+        gui.MaxDistance = 55
+        gui.AlwaysOnTop = false
+        gui.StudsOffsetWorldSpace = Vector3.new(0, model:GetExtentsSize().Y * 0.55 + 0.65, 0)
+        gui.Parent = model.PrimaryPart
+
+        local label = Instance.new("TextLabel")
+        label.Name = "Label"
+        label.BackgroundTransparency = 1
+        label.Size = UDim2.fromScale(1, 1)
+        label.Font = Enum.Font.GothamSemibold
+        label.TextSize = 14
+        label.TextStrokeTransparency = 0.35
+        label.TextColor3 = Color3.fromRGB(247, 235, 185)
+        label.Parent = gui
+    end
+
+    local label = gui:FindFirstChild("Label")
+    if label and label:IsA("TextLabel") then
+        label.Text = tostring(pet.Name or pet.Species) .. "  Lv." .. tostring(pet.Level or 1)
+    end
+end
+
 local function createCompanion(player, pet)
     local template, info = petTemplate(pet)
     if not template then return nil, "No creature mesh exists for "..tostring(pet.Species) end
@@ -305,6 +338,7 @@ local function createCompanion(player, pet)
     rig.base = CFrame.new(position + Vector3.new(0, rig.clearance + .06, 0)) * CFrame.Angles(0, math.atan2(-root.CFrame.LookVector.X, -root.CFrame.LookVector.Z), 0)
     PetAnimator:Stop(model)
     PetAnimator:PlayIdle(model)
+    syncCompanionLabel(model, pet)
     return model
 end
 local function startCompanionFollow(player, session)
@@ -313,6 +347,7 @@ local function startCompanionFollow(player, session)
     task.spawn(function()
         while combatSessions[player] == session and session.companion and session.companion.Parent and session.followToken == token do
             local companion = session.companion
+            syncCompanionLabel(companion, session.pet)
             local root = playerRoot(player)
             if root and not session.attacking then
                 local desired = root.Position - root.CFrame.LookVector*4 + root.CFrame.RightVector*3
@@ -424,10 +459,7 @@ local function lassoTarget(player)
     local target = session.target
     if not validMonster(target) then combatTell(player, "Error", "Select a living wild creature first.") return false end
     if session.attacking then combatTell(player, "Error", "Your companion is already fighting.") return false end
-    session.target = nil
-    player:SetAttribute("CombatTarget", "")
     local ok, success, message, alreadyNotified = pcall(function() return CaptureService:Capture(player, target) end)
-    ActionLockService:End(player, "Capture")
     if not ok then combatTell(player, "Error", "The lasso could not complete the throw.") return false end
     if not success and message and not alreadyNotified then combatTell(player, "Error", message) end
     return success
