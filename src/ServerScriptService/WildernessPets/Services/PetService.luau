@@ -1,4 +1,6 @@
 local HttpService = game:GetService("HttpService")
+local TextService = game:GetService("TextService")
+local RunService = game:GetService("RunService")
 local Config = require(game.ReplicatedStorage.WildernessPets.Shared.Config)
 local DataService = require(script.Parent.PlayerDataService)
 local Service = {}
@@ -26,7 +28,8 @@ function Service:Create(player, species)
         UpgradePoints = 0,
         Battles = 0,
         Wins = 0,
-        Displayed = false
+        Displayed = false,
+        RenameCount = 0
     }
     table.insert(data.Pets, pet)
     return pet
@@ -93,11 +96,45 @@ end
 
 function Service:Rename(player, petId, name)
     local pet = self:Find(player, petId)
-    if not pet then return false end
-    name = string.sub(tostring(name or ""), 1, Config.MaxPetNameLength)
-    if name == "" then return false end
-    pet.Name = name
-    return true
+    if not pet then return false, "Pet not found." end
+
+    name = tostring(name or "")
+    name = name:gsub("^%s+", ""):gsub("%s+$", "")
+    name = string.sub(name, 1, Config.MaxPetNameLength)
+
+    if name == "" then
+        return false, "Enter a name first."
+    end
+    if name == pet.Name then
+        return false, "Choose a different name."
+    end
+
+    local filteredName = name
+    if not RunService:IsStudio() then
+        local ok, result = pcall(function()
+            local filterResult = TextService:FilterStringAsync(name, player.UserId)
+            return filterResult:GetNonChatStringForBroadcastAsync()
+        end)
+        if not ok or type(result) ~= "string" or result == "" then
+            return false, "That name could not be used. Try another."
+        end
+        filteredName = string.sub(result, 1, Config.MaxPetNameLength)
+    end
+
+    local renameCount = math.max(0, tonumber(pet.RenameCount) or 0)
+    local cost = renameCount >= 1 and math.max(0, tonumber(Config.PetRenameGemCost) or 0) or 0
+
+    if cost > 0 and not DataService:SpendGems(player, cost) then
+        return false, "You need " .. tostring(cost) .. " Gems to rename this pet again."
+    end
+
+    pet.Name = filteredName
+    pet.RenameCount = renameCount + 1
+
+    if cost > 0 then
+        return true, "Pet renamed for " .. tostring(cost) .. " Gems.", cost
+    end
+    return true, "Pet renamed. Your first rename was free.", 0
 end
 
 function Service:Upgrade(player, petId, stat)
