@@ -16,7 +16,7 @@ local Config = require(Root:WaitForChild("Shared"):WaitForChild("Config"))
 
 local CaptureService = {}
 
-local MAX_RANGE = 42
+local MAX_RANGE = tonumber(Config.LassoRange) or 42
 local COOLDOWN = 1.35
 local FAILURE_DAMAGE = 999999
 
@@ -160,9 +160,9 @@ local function createRopeEffect(player, monster)
 	Debris:AddItem(a1, 1.2)
 end
 
-local function createCapturedPet(player, species)
+local function createCapturedPet(player, species, imprint)
 	if PetService.Create then
-		return PetService:Create(player, species)
+		return PetService:Create(player, species, {Imprint = imprint})
 	end
 	return nil
 end
@@ -180,6 +180,16 @@ local function challengeSettings(rarity, lassoStrength, difficulty)
 		tonumber(minigame.MinGreenWidth) or 0.07,
 		tonumber(minigame.MaxGreenWidth) or 0.40
 	)
+
+	local reductionRate = tonumber(minigame.LassoSpeedReductionPerStrength) or 0
+	local minSpeedMultiplier = tonumber(minigame.MinSpeedMultiplier) or 0.55
+	local speedMultiplier = math.clamp(
+		1 - math.max(0, lassoStrength - 15) * reductionRate,
+		minSpeedMultiplier,
+		1
+	)
+	speed *= speedMultiplier
+
 	return width, speed, requiredHits, tonumber(minigame.RoundDurationSeconds) or 4.5, tonumber(minigame.ClickClockTolerance) or 0.65
 end
 
@@ -349,13 +359,21 @@ function CaptureService:Resolve(player, challengeId, clickTime, timedOut, roundT
 	monster:SetAttribute("Captured", true)
 	clearMonsterCaptureState(player, monster)
 
-	local pet = createCapturedPet(player, challenge.species)
+	local data = getPlayerData(player)
+	local activeEffects = data and data.ActiveEffects or {}
+	local lucky = activeEffects and activeEffects.NextCaptureLuck == true
+	local imprint = PetService:RollImprint(lucky)
+	local pet = createCapturedPet(player, challenge.species, imprint)
 	if not pet then
 		monster:SetAttribute("Captured", false)
 		PetAnimator:PlayIdle(monster)
 		ActionLockService:End(player, "Capture")
 		CaptureRemote:FireClient(player, "Error", "Your pet could not be saved. Try again.")
 		return false, "Pet could not be saved.", true
+	end
+
+	if lucky and activeEffects then
+		activeEffects.NextCaptureLuck = false
 	end
 
 	player:SetAttribute("CombatTarget", "")
@@ -365,7 +383,8 @@ function CaptureService:Resolve(player, challengeId, clickTime, timedOut, roundT
 		"Success",
 		challenge.species,
 		challenge.rarity,
-		challenge.lassoName
+		challenge.lassoName,
+		imprint
 	)
 
 	monster:Destroy()
@@ -423,6 +442,14 @@ function CaptureService:Capture(player, monster)
 	local species, rarity, difficulty = getMonsterInfo(monster)
 	local lassoName, lassoStrength = getLassoStats(player)
 	local zoneWidth, speed, requiredHits, roundDuration, clockTolerance = challengeSettings(rarity, lassoStrength, difficulty)
+
+	local activeEffects = type(data.ActiveEffects) == "table" and data.ActiveEffects or {}
+	if activeEffects.NextCaptureTranquiliser then
+		local tranquiliser = Config.Potions and Config.Potions["Tranquiliser Potion"]
+		speed *= math.max(0.1, tonumber(tranquiliser and tranquiliser.SpeedMultiplier) or 0.5)
+		activeEffects.NextCaptureTranquiliser = false
+	end
+
 	local zoneStart = randomZoneStart(zoneWidth)
 	local startTime = serverNow() + 0.40
 
