@@ -409,13 +409,22 @@ showPets = function(tab)
             PetsRemote:FireServer("Favourite",pet.Id,not pet.Favourite)
         end)
 
-        local rating=math.ceil((pet.Health*pet.Power*pet.Defence)/1000)
-        local currentHealth=math.max(0,tonumber(pet.CurrentHealth) or pet.Health)
+        local now=os.time()
+        local healthBoost=(tonumber(pet.HealthBoostUntil) or 0)>now and math.max(0,tonumber(pet.HealthBoostPercent) or 0) or 0
+        local powerBoost=(tonumber(pet.PowerBoostUntil) or 0)>now and math.max(0,tonumber(pet.PowerBoostPercent) or 0) or 0
+        local defenceBoost=(tonumber(pet.DefenceBoostUntil) or 0)>now and math.max(0,tonumber(pet.DefenceBoostPercent) or 0) or 0
+        local effectiveHealth=math.floor(pet.Health*(1+healthBoost)+0.5)
+        local effectivePower=math.floor(pet.Power*(1+powerBoost)+0.5)
+        local effectiveDefence=math.floor(pet.Defence*(1+defenceBoost)+0.5)
+        local rating=math.ceil((effectiveHealth*effectivePower*effectiveDefence)/1000)
+        local currentHealth=math.max(0,tonumber(pet.CurrentHealth) or effectiveHealth)
         local stats=text(
             detail,
             pet.Species.." · "..pet.Rarity.." · Lv."..pet.Level..
             "\n"..destination(pet).."  ·  Imprint "..tostring(pet.Imprint or 20).."%"..
-            "\n\nHealth "..math.floor(currentHealth).."/"..pet.Health.."   Power "..pet.Power.."   Defence "..pet.Defence..
+            "\n\nHealth "..math.floor(currentHealth).."/"..effectiveHealth..(healthBoost>0 and " ↑" or "")..
+            "   Power "..effectivePower..(powerBoost>0 and " ↑" or "")..
+            "   Defence "..effectiveDefence..(defenceBoost>0 and " ↑" or "")..
             "\nPower rating "..rating..
             "\nXP "..pet.XP.." / "..(pet.Level*100).."   ·   Upgrade points "..pet.UpgradePoints,
             UDim2.fromOffset(0,36),
@@ -442,6 +451,8 @@ showPets = function(tab)
             if healReady>os.time() then
                 local remaining=math.max(0,healReady-os.time())
                 healText="HEALING AT BARN\n"..tostring(math.ceil(remaining)).." seconds remaining"
+            elseif healReady>0 then
+                healText="HEALED — READY TO COLLECT\nReturn to the Barn on your plot to collect this pet."
             else
                 healText="Heal pet at the Barn on your plot.\nHealing time = 30s × level × rarity rank."
             end
@@ -676,7 +687,7 @@ showLassoKeeper = function(tab)
 
             local price=text(
                 row,
-                tostring(info.Coins or 0).." Coins"..((info.Gems or 0)>0 and ("  ·  "..tostring(info.Gems).." Gems") or ""),
+                ((info.Gems or 0)>0 and (tostring(info.Gems).." Gems") or (tostring(info.Coins or 0).." Coins")),
                 UDim2.fromOffset(14,34),
                 UDim2.fromOffset(430,18)
             )
@@ -738,7 +749,7 @@ showLassoKeeper = function(tab)
 
             local refund=text(
                 row,
-                "Refund: "..tostring(info.Coins or 0).." Coins"..((info.Gems or 0)>0 and ("  ·  "..tostring(info.Gems).." Gems") or ""),
+                "Refund: "..((info.Gems or 0)>0 and (tostring(info.Gems).." Gems") or (tostring(info.Coins or 0).." Coins")),
                 UDim2.fromOffset(14,34),
                 UDim2.fromOffset(430,18)
             )
@@ -780,7 +791,7 @@ showLassoKeeper = function(tab)
 
             local price=text(
                 row,
-                tostring(entry.Coins or 0).." Coins"..((entry.Gems or 0)>0 and ("  ·  "..tostring(entry.Gems).." Gems") or ""),
+                ((entry.Gems or 0)>0 and (tostring(entry.Gems).." Gems") or (tostring(entry.Coins or 0).." Coins")),
                 UDim2.fromOffset(14,34),
                 UDim2.fromOffset(430,18)
             )
@@ -1196,7 +1207,7 @@ showBarn = function()
 
     local subtitle=text(
         panel,
-        "Dead pets recover here. Healing time = 30 seconds × pet level × rarity rank.",
+        "Healing runs in real time. When the timer reaches zero, return to this Barn and COLLECT the pet.",
         UDim2.fromOffset(20,50),
         UDim2.fromOffset(680,36)
     )
@@ -1219,17 +1230,20 @@ showBarn = function()
     list.AutomaticCanvasSize=Enum.AutomaticSize.Y
     list.CanvasSize=UDim2.new()
     list.Parent=panel
+
     local layout=Instance.new("UIListLayout")
     layout.Padding=UDim.new(0,8)
     layout.Parent=list
 
     local deadPets={}
     for _,pet in ipairs(state.Pets or {}) do
-        if pet.Dead then table.insert(deadPets,pet) end
+        if pet.Dead then
+            table.insert(deadPets,pet)
+        end
     end
 
     if #deadPets==0 then
-        local empty=text(list,"No pets need healing.",UDim2.new(),UDim2.fromOffset(690,60))
+        local empty=text(list,"No pets need healing or collection.",UDim2.new(),UDim2.fromOffset(690,60))
         empty.TextScaled=false
         empty.TextSize=16
         return
@@ -1237,23 +1251,41 @@ showBarn = function()
 
     local reviveCount=0
     for _,item in ipairs(state.Inventory or {}) do
-        if type(item)=="table" and item.Type=="Potion" and item.Name=="Instant Revive Potion" then
+        if type(item)=="table"
+            and item.Type=="Potion"
+            and item.Name=="Instant Revive Potion" then
             reviveCount=tonumber(item.Quantity) or 0
         end
+    end
+
+    local function formatCountdown(seconds)
+        seconds=math.max(0,math.ceil(seconds))
+        local hours=math.floor(seconds/3600)
+        local minutes=math.floor((seconds%3600)/60)
+        local secs=seconds%60
+
+        if hours>0 then
+            return string.format("%02d:%02d:%02d",hours,minutes,secs)
+        end
+        return string.format("%02d:%02d",minutes,secs)
     end
 
     for _,pet in ipairs(deadPets) do
         local rarity=Config.Rarities[pet.Rarity] or {}
         local rank=tonumber(rarity.Rank) or 1
-        local total=math.floor((Config.HealingBaseSeconds or 30)*math.max(1,pet.Level or 1)*math.max(1,rank))
+        local total=math.floor(
+            (Config.HealingBaseSeconds or 30)
+            * math.max(1,pet.Level or 1)
+            * math.max(1,rank)
+        )
         local readyAt=tonumber(pet.HealReadyAt) or 0
-        local healing=readyAt>os.time()
 
         local row=Instance.new("Frame")
         row.Size=UDim2.fromOffset(700,84)
         row.BackgroundColor3=Color3.fromRGB(43,42,45)
         row.BorderSizePixel=0
         row.Parent=list
+
         local corner=Instance.new("UICorner")
         corner.CornerRadius=UDim.new(0,8)
         corner.Parent=row
@@ -1270,40 +1302,85 @@ showBarn = function()
 
         local status=text(
             row,
-            healing and ("Healing · "..tostring(math.max(0,readyAt-os.time())).."s remaining") or ("Ready for Barn · "..tostring(total).."s healing"),
+            "",
             UDim2.fromOffset(14,36),
-            UDim2.fromOffset(420,20)
+            UDim2.fromOffset(430,20)
         )
         status.TextScaled=false
         status.TextSize=11
-        status.TextColor3=Color3.fromRGB(200,188,170)
         status.TextXAlignment=Enum.TextXAlignment.Left
 
-        if healing then
-            local revive=button(
-                row,
-                reviveCount>0 and ("INSTANT REVIVE x"..tostring(reviveCount)) or "NO REVIVE POTION",
-                UDim2.fromOffset(465,20),
-                UDim2.fromOffset(220,42)
-            )
-            revive.TextScaled=false
-            revive.TextSize=10
-            if reviveCount>0 then
-                revive.MouseButton1Click:Connect(function()
-                    ShopRemote:FireServer("UsePotion","Instant Revive Potion",pet.Id)
-                end)
-            else
-                revive.Active=false
-                revive.BackgroundColor3=Color3.fromRGB(48,50,54)
+        local action=button(
+            row,
+            "",
+            UDim2.fromOffset(465,20),
+            UDim2.fromOffset(220,42)
+        )
+        action.TextScaled=false
+        action.TextSize=10
+
+        local function updateRow()
+            if not row.Parent then return end
+
+            if readyAt<=0 then
+                status.Text="Not healing  ·  "..tostring(total).."s required"
+                status.TextColor3=Color3.fromRGB(200,188,170)
+                action.Text="PLACE IN BARN"
+                action.Active=true
+                action.AutoButtonColor=true
+                action.BackgroundColor3=Color3.fromRGB(55,70,90)
+                return
             end
-        else
-            local heal=button(row,"PLACE IN BARN",UDim2.fromOffset(505,20),UDim2.fromOffset(180,42))
-            heal.TextScaled=false
-            heal.TextSize=11
-            heal.MouseButton1Click:Connect(function()
-                ShopRemote:FireServer("StartHealing",pet.Id)
-            end)
+
+            local remaining=readyAt-os.time()
+
+            if remaining<=0 then
+                status.Text="HEALED  ·  READY TO COLLECT"
+                status.TextColor3=Color3.fromRGB(150,235,158)
+                action.Text="COLLECT PET"
+                action.Active=true
+                action.AutoButtonColor=true
+                action.BackgroundColor3=Color3.fromRGB(58,98,70)
+            else
+                status.Text="HEALING  ·  "..formatCountdown(remaining).." remaining"
+                status.TextColor3=Color3.fromRGB(225,205,170)
+
+                if reviveCount>0 then
+                    action.Text="INSTANT REVIVE x"..tostring(reviveCount)
+                    action.Active=true
+                    action.AutoButtonColor=true
+                    action.BackgroundColor3=Color3.fromRGB(55,70,90)
+                else
+                    action.Text="HEALING..."
+                    action.Active=false
+                    action.AutoButtonColor=false
+                    action.BackgroundColor3=Color3.fromRGB(48,50,54)
+                end
+            end
         end
+
+        action.MouseButton1Click:Connect(function()
+            if readyAt<=0 then
+                ShopRemote:FireServer("StartHealing",pet.Id)
+                return
+            end
+
+            local remaining=readyAt-os.time()
+            if remaining<=0 then
+                ShopRemote:FireServer("CollectHealed",pet.Id)
+            elseif reviveCount>0 then
+                ShopRemote:FireServer("UsePotion","Instant Revive Potion",pet.Id)
+            end
+        end)
+
+        updateRow()
+
+        task.spawn(function()
+            while panel.Parent and row.Parent do
+                updateRow()
+                task.wait(0.25)
+            end
+        end)
     end
 end
 
