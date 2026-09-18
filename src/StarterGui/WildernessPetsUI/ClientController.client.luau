@@ -530,7 +530,7 @@ showPets = function(tab)
 
     local chosen
     for _,pet in ipairs(pets) do
-        local prefix=pet.Favourite and "★ " or (pet.Dead and "☠ " or "")
+        local prefix=(pet.Favourite and "★ " or "")..(pet.Dead and "☠ " or "")
         local b=button(
             list,
             prefix..pet.Name.."  ·  Lv."..pet.Level.."\n"..pet.Rarity.."  /  "..destination(pet),
