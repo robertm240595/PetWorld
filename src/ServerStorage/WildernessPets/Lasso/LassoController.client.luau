@@ -152,7 +152,7 @@ tool.Activated:Connect(function()
 
 	CaptureRemote:FireServer("Throw", monster)
 
-	task.delay(12, function()
+	task.delay(60, function()
 		-- Safety release if a server response is interrupted.
 		busy = false
 	end)
@@ -173,6 +173,9 @@ CaptureRemote.OnClientEvent:Connect(function(action, ...)
 			"Steady... stop the marker in the green zone!  "
 			.. tostring(species) .. " [" .. tostring(rarity) .. "]"
 		)
+
+	elseif action == "Progress" then
+		busy = true
 
 	elseif action == "Success" then
 		busy = false
