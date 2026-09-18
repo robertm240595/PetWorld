@@ -157,6 +157,10 @@ ShopRemote.OnServerEvent:Connect(function(player, action, value)
         local success, message = ShopService:BuyLasso(player, value)
         ShopRemote:FireClient(player, "Purchase", success, message)
 
+    elseif action == "EquipLasso" then
+        local success, message = ShopService:EquipLasso(player, value)
+        ShopRemote:FireClient(player, "LassoEquipped", success, message)
+
     elseif action == "SellPet" then
         local allowed, gateMessage = BeastTraderService:CanTrade(player)
         if not allowed then
