@@ -403,6 +403,7 @@ showPets = function(tab)
         )
         favourite.TextScaled=false
         favourite.TextSize=10
+        favourite.Visible=not pet.Dead
         favourite.BackgroundColor3=pet.Favourite and Color3.fromRGB(110,88,48) or Color3.fromRGB(48,54,62)
         favourite.MouseButton1Click:Connect(function()
             PetsRemote:FireServer("Favourite",pet.Id,not pet.Favourite)
