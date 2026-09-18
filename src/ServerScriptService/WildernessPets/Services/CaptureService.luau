@@ -388,6 +388,14 @@ function CaptureService:Capture(player, monster)
 		return false, "Finish your current lasso attempt first."
 	end
 
+	local data = getPlayerData(player)
+	if not data or type(data.Pets) ~= "table" then
+		return false, "Pet backpack unavailable."
+	end
+	if #data.Pets >= (Config.MaxPets or 60) then
+		return false, "Your pet backpack is full (" .. tostring(Config.MaxPets or 60) .. "/" .. tostring(Config.MaxPets or 60) .. ")."
+	end
+
 	local attemptTime = os.clock()
 	if lastAttempt[player] and attemptTime - lastAttempt[player] < COOLDOWN then
 		return false, "Slow down!"
