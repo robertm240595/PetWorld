@@ -60,23 +60,41 @@ local function spawnPosition()
  local params=RaycastParams.new()
  params.FilterType=Enum.RaycastFilterType.Include
  params.FilterDescendantsInstances={workspace.Terrain}
- for _=1,60 do
-  local x,z=rng:NextNumber(-480,530),rng:NextNumber(-530,530)
-  local safe=Vector2.new(x,z).Magnitude>140
-  if safe then
-   for _,plot in world.Plots:GetChildren() do
-    local land=plot:FindFirstChild("Land")
-    if land then
-     local p=land.CFrame:PointToObjectSpace(Vector3.new(x,land.Position.Y,z))
-     if math.abs(p.X)<land.Size.X/2+22 and math.abs(p.Z)<land.Size.Z/2+22 then safe=false break end
+
+ local spawn=Config.WildSpawn or {}
+ local minRadius=math.max(0,tonumber(spawn.MinRadius) or 190)
+ local maxRadius=math.max(minRadius+1,tonumber(spawn.MaxRadius) or 640)
+ local attempts=math.max(20,math.floor(tonumber(spawn.Attempts) or 90))
+
+ for _=1,attempts do
+  local angle=rng:NextNumber(0,math.pi*2)
+  local radius=math.sqrt(rng:NextNumber(minRadius*minRadius,maxRadius*maxRadius))
+  local x=math.cos(angle)*radius
+  local z=math.sin(angle)*radius
+  local safe=true
+
+  for _,plot in world.Plots:GetChildren() do
+   local land=plot:FindFirstChild("Land")
+   if land then
+    local p=land.CFrame:PointToObjectSpace(Vector3.new(x,land.Position.Y,z))
+    if math.abs(p.X)<land.Size.X/2+24 and math.abs(p.Z)<land.Size.Z/2+24 then
+     safe=false
+     break
     end
    end
   end
+
   if safe then
-   local hit=workspace:Raycast(Vector3.new(x,250,z),Vector3.new(0,-500,0),params)
-   if hit and hit.Normal.Y>.8 and hit.Material~=Enum.Material.Water and not nearPlayer(hit.Position,Config.Respawn.SafePlayerRadius) then return hit.Position end
+   local hit=workspace:Raycast(Vector3.new(x,300,z),Vector3.new(0,-650,0),params)
+   if hit
+    and hit.Normal.Y>.8
+    and hit.Material~=Enum.Material.Water
+    and not nearPlayer(hit.Position,Config.Respawn.SafePlayerRadius) then
+    return hit.Position
+   end
   end
  end
+
  return nil
 end
 local rarityColors={Common=Color3.fromRGB(220,228,218),Uncommon=Color3.fromRGB(114,220,142),Rare=Color3.fromRGB(109,181,255),Epic=Color3.fromRGB(193,136,255),Legendary=Color3.fromRGB(255,204,89),Mythic=Color3.fromRGB(255,126,189),Limited=Color3.fromRGB(141,250,239),Ancient=Color3.fromRGB(255,130,77)}
