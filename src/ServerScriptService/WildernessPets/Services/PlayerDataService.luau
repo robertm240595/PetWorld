@@ -1,8 +1,16 @@
 local Players = game:GetService("Players")
 local DataStoreService = game:GetService("DataStoreService")
+local RunService = game:GetService("RunService")
 local Config = require(game.ReplicatedStorage.WildernessPets.Shared.Config)
 
-local Store = DataStoreService:GetDataStore("WildernessPets_V2")
+-- Unpublished Studio places cannot access DataStoreService. In that case,
+-- keep player data in memory for the current test session instead.
+local Store = nil
+local useDataStore = not RunService:IsStudio()
+
+if useDataStore then
+    Store = DataStoreService:GetDataStore("WildernessPets_V2")
+end
 
 local Service = {}
 Service.Data = {}
@@ -69,13 +77,15 @@ end
 function Service:Load(player)
     local data = newData()
 
-    local success, saved = pcall(function()
-        return Store:GetAsync("Player_" .. player.UserId)
-    end)
+    if useDataStore and Store then
+        local success, saved = pcall(function()
+            return Store:GetAsync("Player_" .. player.UserId)
+        end)
 
-    if success and type(saved) == "table" then
-        for k, v in pairs(saved) do
-            data[k] = v
+        if success and type(saved) == "table" then
+            for k, v in pairs(saved) do
+                data[k] = v
+            end
         end
     end
 
@@ -93,6 +103,10 @@ end
 function Service:Save(player)
     local data = self.Data[player]
     if not data then return end
+
+    if not useDataStore or not Store then
+        return
+    end
 
     pcall(function()
         Store:UpdateAsync("Player_" .. player.UserId, function()
