@@ -172,6 +172,7 @@ local function challengeSettings(rarity, lassoStrength, difficulty)
 	local raritySettings = (minigame.Rarities or {})[rarity] or {}
 	local width = tonumber(raritySettings.GreenWidth) or 0.24
 	local speed = tonumber(raritySettings.Speed) or 0.85
+	local requiredHits = math.max(3, math.floor(tonumber(raritySettings.Hits) or 3))
 	local bonusRate = tonumber(minigame.LassoWidthBonusPerStrength) or 0.001
 	local bonus = math.clamp((lassoStrength - difficulty) * bonusRate, -0.04, 0.08)
 	width = math.clamp(
@@ -179,7 +180,7 @@ local function challengeSettings(rarity, lassoStrength, difficulty)
 		tonumber(minigame.MinGreenWidth) or 0.07,
 		tonumber(minigame.MaxGreenWidth) or 0.40
 	)
-	return width, speed, tonumber(minigame.DurationSeconds) or 8, tonumber(minigame.ClickClockTolerance) or 0.65
+	return width, speed, requiredHits, tonumber(minigame.RoundDurationSeconds) or 4.5, tonumber(minigame.ClickClockTolerance) or 0.65
 end
 
 local function sliderPosition(challenge, atTime)
@@ -189,6 +190,23 @@ local function sliderPosition(challenge, atTime)
 		return phase
 	end
 	return 2 - phase
+end
+
+local function randomZoneStart(width)
+	return rng:NextNumber(0.03, math.max(0.03, 0.97 - width))
+end
+
+local function scheduleRoundTimeout(player, challenge)
+	local id = challenge.id
+	local round = challenge.round
+	local delaySeconds = math.max(0.2, challenge.deadline - serverNow() + 0.8)
+
+	task.delay(delaySeconds, function()
+		local current = challenges[player]
+		if current and current.id == id and current.round == round and not current.resolving then
+			CaptureService:Resolve(player, id, nil, true, round)
+		end
+	end)
 end
 
 local function clearMonsterCaptureState(player, monster)
@@ -259,16 +277,21 @@ local function finishFailure(player, challenge, reason)
 	return false, reason or "The " .. challenge.species .. " broke free!", true
 end
 
-function CaptureService:Resolve(player, challengeId, clickTime, timedOut)
+function CaptureService:Resolve(player, challengeId, clickTime, timedOut, roundToken)
 	local challenge = challenges[player]
 	if not challenge or challenge.id ~= challengeId or challenge.resolving then
 		return false, "That lasso attempt is no longer active."
 	end
+
+	if timedOut and roundToken and roundToken ~= challenge.round then
+		return false, "Stale lasso round."
+	end
+
 	challenge.resolving = true
-	challenges[player] = nil
 
 	local monster = challenge.monster
 	if not monster or not monster.Parent or monster:GetAttribute("Dead") or monster:GetAttribute("Captured") then
+		challenges[player] = nil
 		clearMonsterCaptureState(player, monster)
 		ActionLockService:End(player, "Capture")
 		CaptureRemote:FireClient(player, "Error", "The creature escaped before the lasso landed.")
@@ -292,9 +315,37 @@ function CaptureService:Resolve(player, challengeId, clickTime, timedOut)
 	end
 
 	if not success then
+		challenges[player] = nil
 		return finishFailure(player, challenge, reason)
 	end
 
+	challenge.hits += 1
+
+	if challenge.hits < challenge.requiredHits then
+		challenge.round += 1
+		challenge.zoneStart = randomZoneStart(challenge.zoneWidth)
+		challenge.startTime = serverNow() + 0.25
+		challenge.deadline = challenge.startTime + challenge.roundDuration
+		challenge.resolving = false
+
+		CaptureRemote:FireClient(
+			player,
+			"Progress",
+			challenge.id,
+			challenge.hits,
+			challenge.requiredHits,
+			challenge.zoneStart,
+			challenge.zoneWidth,
+			challenge.speed,
+			challenge.startTime,
+			challenge.roundDuration
+		)
+
+		scheduleRoundTimeout(player, challenge)
+		return true, "Lasso hold " .. tostring(challenge.hits) .. "/" .. tostring(challenge.requiredHits) .. ".", true
+	end
+
+	challenges[player] = nil
 	monster:SetAttribute("Captured", true)
 	clearMonsterCaptureState(player, monster)
 
@@ -324,6 +375,7 @@ function CaptureService:Resolve(player, challengeId, clickTime, timedOut)
 		refreshEvent:Fire(player)
 	end
 
+	-- Capturing grants no pet XP. Pet XP is awarded only by combat kills.
 	ActionLockService:End(player, "Capture")
 	return true, "Captured " .. challenge.species .. "!", true
 end
@@ -362,8 +414,8 @@ function CaptureService:Capture(player, monster)
 
 	local species, rarity, difficulty = getMonsterInfo(monster)
 	local lassoName, lassoStrength = getLassoStats(player)
-	local zoneWidth, speed, duration, clockTolerance = challengeSettings(rarity, lassoStrength, difficulty)
-	local zoneStart = rng:NextNumber(0.03, math.max(0.03, 0.97 - zoneWidth))
+	local zoneWidth, speed, requiredHits, roundDuration, clockTolerance = challengeSettings(rarity, lassoStrength, difficulty)
+	local zoneStart = randomZoneStart(zoneWidth)
 	local startTime = serverNow() + 0.40
 
 	local challenge = {
@@ -375,8 +427,12 @@ function CaptureService:Capture(player, monster)
 		zoneStart = zoneStart,
 		zoneWidth = zoneWidth,
 		speed = speed,
+		requiredHits = requiredHits,
+		hits = 0,
+		round = 1,
+		roundDuration = roundDuration,
 		startTime = startTime,
-		deadline = startTime + duration,
+		deadline = startTime + roundDuration,
 		clockTolerance = clockTolerance,
 		resolving = false,
 	}
@@ -388,7 +444,7 @@ function CaptureService:Capture(player, monster)
 	monster:SetAttribute("CaptureOwnerUserId", player.UserId)
 
 	pcall(function()
-		PetAnimator:PlayStruggle(monster, math.min(duration, 1.2))
+		PetAnimator:PlayStruggle(monster, math.min(roundDuration, 1.2))
 	end)
 
 	CaptureRemote:FireClient(
@@ -403,15 +459,12 @@ function CaptureService:Capture(player, monster)
 		zoneWidth,
 		speed,
 		startTime,
-		duration
+		roundDuration,
+		requiredHits,
+		0
 	)
 
-	task.delay(duration + 1.4, function()
-		local current = challenges[player]
-		if current and current.id == challenge.id and not current.resolving then
-			CaptureService:Resolve(player, challenge.id, nil, true)
-		end
-	end)
+	scheduleRoundTimeout(player, challenge)
 
 	return true, "Lasso challenge started.", true
 end
