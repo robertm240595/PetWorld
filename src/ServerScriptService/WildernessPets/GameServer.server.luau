@@ -985,6 +985,9 @@ local function recallCompanion(player)
     if target and target.Parent and target:GetAttribute("CombatOwnerUserId") == player.UserId then
         target:SetAttribute("InCombat", false)
         target:SetAttribute("CombatOwnerUserId", nil)
+        if not target:GetAttribute("Dead") and not target:GetAttribute("Captured") then
+            pcall(function() PetAnimator:PlayIdle(target) end)
+        end
     end
     PetAnimator:Stop(session.companion)
     PetAnimator:PlayIdle(session.companion)
