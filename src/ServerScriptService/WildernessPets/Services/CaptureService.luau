@@ -443,8 +443,22 @@ CaptureRemote.OnServerEvent:Connect(function(player, action, ...)
 			if challenge then
 				challenges[player] = nil
 				clearMonsterCaptureState(player, challenge.monster)
-				ActionLockService:End(player, "Capture")
+			else
+				local folder = getMonsterFolder()
+				if folder then
+					for _, monster in ipairs(folder:GetChildren()) do
+						if monster:GetAttribute("CaptureOwnerUserId") == player.UserId then
+							clearMonsterCaptureState(player, monster)
+							monster:SetAttribute("InCombat", false)
+							if monster:GetAttribute("CombatOwnerUserId") == player.UserId then
+								monster:SetAttribute("CombatOwnerUserId", nil)
+							end
+							pcall(function() PetAnimator:PlayIdle(monster) end)
+						end
+					end
+				end
 			end
+			ActionLockService:End(player, "Capture")
 			CaptureRemote:FireClient(player, "Error", "The lasso attempt could not finish. Please try again.")
 		end
 	end
