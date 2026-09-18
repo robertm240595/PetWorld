@@ -147,7 +147,7 @@ Config.Lassos = {
         Coins = 2500,
         Gems = 0,
         DisplayColor = Color3.fromRGB(177, 126, 72),
-        DisplayMaterial = "Leather"
+        DisplayMaterial = "Fabric"
     },
 
     ["Iron Lasso"] = {
