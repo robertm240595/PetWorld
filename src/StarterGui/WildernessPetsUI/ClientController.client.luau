@@ -1126,7 +1126,11 @@ showBeastTrader = function(tab)
             value=math.floor(
                 (info.SellValue or 0)
                 * (rarity.SellMultiplier or 1)
-                * (1 + ((math.max(1,tonumber(pet.Level) or 1)-1)*0.10))
+                * (1 + math.min(
+                    tonumber(Config.PetSellLevelBonusCap) or 1.5,
+                    (math.max(1,tonumber(pet.Level) or 1)-1)
+                        * (tonumber(Config.PetSellLevelBonusPerLevel) or 0.025)
+                ))
                 * (tonumber(Config.BeastTraderSellMultiplier) or 1)
             )
         end
