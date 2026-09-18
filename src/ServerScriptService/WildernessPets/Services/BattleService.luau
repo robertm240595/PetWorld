@@ -1,4 +1,5 @@
 local Animator = require(script.Parent.Parent.Systems.PetAnimator)
+local PetService = require(script.Parent.PetService)
 local Service = {}
 local displaying = false
 local function damage(attacker, defender)
@@ -55,14 +56,16 @@ local function replay(petA,petB,hits,winner)
 end
 function Service:Fight(petA,petB)
  if not petA or not petB then return nil end
- local hpA,hpB=petA.Health,petB.Health
+ local statsA=PetService:GetEffectiveStats(petA)
+ local statsB=PetService:GetEffectiveStats(petB)
+ local hpA,hpB=statsA.Health,statsB.Health
  local turn=1
  local hits={}
  while hpA>0 and hpB>0 and turn<=100 do
-  hpB-=damage(petA,petB)
+  hpB-=damage(statsA,statsB)
   table.insert(hits,{side=1})
   if hpB<=0 then break end
-  hpA-=damage(petB,petA)
+  hpA-=damage(statsB,statsA)
   table.insert(hits,{side=2})
   if hpA<=0 then break end
   turn+=1
