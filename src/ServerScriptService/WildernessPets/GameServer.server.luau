@@ -86,6 +86,20 @@ Players.PlayerRemoving:Connect(function(player)
     DataService:Cleanup(player)
 end)
 
+task.spawn(function()
+    while true do
+        for _, player in ipairs(Players:GetPlayers()) do
+            if PetService:RefreshHealing(player) then
+                local refresh = script.Parent.Systems:FindFirstChild("PetDisplayRefresh")
+                if refresh then refresh:Fire(player) end
+                BarnService:RefreshVisuals(player)
+                PetsRemote:FireClient(player, "HealingComplete")
+            end
+        end
+        task.wait(1)
+    end
+end)
+
 ----------------------------------------------------------------
 -- STATE
 ----------------------------------------------------------------
