@@ -178,10 +178,36 @@ end)
 -- SHOPS
 ----------------------------------------------------------------
 
-ShopRemote.OnServerEvent:Connect(function(player, action, value)
+ShopRemote.OnServerEvent:Connect(function(player, action, ...)
+    local args = {...}
+    local value = args[1]
+
     if action == "BuyLasso" then
+        local allowed, gateMessage = LassoKeeperService:CanTrade(player)
+        if not allowed then
+            ShopRemote:FireClient(player, "LassoShopResult", false, gateMessage)
+            return
+        end
         local success, message = ShopService:BuyLasso(player, value)
-        ShopRemote:FireClient(player, "Purchase", success, message)
+        ShopRemote:FireClient(player, "LassoShopResult", success, message)
+
+    elseif action == "SellLasso" then
+        local allowed, gateMessage = LassoKeeperService:CanTrade(player)
+        if not allowed then
+            ShopRemote:FireClient(player, "LassoShopResult", false, gateMessage)
+            return
+        end
+        local success, message = ShopService:SellLasso(player, value)
+        ShopRemote:FireClient(player, "LassoShopResult", success, message)
+
+    elseif action == "BuybackLasso" then
+        local allowed, gateMessage = LassoKeeperService:CanTrade(player)
+        if not allowed then
+            ShopRemote:FireClient(player, "LassoShopResult", false, gateMessage)
+            return
+        end
+        local success, message = ShopService:BuybackLasso(player, value)
+        ShopRemote:FireClient(player, "LassoShopResult", success, message)
 
     elseif action == "EquipLasso" then
         local success, message = ShopService:EquipLasso(player, value)
@@ -212,13 +238,90 @@ ShopRemote.OnServerEvent:Connect(function(player, action, value)
             if refresh then refresh:Fire(player) end
         end
 
-        ShopRemote:FireClient(
-            player,
-            "Sold",
-            success,
-            success and amount or 0,
-            message or (success and "Pet sold." or "Could not sell that pet.")
-        )
+        ShopRemote:FireClient(player, "Sold", success, success and amount or 0, message)
+
+    elseif action == "BuybackPet" then
+        local allowed, gateMessage = BeastTraderService:CanTrade(player)
+        if not allowed then
+            ShopRemote:FireClient(player, "PetBuybackResult", false, gateMessage)
+            return
+        end
+
+        local success, message = ShopService:BuybackPet(player, value)
+        local refresh = script.Parent.Systems:FindFirstChild("PetDisplayRefresh")
+        if success and refresh then refresh:Fire(player) end
+        ShopRemote:FireClient(player, "PetBuybackResult", success, message)
+
+    elseif action == "BuyPotion" then
+        local allowed, gateMessage = PetMerchantService:CanTrade(player)
+        if not allowed then
+            ShopRemote:FireClient(player, "PotionResult", false, gateMessage)
+            return
+        end
+
+        local success, message = PotionService:BuyPotion(player, value)
+        ShopRemote:FireClient(player, "PotionResult", success, message)
+
+    elseif action == "UsePotion" then
+        local potionName = value
+        local requestedPetId = args[2]
+        local potion = Config.Potions and Config.Potions[potionName]
+        if not potion then
+            ShopRemote:FireClient(player, "PotionResult", false, "Potion unavailable.")
+            return
+        end
+
+        local data = DataService:Get(player)
+        if not data then
+            ShopRemote:FireClient(player, "PotionResult", false, "Player data unavailable.")
+            return
+        end
+
+        local session = combatSessions and combatSessions[player]
+        local context = {
+            InCombat = session and session.attacking == true or false,
+            BarnAllowed = false
+        }
+
+        if potion.Type == "BattleHeal" then
+            requestedPetId = data.EquippedPetId
+        elseif potion.Type == "InstantRevive" then
+            local allowed, message = BarnService:CanUse(player)
+            context.BarnAllowed = allowed
+            if not allowed then
+                ShopRemote:FireClient(player, "PotionResult", false, message)
+                return
+            end
+        end
+
+        local success, message = PotionService:UsePotion(player, potionName, requestedPetId, context)
+
+        if success then
+            local activeSession = combatSessions and combatSessions[player]
+            if activeSession and activeSession.pet then
+                local refreshed = PetService:Find(player, activeSession.petId)
+                if refreshed then activeSession.pet = refreshed end
+                if activeSession.companion and activeSession.companion.Parent then
+                    activeSession.companion:SetAttribute("Health", refreshed and refreshed.CurrentHealth or 0)
+                end
+            end
+            local refresh = script.Parent.Systems:FindFirstChild("PetDisplayRefresh")
+            if refresh then refresh:Fire(player) end
+            BarnService:RefreshVisuals(player)
+        end
+
+        ShopRemote:FireClient(player, "PotionResult", success, message)
+
+    elseif action == "StartHealing" then
+        local allowed, gateMessage = BarnService:CanUse(player)
+        if not allowed then
+            ShopRemote:FireClient(player, "BarnResult", false, gateMessage)
+            return
+        end
+
+        local success, message, seconds = PetService:StartHealing(player, value)
+        if success then BarnService:RefreshVisuals(player) end
+        ShopRemote:FireClient(player, "BarnResult", success, message, seconds or 0)
     end
 end)
 
