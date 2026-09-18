@@ -152,7 +152,8 @@ tool.Activated:Connect(function()
 
 	CaptureRemote:FireServer("Throw", monster)
 
-	task.delay(COOLDOWN, function()
+	task.delay(12, function()
+		-- Safety release if a server response is interrupted.
 		busy = false
 	end)
 end)
@@ -164,16 +165,17 @@ end)
 CaptureRemote.OnClientEvent:Connect(function(action, ...)
 	local args = {...}
 
-	if action == "Attempt" then
-		local species = args[2] or "Monster"
-		local rarity = args[3] or "Common"
-
+	if action == "Challenge" then
+		busy = true
+		local species = args[3] or "Monster"
+		local rarity = args[4] or "Common"
 		showMessage(
-			"Lasso thrown at " .. tostring(species)
-			.. " [" .. tostring(rarity) .. "]!"
+			"Steady... stop the marker in the green zone!  "
+			.. tostring(species) .. " [" .. tostring(rarity) .. "]"
 		)
 
 	elseif action == "Success" then
+		busy = false
 		local species = args[1] or "Monster"
 		local rarity = args[2] or "Common"
 
@@ -184,6 +186,7 @@ CaptureRemote.OnClientEvent:Connect(function(action, ...)
 		)
 
 	elseif action == "Failed" then
+		busy = false
 		local species = args[1] or "Monster"
 
 		showMessage(
@@ -192,6 +195,7 @@ CaptureRemote.OnClientEvent:Connect(function(action, ...)
 		)
 
 	elseif action == "Error" then
+		busy = false
 		showMessage(tostring(args[1] or "Something went wrong."))
 	end
 end)
