@@ -30,6 +30,7 @@ LassoKeeperService:Init()
 PetMerchantService:Init()
 BarnService:Init()
 local equipCompanion, unequipCompanion
+local combatSessions
 local plots = workspace.WildernessPets.Plots
 
 for _, plot in ipairs(plots:GetChildren()) do
@@ -388,7 +389,7 @@ end)
 local TweenService = game:GetService("TweenService")
 local Debris = game:GetService("Debris")
 local PetAnimator = require(script.Parent.Systems.PetAnimator)
-local combatSessions = setmetatable({}, {__mode="k"})
+combatSessions = setmetatable({}, {__mode="k"})
 local rewardGuard = setmetatable({}, {__mode="k"})
 
 local function combatWorld()
