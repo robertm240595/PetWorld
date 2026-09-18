@@ -61,6 +61,7 @@ end
 function Service:UsePotion(player, name, petId, context)
     local item = Config.Potions and Config.Potions[name]
     local data = DataService:Get(player)
+
     if not item or not data then
         return false, "Potion unavailable."
     end
@@ -73,14 +74,15 @@ function Service:UsePotion(player, name, petId, context)
     local itemType = item.Type
 
     if itemType == "XPBoost" then
-        local duration = math.max(1, math.floor(tonumber(item.Duration) or 600))
+        local duration = math.max(1, math.floor(tonumber(item.Duration) or 900))
         local currentUntil = math.max(os.time(), tonumber(active.XPBoostUntil) or 0)
         active.XPBoostUntil = currentUntil + duration
         active.XPBoostPercent = math.max(0, tonumber(item.Percent) or 0.25)
 
     elseif itemType == "SpeedBoost" then
-        local duration = math.max(1, math.floor(tonumber(item.Duration) or 300))
+        local duration = math.max(1, math.floor(tonumber(item.Duration) or 900))
         local currentUntil = math.max(os.time(), tonumber(active.SpeedBoostUntil) or 0)
+
         active.SpeedBoostUntil = currentUntil + duration
         active.PlayerSpeedMultiplier = math.max(1, tonumber(item.PlayerMultiplier) or 1.25)
         active.PetSpeedMultiplier = math.max(1, tonumber(item.PetMultiplier) or 1.25)
@@ -97,38 +99,79 @@ function Service:UsePotion(player, name, petId, context)
         end
         active.NextCaptureLuck = true
 
-    elseif itemType == "StatBoost" then
+    elseif itemType == "TimedStatBoost" then
         local pet = PetService:Find(player, petId)
-        if not pet then return false, "Select a pet first." end
-        if pet.Dead then return false, "Dead pets must be revived before using stat potions." end
+        if not pet then
+            return false, "Select a pet first."
+        end
+        if pet.Dead then
+            return false, "Dead pets must be collected from the Barn before using stat elixirs."
+        end
 
-        local amount = math.max(1, math.floor(tonumber(item.Amount) or 1))
-        if item.Stat == "Health" then
-            pet.Health += amount
-            pet.CurrentHealth = math.min(pet.Health, (pet.CurrentHealth or pet.Health) + amount)
-        elseif item.Stat == "Power" then
-            pet.Power += amount
-        elseif item.Stat == "Defence" then
-            pet.Defence += amount
+        local duration = math.max(1, math.floor(tonumber(item.Duration) or 1800))
+        local percent = math.max(0, tonumber(item.Percent) or 0.20)
+        local stat = tostring(item.Stat or "")
+
+        local untilField
+        local percentField
+
+        if stat == "Health" then
+            untilField = "HealthBoostUntil"
+            percentField = "HealthBoostPercent"
+        elseif stat == "Power" then
+            untilField = "PowerBoostUntil"
+            percentField = "PowerBoostPercent"
+        elseif stat == "Defence" then
+            untilField = "DefenceBoostUntil"
+            percentField = "DefenceBoostPercent"
         else
             return false, "Potion stat is invalid."
+        end
+
+        local before = PetService:GetEffectiveStats(pet)
+        local currentUntil = math.max(os.time(), tonumber(pet[untilField]) or 0)
+
+        pet[untilField] = currentUntil + duration
+        pet[percentField] = percent
+
+        local after = PetService:GetEffectiveStats(pet)
+
+        if stat == "Health" then
+            local gainedMaximum = math.max(0, after.Health - before.Health)
+            pet.CurrentHealth = math.min(
+                after.Health,
+                (tonumber(pet.CurrentHealth) or before.Health) + gainedMaximum
+            )
         end
 
     elseif itemType == "BattleHeal" then
         if not context.InCombat then
             return false, "Battle Health Potions can only be used while your equipped pet is fighting."
         end
+
         local pet = PetService:Find(player, petId)
-        if not pet or pet.Dead then return false, "Your equipped pet cannot be healed." end
-        local current = math.max(0, tonumber(pet.CurrentHealth) or pet.Health)
-        if current >= pet.Health then return false, "Your pet is already at full Health." end
-        local heal = math.max(1, math.floor(pet.Health * math.max(0, tonumber(item.Percent) or 0.35) + 0.5))
-        pet.CurrentHealth = math.min(pet.Health, current + heal)
+        if not pet or pet.Dead then
+            return false, "Your equipped pet cannot be healed."
+        end
+
+        local stats = PetService:GetEffectiveStats(pet)
+        local current = math.max(0, tonumber(pet.CurrentHealth) or stats.Health)
+
+        if current >= stats.Health then
+            return false, "Your pet is already at full Health."
+        end
+
+        local heal = math.max(
+            1,
+            math.floor(stats.Health * math.max(0, tonumber(item.Percent) or 0.35) + 0.5)
+        )
+        pet.CurrentHealth = math.min(stats.Health, current + heal)
 
     elseif itemType == "InstantRevive" then
         if not context.BarnAllowed then
             return false, "Use an Instant Revive Potion at your Barn."
         end
+
         local ok, message = PetService:ReviveNow(player, petId)
         if not ok then return false, message end
 
@@ -142,6 +185,7 @@ function Service:UsePotion(player, name, petId, context)
 
     if itemType == "SpeedBoost" then
         applyWalkSpeed(player)
+
         local expiresAt = tonumber(active.SpeedBoostUntil) or os.time()
         task.delay(math.max(1, expiresAt - os.time() + 1), function()
             if player and player.Parent then
