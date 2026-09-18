@@ -132,22 +132,22 @@ showPets = function(tab)
     local pets=state.Pets or {}
     local inventory=state.Inventory or {}
 
-    local panel=frame(UDim2.fromOffset(780,590),UDim2.new(.5,-390,.5,-295))
+    local panel=frame(UDim2.fromOffset(820,620),UDim2.new(.5,-410,.5,-310))
     panel.Name="PetBackpack"
     panel.AnchorPoint=Vector2.new(.5,.5)
-    panel.Position=UDim2.new(.5,0,.5,-25)
+    panel.Position=UDim2.new(.5,0,.5,0)
 
-    local viewport=workspace.CurrentCamera and workspace.CurrentCamera.ViewportSize or Vector2.new(1280,720)
+    local viewportSize=workspace.CurrentCamera and workspace.CurrentCamera.ViewportSize or Vector2.new(1280,720)
     local fit=Instance.new("UIScale")
-    fit.Scale=math.min(1,(viewport.X-24)/780,(viewport.Y-100)/590)
+    fit.Scale=math.min(1,(viewportSize.X-30)/820,(viewportSize.Y-40)/620)
     fit.Parent=panel
 
-    local header=text(panel,"BACKPACK",UDim2.fromOffset(20,12),UDim2.fromOffset(420,30))
+    local header=text(panel,"BACKPACK",UDim2.fromOffset(22,14),UDim2.fromOffset(430,30))
     header.TextScaled=false
     header.TextSize=22
     header.TextXAlignment=Enum.TextXAlignment.Left
 
-    local close=button(panel,"×",UDim2.fromOffset(724,10),UDim2.fromOffset(38,34))
+    local close=button(panel,"×",UDim2.fromOffset(762,10),UDim2.fromOffset(38,34))
     close.TextScaled=false
     close.TextSize=24
     close.MouseButton1Click:Connect(function()
@@ -157,8 +157,8 @@ showPets = function(tab)
     local petTab=button(
         panel,
         "🐾  PETS   "..tostring(#pets).."/"..tostring(Config.MaxPets or 60),
-        UDim2.fromOffset(20,50),
-        UDim2.fromOffset(220,52)
+        UDim2.fromOffset(22,54),
+        UDim2.fromOffset(230,50)
     )
     petTab.TextScaled=false
     petTab.TextSize=14
@@ -166,8 +166,8 @@ showPets = function(tab)
     local inventoryTab=button(
         panel,
         "🎒  INVENTORY   "..tostring(#inventory).."/"..tostring(Config.MaxInventory or 25),
-        UDim2.fromOffset(248,50),
-        UDim2.fromOffset(250,52)
+        UDim2.fromOffset(260,54),
+        UDim2.fromOffset(260,50)
     )
     inventoryTab.TextScaled=false
     inventoryTab.TextSize=14
@@ -185,9 +185,9 @@ showPets = function(tab)
     if backpackTab=="Inventory" then
         local status=text(
             panel,
-            "Carried items  ·  "..tostring(#inventory).."/"..tostring(Config.MaxInventory or 25).." slots",
-            UDim2.fromOffset(20,108),
-            UDim2.fromOffset(730,24)
+            "Items  ·  "..tostring(#inventory).."/"..tostring(Config.MaxInventory or 25).." slots  ·  Equip your preferred lasso here",
+            UDim2.fromOffset(22,112),
+            UDim2.fromOffset(770,24)
         )
         status.TextScaled=false
         status.TextSize=13
@@ -195,8 +195,8 @@ showPets = function(tab)
 
         local list=Instance.new("ScrollingFrame")
         list.Name="InventoryItems"
-        list.Position=UDim2.fromOffset(20,140)
-        list.Size=UDim2.fromOffset(740,425)
+        list.Position=UDim2.fromOffset(22,145)
+        list.Size=UDim2.fromOffset(776,445)
         list.BackgroundTransparency=1
         list.BorderSizePixel=0
         list.ScrollBarThickness=5
@@ -209,7 +209,7 @@ showPets = function(tab)
         layout.Parent=list
 
         if #inventory==0 then
-            local empty=text(list,"Your inventory is empty.",UDim2.new(),UDim2.fromOffset(720,55))
+            local empty=text(list,"Your inventory is empty.",UDim2.new(),UDim2.fromOffset(750,55))
             empty.TextScaled=false
             empty.TextSize=16
         else
@@ -218,8 +218,9 @@ showPets = function(tab)
                     local itemType=tostring(item.Type or "Item")
                     local itemName=tostring(item.Name or "Unknown")
                     local quantity=math.max(1,tonumber(item.Quantity) or 1)
+
                     local row=Instance.new("Frame")
-                    row.Size=UDim2.fromOffset(720,64)
+                    row.Size=UDim2.fromOffset(750,72)
                     row.BackgroundColor3=Color3.fromRGB(38,43,52)
                     row.BorderSizePixel=0
                     row.Parent=list
@@ -229,8 +230,8 @@ showPets = function(tab)
 
                     local itemIcon=text(
                         row,
-                        itemType=="Lasso" and "◎" or "▣",
-                        UDim2.fromOffset(12,9),
+                        itemType=="Lasso" and "◎" or "✦",
+                        UDim2.fromOffset(12,12),
                         UDim2.fromOffset(44,44)
                     )
                     itemIcon.TextScaled=false
@@ -239,8 +240,8 @@ showPets = function(tab)
                     local itemLabel=text(
                         row,
                         itemName.."  ·  "..itemType.."  ·  x"..tostring(quantity),
-                        UDim2.fromOffset(66,9),
-                        UDim2.fromOffset(430,22)
+                        UDim2.fromOffset(66,8),
+                        UDim2.fromOffset(455,22)
                     )
                     itemLabel.TextScaled=false
                     itemLabel.TextSize=14
@@ -253,25 +254,36 @@ showPets = function(tab)
                         if state.Lasso==itemName then
                             detailText=detailText.."  ·  EQUIPPED"
                         end
+                    elseif itemType=="Potion" then
+                        local info=Config.Potions and Config.Potions[itemName]
+                        detailText=info and tostring(info.Description or "") or ""
                     end
 
                     local itemDetail=text(
                         row,
                         detailText,
-                        UDim2.fromOffset(66,33),
-                        UDim2.fromOffset(430,20)
+                        UDim2.fromOffset(66,32),
+                        UDim2.fromOffset(490,30)
                     )
                     itemDetail.TextScaled=false
                     itemDetail.TextSize=11
+                    itemDetail.TextWrapped=true
                     itemDetail.TextColor3=Color3.fromRGB(190,195,205)
                     itemDetail.TextXAlignment=Enum.TextXAlignment.Left
 
                     if itemType=="Lasso" and state.Lasso~=itemName then
-                        local equip=button(row,"EQUIP",UDim2.fromOffset(570,14),UDim2.fromOffset(130,36))
+                        local equip=button(row,"EQUIP",UDim2.fromOffset(602,18),UDim2.fromOffset(130,36))
                         equip.TextScaled=false
                         equip.TextSize=12
                         equip.MouseButton1Click:Connect(function()
                             ShopRemote:FireServer("EquipLasso",itemName)
+                        end)
+                    elseif itemType=="Potion" then
+                        local use=button(row,"USE",UDim2.fromOffset(602,18),UDim2.fromOffset(130,36))
+                        use.TextScaled=false
+                        use.TextSize=12
+                        use.MouseButton1Click:Connect(function()
+                            ShopRemote:FireServer("UsePotion",itemName,selectedPetId)
                         end)
                     end
                 end
@@ -283,14 +295,14 @@ showPets = function(tab)
 
     local roamingCount=0
     for _,pet in ipairs(pets) do
-        if pet.Displayed then roamingCount+=1 end
+        if pet.Displayed and not pet.Dead then roamingCount+=1 end
     end
 
     local status=text(
         panel,
-        tostring(#pets).."/"..tostring(Config.MaxPets or 60).." pets  ·  Plot: "..roamingCount.."/10  ·  First rename free",
-        UDim2.fromOffset(20,108),
-        UDim2.fromOffset(730,24)
+        tostring(#pets).."/"..tostring(Config.MaxPets or 60).." pets  ·  Plot: "..roamingCount.."/10  ·  ★ protects pets from selling",
+        UDim2.fromOffset(22,112),
+        UDim2.fromOffset(770,24)
     )
     status.TextScaled=false
     status.TextSize=13
@@ -298,8 +310,8 @@ showPets = function(tab)
 
     local list=Instance.new("ScrollingFrame")
     list.Name="CollectedPets"
-    list.Position=UDim2.fromOffset(18,140)
-    list.Size=UDim2.fromOffset(315,425)
+    list.Position=UDim2.fromOffset(18,145)
+    list.Size=UDim2.fromOffset(326,445)
     list.BackgroundTransparency=1
     list.BorderSizePixel=0
     list.ScrollBarThickness=4
@@ -313,49 +325,149 @@ showPets = function(tab)
 
     local detail=Instance.new("Frame")
     detail.Name="PetDetails"
-    detail.Position=UDim2.fromOffset(352,140)
-    detail.Size=UDim2.fromOffset(410,425)
+    detail.Position=UDim2.fromOffset(362,145)
+    detail.Size=UDim2.fromOffset(438,445)
     detail.BackgroundTransparency=1
     detail.Parent=panel
 
     local function destination(p)
+        if p.Dead then return "DEAD" end
         if state.EquippedPetId==p.Id then return "COMPANION" end
         if state.PodiumPetId==p.Id then return "PODIUM" end
         return p.Displayed and "ROAMING" or "COLLECTION"
+    end
+
+    local function makeDeadPreview(parent,pet)
+        local viewport=Instance.new("ViewportFrame")
+        viewport.Name="DeadPetPreview"
+        viewport.Position=UDim2.fromOffset(224,128)
+        viewport.Size=UDim2.fromOffset(200,150)
+        viewport.BackgroundColor3=Color3.fromRGB(31,33,38)
+        viewport.BorderSizePixel=0
+        viewport.Ambient=Color3.fromRGB(190,190,190)
+        viewport.LightColor=Color3.fromRGB(255,240,220)
+        viewport.LightDirection=Vector3.new(-1,-1,-1)
+        viewport.Parent=parent
+        local corner=Instance.new("UICorner")
+        corner.CornerRadius=UDim.new(0,10)
+        corner.Parent=viewport
+
+        local previews=Root:FindFirstChild("PetPreviews")
+        local template=previews and (previews:FindFirstChild(pet.Species) or previews:FindFirstChild((Config.Pets[pet.Species] or {}).AnimationSpecies or ""))
+        if not template then return end
+
+        local copy=template:Clone()
+        local worldModel=Instance.new("WorldModel")
+        worldModel.Parent=viewport
+        copy.Parent=worldModel
+
+        local rootPart=copy.PrimaryPart or copy:FindFirstChildWhichIsA("BasePart",true)
+        if not rootPart then return end
+        copy.PrimaryPart=rootPart
+
+        copy:PivotTo(CFrame.new()*CFrame.Angles(0,0,math.rad(78)))
+        local size=copy:GetExtentsSize()
+        local camera=Instance.new("Camera")
+        camera.FieldOfView=38
+        camera.CFrame=CFrame.lookAt(
+            Vector3.new(0,math.max(1,size.Y*.25),math.max(6,size.Magnitude*1.15)),
+            Vector3.new(0,0,0)
+        )
+        camera.Parent=viewport
+        viewport.CurrentCamera=camera
+
+        task.spawn(function()
+            local angle=0
+            while viewport.Parent and copy.Parent do
+                angle+=0.012
+                copy:PivotTo(CFrame.Angles(0,angle,math.rad(78)))
+                task.wait(1/30)
+            end
+        end)
     end
 
     local function details(pet)
         selectedPetId=pet.Id
         detail:ClearAllChildren()
 
-        local title=text(detail,pet.Name,UDim2.fromOffset(0,0),UDim2.fromOffset(402,30))
+        local title=text(detail,pet.Name,UDim2.fromOffset(0,0),UDim2.fromOffset(330,30))
         title.TextScaled=false
         title.TextSize=21
         title.TextXAlignment=Enum.TextXAlignment.Left
 
+        local favourite=button(
+            detail,
+            pet.Favourite and "★ FAVOURITE" or "☆ FAVOURITE",
+            UDim2.fromOffset(316,0),
+            UDim2.fromOffset(122,30)
+        )
+        favourite.TextScaled=false
+        favourite.TextSize=10
+        favourite.BackgroundColor3=pet.Favourite and Color3.fromRGB(110,88,48) or Color3.fromRGB(48,54,62)
+        favourite.MouseButton1Click:Connect(function()
+            PetsRemote:FireServer("Favourite",pet.Id,not pet.Favourite)
+        end)
+
         local rating=math.ceil((pet.Health*pet.Power*pet.Defence)/1000)
+        local currentHealth=math.max(0,tonumber(pet.CurrentHealth) or pet.Health)
         local stats=text(
             detail,
             pet.Species.." · "..pet.Rarity.." · Lv."..pet.Level..
-            "\n"..destination(pet)..
-            "\n\nHealth "..pet.Health.."   Power "..pet.Power.."   Defence "..pet.Defence..
+            "\n"..destination(pet).."  ·  Imprint "..tostring(pet.Imprint or 20).."%"..
+            "\n\nHealth "..math.floor(currentHealth).."/"..pet.Health.."   Power "..pet.Power.."   Defence "..pet.Defence..
             "\nPower rating "..rating..
             "\nXP "..pet.XP.." / "..(pet.Level*100).."   ·   Upgrade points "..pet.UpgradePoints,
             UDim2.fromOffset(0,36),
-            UDim2.fromOffset(402,120)
+            UDim2.fromOffset(438,112)
         )
         stats.TextScaled=false
         stats.TextSize=13
         stats.TextWrapped=true
         stats.TextXAlignment=Enum.TextXAlignment.Left
 
+        if pet.Dead then
+            local deadBadge=text(
+                detail,
+                "DEAD",
+                UDim2.fromOffset(0,154),
+                UDim2.fromOffset(195,54)
+            )
+            deadBadge.TextScaled=false
+            deadBadge.TextSize=30
+            deadBadge.TextColor3=Color3.fromRGB(230,92,82)
+
+            local healReady=tonumber(pet.HealReadyAt) or 0
+            local healText
+            if healReady>os.time() then
+                local remaining=math.max(0,healReady-os.time())
+                healText="HEALING AT BARN\n"..tostring(math.ceil(remaining)).." seconds remaining"
+            else
+                healText="Heal pet at the Barn on your plot.\nHealing time = 30s × level × rarity rank."
+            end
+
+            local hint=text(
+                detail,
+                healText,
+                UDim2.fromOffset(0,218),
+                UDim2.fromOffset(205,108)
+            )
+            hint.TextScaled=false
+            hint.TextSize=13
+            hint.TextWrapped=true
+            hint.TextXAlignment=Enum.TextXAlignment.Left
+            hint.TextColor3=Color3.fromRGB(210,198,178)
+
+            makeDeadPreview(detail,pet)
+            return
+        end
+
         local renameCount=math.max(0,tonumber(pet.RenameCount) or 0)
         local renameCost=renameCount>=1 and math.max(0,tonumber(Config.PetRenameGemCost) or 0) or 0
 
         local renameBox=Instance.new("TextBox")
         renameBox.Name="RenameBox"
-        renameBox.Position=UDim2.fromOffset(0,158)
-        renameBox.Size=UDim2.fromOffset(260,36)
+        renameBox.Position=UDim2.fromOffset(0,154)
+        renameBox.Size=UDim2.fromOffset(280,36)
         renameBox.BackgroundColor3=Color3.fromRGB(38,43,52)
         renameBox.BorderSizePixel=0
         renameBox.ClearTextOnFocus=false
@@ -371,7 +483,7 @@ showPets = function(tab)
         renameCorner.Parent=renameBox
 
         local renameText=renameCost==0 and "RENAME · FREE" or ("RENAME · "..tostring(renameCost).." GEMS")
-        local renameButton=button(detail,renameText,UDim2.fromOffset(268,158),UDim2.fromOffset(134,36))
+        local renameButton=button(detail,renameText,UDim2.fromOffset(288,154),UDim2.fromOffset(150,36))
         renameButton.TextScaled=false
         renameButton.TextSize=11
         renameButton.MouseButton1Click:Connect(function()
@@ -381,8 +493,8 @@ showPets = function(tab)
         local renameHint=text(
             detail,
             renameCost==0 and "This pet still has its one free rename." or ("Further renames cost "..tostring(renameCost).." Gems."),
-            UDim2.fromOffset(0,197),
-            UDim2.fromOffset(402,21)
+            UDim2.fromOffset(0,194),
+            UDim2.fromOffset(438,21)
         )
         renameHint.TextScaled=false
         renameHint.TextSize=11
@@ -396,7 +508,7 @@ showPets = function(tab)
         }
 
         for i,option in ipairs(options) do
-            local b=button(detail,option[1],UDim2.fromOffset(0,226+(i-1)*45),UDim2.fromOffset(402,37))
+            local b=button(detail,option[1],UDim2.fromOffset(0,222+(i-1)*45),UDim2.fromOffset(438,37))
             b.Name=option[2]
             b.TextScaled=false
             b.TextSize=13
@@ -406,7 +518,7 @@ showPets = function(tab)
         end
 
         for i,stat in ipairs({"Health","Power","Defence"}) do
-            local b=button(detail,"+ "..stat,UDim2.fromOffset((i-1)*136,372),UDim2.fromOffset(130,36))
+            local b=button(detail,"+ "..stat,UDim2.fromOffset((i-1)*148,370),UDim2.fromOffset(142,36))
             b.TextScaled=false
             b.TextSize=12
             b.MouseButton1Click:Connect(function()
@@ -417,15 +529,17 @@ showPets = function(tab)
 
     local chosen
     for _,pet in ipairs(pets) do
+        local prefix=pet.Favourite and "★ " or (pet.Dead and "☠ " or "")
         local b=button(
             list,
-            pet.Name.."  ·  Lv."..pet.Level.."\n"..pet.Rarity.."  /  "..destination(pet),
+            prefix..pet.Name.."  ·  Lv."..pet.Level.."\n"..pet.Rarity.."  /  "..destination(pet),
             UDim2.new(),
-            UDim2.fromOffset(298,58)
+            UDim2.fromOffset(306,58)
         )
         b.TextScaled=false
         b.TextSize=13
         b.TextWrapped=true
+        b.BackgroundColor3=pet.Dead and Color3.fromRGB(62,43,45) or (pet.Favourite and Color3.fromRGB(66,57,43) or Color3.fromRGB(55,70,90))
         b.MouseButton1Click:Connect(function()
             details(pet)
         end)
@@ -440,7 +554,7 @@ showPets = function(tab)
             detail,
             "Your pet collection is empty.\nCapture wild pets to fill it.",
             UDim2.fromOffset(0,70),
-            UDim2.fromOffset(402,130)
+            UDim2.fromOffset(438,130)
         )
         empty.TextScaled=false
         empty.TextSize=16
