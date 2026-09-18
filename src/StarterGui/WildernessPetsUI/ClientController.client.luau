@@ -1565,7 +1565,14 @@ else
 end
 PetsRemote.OnClientEvent:Connect(function(action, success, message)
     if action == "Updated" then
-        if success and petsOpen then showPets() end
+        if success and petsOpen then showPets(backpackTab) end
         notify(message or (success and "Pet updated." or "Could not update this pet."))
+    elseif action == "HealingComplete" then
+        if gui:FindFirstChild("HealingBarn") then
+            showBarn()
+        elseif petsOpen then
+            showPets(backpackTab)
+        end
+        notify("A pet has finished healing at your Barn.")
     end
 end)
