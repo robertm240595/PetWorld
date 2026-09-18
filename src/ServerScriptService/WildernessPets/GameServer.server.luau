@@ -321,7 +321,14 @@ ShopRemote.OnServerEvent:Connect(function(player, action, ...)
         end
 
         local success, message, seconds = PetService:StartHealing(player, value)
-        if success then BarnService:RefreshVisuals(player) end
+        if success then
+            BarnService:RefreshVisuals(player)
+            task.delay(math.max(1, tonumber(seconds) or 1), function()
+                if player and player.Parent then
+                    BarnService:RefreshVisuals(player)
+                end
+            end)
+        end
         ShopRemote:FireClient(player, "BarnResult", success, message, seconds or 0)
 
     elseif action == "CollectHealed" then
