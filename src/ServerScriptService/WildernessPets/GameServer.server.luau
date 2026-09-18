@@ -56,7 +56,8 @@ local function teleportToPlot(player, character)
 end
 
 local function setupPlayer(player)
-    DataService:Load(player)
+    local data = DataService:Load(player)
+    player:SetAttribute("EquippedLassoName", data and data.Lasso or "Rough Rope")
     PetService:RefreshHealing(player)
     ActionLockService:Initialize(player)
 
@@ -86,20 +87,6 @@ Players.PlayerRemoving:Connect(function(player)
     DataService:Cleanup(player)
 end)
 
-task.spawn(function()
-    while true do
-        for _, player in ipairs(Players:GetPlayers()) do
-            if PetService:RefreshHealing(player) then
-                local refresh = script.Parent.Systems:FindFirstChild("PetDisplayRefresh")
-                if refresh then refresh:Fire(player) end
-                BarnService:RefreshVisuals(player)
-                PetsRemote:FireClient(player, "HealingComplete")
-            end
-        end
-        task.wait(1)
-    end
-end)
-
 ----------------------------------------------------------------
 -- STATE
 ----------------------------------------------------------------
@@ -111,12 +98,7 @@ GetState.OnServerInvoke = function(player)
         return nil
     end
 
-    local healingChanged = PetService:RefreshHealing(player)
-    if healingChanged then
-        local refresh = script.Parent.Systems:FindFirstChild("PetDisplayRefresh")
-        if refresh then refresh:Fire(player) end
-        BarnService:RefreshVisuals(player)
-    end
+    PetService:RefreshHealing(player)
 
     return {
         Coins = data.Coins,
