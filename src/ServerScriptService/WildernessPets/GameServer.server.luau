@@ -30,6 +30,7 @@ LassoKeeperService:Init()
 PetMerchantService:Init()
 BarnService:Init()
 local equipCompanion, unequipCompanion
+local syncCompanionLabel
 local combatSessions
 local plots = workspace.WildernessPets.Plots
 
@@ -453,7 +454,7 @@ local function destroyCompanion(session)
     if session and session.companion and session.companion.Parent then session.companion:Destroy() end
 end
 
-local function syncCompanionLabel(model, pet)
+syncCompanionLabel = function(model, pet)
     if not model or not model.Parent or not model.PrimaryPart or not pet then return end
 
     local stats = PetService:GetEffectiveStats(pet)
