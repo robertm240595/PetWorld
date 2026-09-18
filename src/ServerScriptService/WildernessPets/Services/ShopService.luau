@@ -10,22 +10,56 @@ function Service:BuyLasso(player, name)
     local data = DataService:Get(player)
 
     if not item or not data then
-        return false
+        return false, "Lasso unavailable."
+    end
+
+    data.Inventory = type(data.Inventory) == "table" and data.Inventory or {}
+
+    for _, owned in ipairs(data.Inventory) do
+        if type(owned) == "table" and owned.Type == "Lasso" and owned.Name == name then
+            data.Lasso = name
+            return true, "Lasso equipped."
+        end
+    end
+
+    if #data.Inventory >= (Config.MaxInventory or 25) then
+        return false, "Your inventory is full."
     end
 
     local coinCost = item.Coins or 0
     local gemCost = item.Gems or 0
 
     if data.Coins < coinCost or data.Gems < gemCost then
-        return false
+        return false, "You cannot afford that lasso."
     end
 
-    DataService:SpendCoins(player, coinCost)
-    DataService:SpendGems(player, gemCost)
+    if coinCost > 0 then DataService:SpendCoins(player, coinCost) end
+    if gemCost > 0 then DataService:SpendGems(player, gemCost) end
+
+    table.insert(data.Inventory, {
+        Type = "Lasso",
+        Name = name,
+        Quantity = 1
+    })
 
     data.Lasso = name
 
-    return true
+    return true, "Lasso purchased and equipped."
+end
+
+function Service:GetPetSellValue(pet)
+    if not pet then return nil end
+
+    local template = Config.Pets[pet.Species]
+    local rarity = Config.Rarities[pet.Rarity]
+    if not template or not rarity then return nil end
+
+    return math.floor(
+        template.SellValue
+        * rarity.SellMultiplier
+        * (1 + ((math.max(1, tonumber(pet.Level) or 1) - 1) * 0.10))
+        * (tonumber(Config.BeastTraderSellMultiplier) or 1)
+    )
 end
 
 function Service:SellPet(player, petId)
@@ -33,21 +67,17 @@ function Service:SellPet(player, petId)
     local pet = PetService:Find(player, petId)
 
     if not data or not pet then
-        return false
+        return false, "Pet not found."
     end
 
-    local template = Config.Pets[pet.Species]
-    if not template then
-        return false
+    local value = self:GetPetSellValue(pet)
+    if not value then
+        return false, "This pet cannot be traded."
     end
 
-    local rarity = Config.Rarities[pet.Rarity]
-
-    local value = math.floor(
-        template.SellValue *
-        rarity.SellMultiplier *
-        (1 + ((pet.Level - 1) * 0.10))
-    )
+    if data.DefencePetId == petId then data.DefencePetId = "" end
+    if data.PodiumPetId == petId then data.PodiumPetId = "" end
+    if data.EquippedPetId == petId then data.EquippedPetId = "" end
 
     for i, owned in ipairs(data.Pets) do
         if owned.Id == petId then
@@ -56,9 +86,10 @@ function Service:SellPet(player, petId)
         end
     end
 
+    -- Selling never grants pet XP. XP is awarded only by wild-pet combat kills.
     DataService:AddCoins(player, value)
 
-    return value
+    return value, "Sold " .. tostring(pet.Name or pet.Species) .. " for " .. tostring(value) .. " Coins."
 end
 
 return Service
