@@ -7,6 +7,26 @@ Config.StartGems = 25
 
 Config.MaxPets = 30
 Config.MaxPetNameLength = 18
+-- First rename is free. Further renames spend gems; gem packs can later be sold for Robux.
+Config.PetRenameGemCost = 50
+
+Config.CaptureMinigame = {
+    DurationSeconds = 8,
+    ClickClockTolerance = 0.65,
+    LassoWidthBonusPerStrength = 0.001,
+    MinGreenWidth = 0.07,
+    MaxGreenWidth = 0.40,
+    Rarities = {
+        Common = {GreenWidth = 0.32, Speed = 0.70},
+        Uncommon = {GreenWidth = 0.28, Speed = 0.76},
+        Rare = {GreenWidth = 0.24, Speed = 0.83},
+        Epic = {GreenWidth = 0.20, Speed = 0.91},
+        Legendary = {GreenWidth = 0.16, Speed = 1.00},
+        Mythic = {GreenWidth = 0.13, Speed = 1.08},
+        Limited = {GreenWidth = 0.11, Speed = 1.14},
+        Ancient = {GreenWidth = 0.09, Speed = 1.22}
+    }
+}
 
 Config.PlotCount = 12
 Config.PlotSize = 108
