@@ -706,90 +706,263 @@ end
 local function rewardCombatKill(player, session, target)
     if rewardGuard[target] then return end
     rewardGuard[target] = true
+
     local rarity = target:GetAttribute("Rarity") or "Common"
     local rarityInfo = Config.Rarities[rarity]
     local rank = rarityInfo and rarityInfo.Rank or 1
     local info = Config.Pets[target:GetAttribute("Species") or ""]
-    local xp = math.max(20, rank * 30)
+    local baseXP = math.max(20, rank * 30)
     local coins = math.max(3, math.floor(((info and info.SellValue) or 40) * .1))
     local part = monsterPart(target)
     local destination = session.companion and session.companion.PrimaryPart and session.companion.PrimaryPart.Position
+
     if part then makeExperienceOrbs(part.Position, destination) end
+
     DataService:AddCoins(player, coins)
-    PetService:AddXP(player, session.petId, xp)
-    combatTell(player, "Reward", xp, coins, rarity)
+    local _, _, awardedXP = PetService:AddXP(player, session.petId, baseXP)
+    awardedXP = awardedXP or baseXP
+
+    combatTell(player, "Reward", awardedXP, coins, rarity)
+
     local refresh = script.Parent.Systems:FindFirstChild("PetDisplayRefresh")
     if refresh and refresh:IsA("BindableEvent") then refresh:Fire(player) end
 end
+
 local function petBaseDamage(pet)
     local level = math.max(1, tonumber(pet.Level) or 1)
     local power = math.max(1, tonumber(pet.Power) or 1)
     return math.max(1, math.floor(power * (1 + (level-1)*.06)))
 end
+
+local function wildPetDamage(target, pet)
+    local power = math.max(1, tonumber(target:GetAttribute("Power")) or 1)
+    local defence = math.max(0, tonumber(pet.Defence) or 0)
+    local scale = tonumber((Config.Combat or {}).WildDamageDefenceScale) or 0.45
+    return math.max(1, math.floor(power - defence * scale))
+end
+
+local function defeatCompanion(player, session, target)
+    if not session or session.petDefeated then return end
+
+    session.petDefeated = true
+    session.attacking = false
+    session.attackToken = (session.attackToken or 0) + 1
+
+    local pet = session.pet
+    local companion = session.companion
+
+    if pet then
+        pet.CurrentHealth = 0
+        PetService:MarkDead(player, session.petId)
+    end
+
+    if companion and companion.Parent then
+        companion:SetAttribute("Health", 0)
+        pcall(function()
+            PetAnimator:PlayFaint(companion, 0.7)
+        end)
+    end
+
+    if target and target.Parent and target:GetAttribute("CombatOwnerUserId") == player.UserId then
+        target:SetAttribute("InCombat", false)
+        target:SetAttribute("CombatOwnerUserId", nil)
+        pcall(function()
+            PetAnimator:PlayIdle(target)
+        end)
+    end
+
+    local data = DataService:Get(player)
+    if data then data.EquippedPetId = "" end
+
+    player:SetAttribute("EquippedPetId", "")
+    player:SetAttribute("EquippedPetSpecies", "")
+    player:SetAttribute("CombatTarget", "")
+
+    combatTell(player, "PetDefeated", pet and pet.Name or "Your pet")
+    combatTell(player, "ClearTarget")
+
+    local refresh = script.Parent.Systems:FindFirstChild("PetDisplayRefresh")
+    if refresh and refresh:IsA("BindableEvent") then refresh:Fire(player) end
+
+    ActionLockService:End(player, "CompanionCombat")
+
+    task.delay(0.75, function()
+        if companion and companion.Parent then companion:Destroy() end
+        if combatSessions[player] == session then
+            combatSessions[player] = nil
+        end
+    end)
+end
+
 local function attackTarget(player)
     local session = combatSessions[player]
-    if not session or not session.companion or not session.companion.Parent then combatTell(player, "Error", "Equip a pet before giving an attack command.") return false end
-    if session.attacking then combatTell(player, "Error", "Your pet is already attacking.") return false end
+    if not session or not session.companion or not session.companion.Parent then
+        combatTell(player, "Error", "Equip a pet before giving an attack command.")
+        return false
+    end
+    if session.attacking then
+        combatTell(player, "Error", "Your pet is already attacking.")
+        return false
+    end
+
+    local pet = PetService:Find(player, session.petId)
+    if not pet or pet.Dead or (tonumber(pet.CurrentHealth) or 0) <= 0 then
+        combatTell(player, "Error", "That pet must be healed before it can fight.")
+        return false
+    end
+    session.pet = pet
+
     local target = session.target
-    if not validMonster(target) then combatTell(player, "Error", "Select a living wild creature first.") return false end
+    if not validMonster(target) then
+        combatTell(player, "Error", "Select a living wild creature first.")
+        return false
+    end
+
     local root = playerRoot(player)
     local targetPart = monsterPart(target)
     if not root or not targetPart then return false end
+
     if (root.Position - targetPart.Position).Magnitude > (tonumber(Config.AttackCommandRange) or 50) then
         combatTell(player, "Error", "Move a little closer before commanding your pet to attack.")
         return false
     end
+
     session.attacking = true
+    session.petDefeated = false
     ActionLockService:Begin(player, "CompanionCombat")
+
     target:SetAttribute("InCombat", true)
     target:SetAttribute("CombatOwnerUserId", player.UserId)
+
     local token = (session.attackToken or 0) + 1
     session.attackToken = token
     combatTell(player, "CombatState", "Engaging", target)
+
     task.spawn(function()
         local ok, err = pcall(function()
-            while combatSessions[player] == session and session.attackToken == token and session.attacking and validMonster(target) do
+            while combatSessions[player] == session
+                and session.attackToken == token
+                and session.attacking
+                and not session.petDefeated
+                and validMonster(target) do
+
                 local companion = session.companion
                 if not companion or not companion.Parent then break end
+
                 local current = monsterPart(target)
                 if not current then break end
-                local delta = Vector3.new(current.Position.X-companion:GetPivot().Position.X, 0, current.Position.Z-companion:GetPivot().Position.Z)
+
+                local delta = Vector3.new(
+                    current.Position.X - companion:GetPivot().Position.X,
+                    0,
+                    current.Position.Z - companion:GetPivot().Position.Z
+                )
                 local distance = delta.Magnitude
+
                 if distance > 7 then
-                    local stopAt = current.Position - delta.Unit*4
-                    PetAnimator:PlayRunTo(companion, stopAt, math.clamp(distance/9, .45, 2))
+                    local stopAt = current.Position - delta.Unit * 4
+                    local speedMultiplier = getPetSpeedMultiplier(player)
+                    PetAnimator:PlayRunTo(
+                        companion,
+                        stopAt,
+                        math.clamp(distance / (9 * speedMultiplier), .30, 2)
+                    )
                 end
-                if not validMonster(target) then break end
+
+                if not validMonster(target) or session.petDefeated then break end
+
                 current = monsterPart(target)
-                local close = (current.Position-companion:GetPivot().Position).Magnitude
+                if not current then break end
+
+                local close = (current.Position - companion:GetPivot().Position).Magnitude
                 if close <= 9 then
                     PetAnimator:PlayAttack(companion, current.Position, .72, function()
-                        if combatSessions[player] == session and session.attacking and validMonster(target) then
+                        if combatSessions[player] == session
+                            and session.attacking
+                            and not session.petDefeated
+                            and validMonster(target) then
                             target:SetAttribute("LastHitUserId", player.UserId)
                             MonsterService:DamageMonster(target, petBaseDamage(session.pet))
                         end
                     end, .9)
+
                     local health = target:GetAttribute("Health") or 0
                     if health <= 0 or target:GetAttribute("Dead") then
                         rewardCombatKill(player, session, target)
                         break
                     end
+
+                    if session.attacking
+                        and not session.petDefeated
+                        and validMonster(target)
+                        and companion.Parent
+                        and companion.PrimaryPart then
+
+                        PetAnimator:PlayAttack(target, companion.PrimaryPart.Position, .72, function()
+                            if combatSessions[player] ~= session
+                                or not session.attacking
+                                or session.petDefeated
+                                or not companion.Parent then
+                                return
+                            end
+
+                            local damage = wildPetDamage(target, session.pet)
+                            session.pet.CurrentHealth = math.max(
+                                0,
+                                (tonumber(session.pet.CurrentHealth) or session.pet.Health) - damage
+                            )
+                            companion:SetAttribute("Health", session.pet.CurrentHealth)
+                            syncCompanionLabel(companion, session.pet)
+
+                            task.spawn(function()
+                                if companion.Parent then
+                                    pcall(function() PetAnimator:PlayHit(companion, .22) end)
+                                end
+                            end)
+                        end, .9)
+
+                        if (tonumber(session.pet.CurrentHealth) or 0) <= 0 then
+                            defeatCompanion(player, session, target)
+                            return
+                        end
+                    end
                 end
-                task.wait(.15)
+
+                local interval = tonumber((Config.Combat or {}).WildAttackInterval) or 1.05
+                task.wait(math.max(.08, interval - .72))
             end
         end)
-        if not ok then warn("[WildernessPets] Companion combat: "..tostring(err)) end
+
+        if not ok then
+            warn("[WildernessPets] Companion combat: "..tostring(err))
+        end
+
+        if session.petDefeated then
+            return
+        end
+
         if target and target.Parent and target:GetAttribute("CombatOwnerUserId") == player.UserId then
             target:SetAttribute("InCombat", false)
             target:SetAttribute("CombatOwnerUserId", nil)
+            if not target:GetAttribute("Dead") and not target:GetAttribute("Captured") then
+                pcall(function() PetAnimator:PlayIdle(target) end)
+            end
         end
-        session.attacking = false
-        ActionLockService:End(player, "CompanionCombat")
-        if combatSessions[player] == session and session.companion and session.companion.Parent then PetAnimator:PlayIdle(session.companion) end
-        if combatSessions[player] == session then combatTell(player, "CombatState", "Ready", target) end
+
+        if combatSessions[player] == session then
+            session.attacking = false
+            ActionLockService:End(player, "CompanionCombat")
+            if session.companion and session.companion.Parent then
+                PetAnimator:PlayIdle(session.companion)
+                syncCompanionLabel(session.companion, session.pet)
+            end
+            combatTell(player, "CombatState", "Ready", target)
+        end
     end)
+
     return true
 end
+
 local function abilityTarget(player, slot)
     if slot ~= 1 and slot ~= 2 and slot ~= 3 then return false end
     combatTell(player, "Error", "Ability "..tostring(slot).." is reserved for this pet's unique skill.")
