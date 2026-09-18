@@ -976,48 +976,66 @@ end
 -- BEAST TRADER
 --------------------------------------------------------------
 
-showBeastTrader = function()
+showBeastTrader = function(tab)
+    if tab=="Sell" or tab=="Buyback" then
+        beastTraderTab=tab
+    end
+
     clear()
     gui:SetAttribute("InventoryOpen",true)
 
     state=GetState:InvokeServer()
     if not state then return end
 
-    local panel=frame(UDim2.fromOffset(720,560),UDim2.new(.5,-360,.5,-280))
+    local panel=frame(UDim2.fromOffset(760,590),UDim2.new(.5,-380,.5,-295))
     panel.Name="BeastTrader"
     panel.AnchorPoint=Vector2.new(.5,.5)
-    panel.Position=UDim2.new(.5,0,.5,-20)
+    panel.Position=UDim2.new(.5,0,.5,0)
 
     local viewport=workspace.CurrentCamera and workspace.CurrentCamera.ViewportSize or Vector2.new(1280,720)
     local fit=Instance.new("UIScale")
-    fit.Scale=math.min(1,(viewport.X-24)/720,(viewport.Y-100)/560)
+    fit.Scale=math.min(1,(viewport.X-30)/760,(viewport.Y-40)/590)
     fit.Parent=panel
 
-    local title=text(panel,"BEAST TRADER",UDim2.fromOffset(20,14),UDim2.fromOffset(520,30))
+    local title=text(panel,"BEAST TRADER",UDim2.fromOffset(20,12),UDim2.fromOffset(520,30))
     title.TextScaled=false
     title.TextSize=22
     title.TextXAlignment=Enum.TextXAlignment.Left
 
+    local close=button(panel,"×",UDim2.fromOffset(704,10),UDim2.fromOffset(38,34))
+    close.TextScaled=false
+    close.TextSize=24
+    close.MouseButton1Click:Connect(showHUD)
+
+    local sellTab=button(panel,"SELL PETS",UDim2.fromOffset(20,52),UDim2.fromOffset(180,42))
+    sellTab.TextScaled=false
+    sellTab.TextSize=12
+    sellTab.BackgroundColor3=beastTraderTab=="Sell" and Color3.fromRGB(75,92,117) or Color3.fromRGB(45,51,61)
+    sellTab.MouseButton1Click:Connect(function() showBeastTrader("Sell") end)
+
+    local buybackTab=button(panel,"BUYBACK",UDim2.fromOffset(210,52),UDim2.fromOffset(180,42))
+    buybackTab.TextScaled=false
+    buybackTab.TextSize=12
+    buybackTab.BackgroundColor3=beastTraderTab=="Buyback" and Color3.fromRGB(75,92,117) or Color3.fromRGB(45,51,61)
+    buybackTab.MouseButton1Click:Connect(function() showBeastTrader("Buyback") end)
+
     local subtitle=text(
         panel,
-        "Sell captured pets for Coins. Beast Trader prices include a bonus. Selling gives NO pet XP.",
-        UDim2.fromOffset(20,48),
-        UDim2.fromOffset(660,42)
+        beastTraderTab=="Sell"
+            and "Favourite pets cannot be sold. Beast Trader sales give Coins but NO pet XP."
+            or "Buyback costs more than the original sale price to protect the game economy.",
+        UDim2.fromOffset(20,101),
+        UDim2.fromOffset(710,30)
     )
     subtitle.TextScaled=false
     subtitle.TextSize=12
     subtitle.TextWrapped=true
     subtitle.TextXAlignment=Enum.TextXAlignment.Left
 
-    local close=button(panel,"×",UDim2.fromOffset(664,12),UDim2.fromOffset(36,32))
-    close.TextScaled=false
-    close.TextSize=24
-    close.MouseButton1Click:Connect(showHUD)
-
     local list=Instance.new("ScrollingFrame")
     list.Name="TradePets"
-    list.Position=UDim2.fromOffset(20,100)
-    list.Size=UDim2.fromOffset(680,430)
+    list.Position=UDim2.fromOffset(20,140)
+    list.Size=UDim2.fromOffset(720,425)
     list.BackgroundTransparency=1
     list.BorderSizePixel=0
     list.ScrollBarThickness=5
@@ -1029,9 +1047,60 @@ showBeastTrader = function()
     layout.Padding=UDim.new(0,8)
     layout.Parent=list
 
+    if beastTraderTab=="Buyback" then
+        local buybacks=state.PetBuyback or {}
+        if #buybacks==0 then
+            local empty=text(list,"No recently sold pets are available for buyback.",UDim2.new(),UDim2.fromOffset(690,60))
+            empty.TextScaled=false
+            empty.TextSize=15
+            return
+        end
+
+        for index,entry in ipairs(buybacks) do
+            local pet=entry.Pet or {}
+            local row=Instance.new("Frame")
+            row.Size=UDim2.fromOffset(700,72)
+            row.BackgroundColor3=Color3.fromRGB(38,43,52)
+            row.BorderSizePixel=0
+            row.Parent=list
+            local corner=Instance.new("UICorner")
+            corner.CornerRadius=UDim.new(0,8)
+            corner.Parent=row
+
+            local name=text(
+                row,
+                tostring(pet.Name or pet.Species or "Pet").."  ·  Lv."..tostring(pet.Level or 1).."  ·  Imprint "..tostring(pet.Imprint or 20).."%",
+                UDim2.fromOffset(14,8),
+                UDim2.fromOffset(455,22)
+            )
+            name.TextScaled=false
+            name.TextSize=14
+            name.TextXAlignment=Enum.TextXAlignment.Left
+
+            local price=text(
+                row,
+                "Sold for "..tostring(entry.SoldFor or 0).."  ·  Buyback "..tostring(entry.BuybackPrice or 0).." Coins",
+                UDim2.fromOffset(14,36),
+                UDim2.fromOffset(455,19)
+            )
+            price.TextScaled=false
+            price.TextSize=11
+            price.TextColor3=Color3.fromRGB(190,195,205)
+            price.TextXAlignment=Enum.TextXAlignment.Left
+
+            local buy=button(row,"BUY BACK",UDim2.fromOffset(535,17),UDim2.fromOffset(150,38))
+            buy.TextScaled=false
+            buy.TextSize=11
+            buy.MouseButton1Click:Connect(function()
+                ShopRemote:FireServer("BuybackPet",index)
+            end)
+        end
+        return
+    end
+
     local pets=state.Pets or {}
     if #pets==0 then
-        local empty=text(list,"You do not have any captured pets to trade.",UDim2.new(),UDim2.fromOffset(660,60))
+        local empty=text(list,"You do not have any captured pets to trade.",UDim2.new(),UDim2.fromOffset(690,60))
         empty.TextScaled=false
         empty.TextSize=15
         return
@@ -1051,8 +1120,8 @@ showBeastTrader = function()
         end
 
         local row=Instance.new("Frame")
-        row.Size=UDim2.fromOffset(660,68)
-        row.BackgroundColor3=Color3.fromRGB(38,43,52)
+        row.Size=UDim2.fromOffset(700,72)
+        row.BackgroundColor3=pet.Favourite and Color3.fromRGB(65,56,42) or Color3.fromRGB(38,43,52)
         row.BorderSizePixel=0
         row.Parent=list
         local corner=Instance.new("UICorner")
@@ -1061,9 +1130,9 @@ showBeastTrader = function()
 
         local name=text(
             row,
-            tostring(pet.Name).."  ·  Lv."..tostring(pet.Level),
+            (pet.Favourite and "★ " or "")..tostring(pet.Name).."  ·  Lv."..tostring(pet.Level).."  ·  Imprint "..tostring(pet.Imprint or 20).."%",
             UDim2.fromOffset(14,8),
-            UDim2.fromOffset(390,23)
+            UDim2.fromOffset(455,22)
         )
         name.TextScaled=false
         name.TextSize=14
@@ -1071,9 +1140,9 @@ showBeastTrader = function()
 
         local meta=text(
             row,
-            tostring(pet.Species).."  ·  "..tostring(pet.Rarity).."  ·  Coins only",
-            UDim2.fromOffset(14,34),
-            UDim2.fromOffset(390,20)
+            tostring(pet.Species).."  ·  "..tostring(pet.Rarity).."  ·  "..tostring(value).." Coins",
+            UDim2.fromOffset(14,36),
+            UDim2.fromOffset(455,19)
         )
         meta.TextScaled=false
         meta.TextSize=11
@@ -1082,17 +1151,158 @@ showBeastTrader = function()
 
         local sell=button(
             row,
-            "SELL  "..tostring(value).." COINS",
-            UDim2.fromOffset(432,15),
-            UDim2.fromOffset(210,38)
+            pet.Favourite and "FAVOURITE" or ("SELL  "..tostring(value)),
+            UDim2.fromOffset(535,17),
+            UDim2.fromOffset(150,38)
         )
         sell.TextScaled=false
-        sell.TextSize=12
-        sell.MouseButton1Click:Connect(function()
+        sell.TextSize=11
+
+        if pet.Favourite then
             sell.Active=false
-            sell.Text="SELLING..."
-            ShopRemote:FireServer("SellPet",pet.Id)
-        end)
+            sell.BackgroundColor3=Color3.fromRGB(63,57,48)
+        else
+            sell.MouseButton1Click:Connect(function()
+                sell.Active=false
+                sell.Text="SELLING..."
+                ShopRemote:FireServer("SellPet",pet.Id)
+            end)
+        end
+    end
+end
+
+showBarn = function()
+    clear()
+    gui:SetAttribute("InventoryOpen",true)
+
+    state=GetState:InvokeServer()
+    if not state then return end
+
+    local panel=frame(UDim2.fromOffset(760,590),UDim2.new(.5,-380,.5,-295))
+    panel.Name="HealingBarn"
+    panel.AnchorPoint=Vector2.new(.5,.5)
+    panel.Position=UDim2.new(.5,0,.5,0)
+
+    local viewport=workspace.CurrentCamera and workspace.CurrentCamera.ViewportSize or Vector2.new(1280,720)
+    local fit=Instance.new("UIScale")
+    fit.Scale=math.min(1,(viewport.X-30)/760,(viewport.Y-40)/590)
+    fit.Parent=panel
+
+    local title=text(panel,"PET BARN",UDim2.fromOffset(20,12),UDim2.fromOffset(520,30))
+    title.TextScaled=false
+    title.TextSize=22
+    title.TextXAlignment=Enum.TextXAlignment.Left
+
+    local subtitle=text(
+        panel,
+        "Dead pets recover here. Healing time = 30 seconds × pet level × rarity rank.",
+        UDim2.fromOffset(20,50),
+        UDim2.fromOffset(680,36)
+    )
+    subtitle.TextScaled=false
+    subtitle.TextSize=12
+    subtitle.TextWrapped=true
+    subtitle.TextXAlignment=Enum.TextXAlignment.Left
+
+    local close=button(panel,"×",UDim2.fromOffset(704,10),UDim2.fromOffset(38,34))
+    close.TextScaled=false
+    close.TextSize=24
+    close.MouseButton1Click:Connect(showHUD)
+
+    local list=Instance.new("ScrollingFrame")
+    list.Position=UDim2.fromOffset(20,100)
+    list.Size=UDim2.fromOffset(720,465)
+    list.BackgroundTransparency=1
+    list.BorderSizePixel=0
+    list.ScrollBarThickness=5
+    list.AutomaticCanvasSize=Enum.AutomaticSize.Y
+    list.CanvasSize=UDim2.new()
+    list.Parent=panel
+    local layout=Instance.new("UIListLayout")
+    layout.Padding=UDim.new(0,8)
+    layout.Parent=list
+
+    local deadPets={}
+    for _,pet in ipairs(state.Pets or {}) do
+        if pet.Dead then table.insert(deadPets,pet) end
+    end
+
+    if #deadPets==0 then
+        local empty=text(list,"No pets need healing.",UDim2.new(),UDim2.fromOffset(690,60))
+        empty.TextScaled=false
+        empty.TextSize=16
+        return
+    end
+
+    local reviveCount=0
+    for _,item in ipairs(state.Inventory or {}) do
+        if type(item)=="table" and item.Type=="Potion" and item.Name=="Instant Revive Potion" then
+            reviveCount=tonumber(item.Quantity) or 0
+        end
+    end
+
+    for _,pet in ipairs(deadPets) do
+        local rarity=Config.Rarities[pet.Rarity] or {}
+        local rank=tonumber(rarity.Rank) or 1
+        local total=math.floor((Config.HealingBaseSeconds or 30)*math.max(1,pet.Level or 1)*math.max(1,rank))
+        local readyAt=tonumber(pet.HealReadyAt) or 0
+        local healing=readyAt>os.time()
+
+        local row=Instance.new("Frame")
+        row.Size=UDim2.fromOffset(700,84)
+        row.BackgroundColor3=Color3.fromRGB(43,42,45)
+        row.BorderSizePixel=0
+        row.Parent=list
+        local corner=Instance.new("UICorner")
+        corner.CornerRadius=UDim.new(0,8)
+        corner.Parent=row
+
+        local name=text(
+            row,
+            tostring(pet.Name).."  ·  Lv."..tostring(pet.Level).."  ·  "..tostring(pet.Rarity),
+            UDim2.fromOffset(14,8),
+            UDim2.fromOffset(420,22)
+        )
+        name.TextScaled=false
+        name.TextSize=14
+        name.TextXAlignment=Enum.TextXAlignment.Left
+
+        local status=text(
+            row,
+            healing and ("Healing · "..tostring(math.max(0,readyAt-os.time())).."s remaining") or ("Ready for Barn · "..tostring(total).."s healing"),
+            UDim2.fromOffset(14,36),
+            UDim2.fromOffset(420,20)
+        )
+        status.TextScaled=false
+        status.TextSize=11
+        status.TextColor3=Color3.fromRGB(200,188,170)
+        status.TextXAlignment=Enum.TextXAlignment.Left
+
+        if healing then
+            local revive=button(
+                row,
+                reviveCount>0 and ("INSTANT REVIVE x"..tostring(reviveCount)) or "NO REVIVE POTION",
+                UDim2.fromOffset(465,20),
+                UDim2.fromOffset(220,42)
+            )
+            revive.TextScaled=false
+            revive.TextSize=10
+            if reviveCount>0 then
+                revive.MouseButton1Click:Connect(function()
+                    ShopRemote:FireServer("UsePotion","Instant Revive Potion",pet.Id)
+                end)
+            else
+                revive.Active=false
+                revive.BackgroundColor3=Color3.fromRGB(48,50,54)
+            end
+        else
+            local heal=button(row,"PLACE IN BARN",UDim2.fromOffset(505,20),UDim2.fromOffset(180,42))
+            heal.TextScaled=false
+            heal.TextSize=11
+            heal.MouseButton1Click:Connect(function()
+                ShopRemote:FireServer("StartHealing",pet.Id)
+            end)
+        end
     end
 end
 
