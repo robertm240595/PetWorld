@@ -3,12 +3,13 @@ local Config = {}
 Config.GameName = "Wilderness Pets"
 
 Config.StartCoins = 500
-Config.StartGems = 25
+Config.StartGems = 0
 
 Config.MaxPets = 60
 Config.MaxPetNameLength = 18
 Config.MaxInventory = 25
-Config.BeastTraderSellMultiplier = 1.35
+Config.BeastTraderSellMultiplier = 1.10
+Config.WildKillCoinRatio = 0.15
 Config.BeastTraderBuybackMultiplier = 1.25
 Config.LassoBuybackMultiplier = 1.0
 Config.AttackCommandRange = 50
@@ -33,20 +34,20 @@ Config.PetRenameGemCost = 50
 Config.CaptureMinigame = {
     RoundDurationSeconds = 4.5,
     ClickClockTolerance = 0.65,
-    LassoWidthBonusPerStrength = 0.001,
-    LassoSpeedReductionPerStrength = 0.0035,
-    MinSpeedMultiplier = 0.55,
-    MinGreenWidth = 0.07,
-    MaxGreenWidth = 0.40,
+    LassoWidthBonusPerStrength = 0.0007,
+    LassoSpeedReductionPerStrength = 0.0028,
+    MinSpeedMultiplier = 0.62,
+    MinGreenWidth = 0.045,
+    MaxGreenWidth = 0.32,
     Rarities = {
-        Common = {GreenWidth = 0.32, Speed = 0.70, Hits = 3},
-        Uncommon = {GreenWidth = 0.28, Speed = 0.76, Hits = 4},
-        Rare = {GreenWidth = 0.24, Speed = 0.83, Hits = 5},
-        Epic = {GreenWidth = 0.20, Speed = 0.91, Hits = 6},
-        Legendary = {GreenWidth = 0.16, Speed = 1.00, Hits = 7},
-        Mythic = {GreenWidth = 0.13, Speed = 1.08, Hits = 8},
-        Limited = {GreenWidth = 0.11, Speed = 1.14, Hits = 9},
-        Ancient = {GreenWidth = 0.09, Speed = 1.22, Hits = 10}
+        Common = {GreenWidth = 0.25, Speed = 0.80, Hits = 3},
+        Uncommon = {GreenWidth = 0.20, Speed = 0.90, Hits = 4},
+        Rare = {GreenWidth = 0.16, Speed = 1.02, Hits = 5},
+        Epic = {GreenWidth = 0.13, Speed = 1.15, Hits = 6},
+        Legendary = {GreenWidth = 0.105, Speed = 1.28, Hits = 7},
+        Mythic = {GreenWidth = 0.08, Speed = 1.42, Hits = 8},
+        Limited = {GreenWidth = 0.065, Speed = 1.55, Hits = 9},
+        Ancient = {GreenWidth = 0.05, Speed = 1.68, Hits = 10}
     }
 }
 
@@ -54,101 +55,131 @@ Config.PlotCount = 12
 Config.PlotSize = 108
 Config.PlotSpacing = 285
 
-Config.WildMonsterCount = 36
+Config.WildMonsterCount = 64
+Config.WildSpawn = {
+    MinRadius = 190,
+    MaxRadius = 640,
+    Attempts = 90,
+    RoamMinDistance = 45,
+    RoamMaxDistance = 120
+}
 
 Config.Rarities = {
     Common = {
         Rank = 1,
-        CaptureDifficulty = 10,
-        SellMultiplier = 1,
-        Weight = 55
+        CaptureDifficulty = 18,
+        SellMultiplier = 1.00,
+        Weight = 78
     },
 
     Uncommon = {
         Rank = 2,
-        CaptureDifficulty = 23,
-        SellMultiplier = 2,
-        Weight = 25
+        CaptureDifficulty = 32,
+        SellMultiplier = 1.35,
+        Weight = 17
     },
 
     Rare = {
         Rank = 3,
-        CaptureDifficulty = 40,
-        SellMultiplier = 5,
-        Weight = 11
+        CaptureDifficulty = 50,
+        SellMultiplier = 1.80,
+        Weight = 3.8
     },
 
     Epic = {
         Rank = 4,
-        CaptureDifficulty = 58,
-        SellMultiplier = 10,
-        Weight = 5
+        CaptureDifficulty = 68,
+        SellMultiplier = 2.50,
+        Weight = 0.9
     },
 
     Legendary = {
         Rank = 5,
-        CaptureDifficulty = 74,
-        SellMultiplier = 25,
-        Weight = 2.5
+        CaptureDifficulty = 82,
+        SellMultiplier = 4.00,
+        Weight = 0.22
     },
 
     Mythic = {
         Rank = 6,
-        CaptureDifficulty = 86,
-        SellMultiplier = 60,
-        Weight = 1
+        CaptureDifficulty = 98,
+        SellMultiplier = 6.00,
+        Weight = 0.06
     },
 
     Limited = {
         Rank = 7,
-        CaptureDifficulty = 80,
-        SellMultiplier = 75,
-        Weight = 0.4
+        CaptureDifficulty = 112,
+        SellMultiplier = 8.00,
+        Weight = 0.015
     },
 
     Ancient = {
         Rank = 8,
-        CaptureDifficulty = 96,
-        SellMultiplier = 150,
-        Weight = 0.1
+        CaptureDifficulty = 130,
+        SellMultiplier = 12.00,
+        Weight = 0.005
     }
+}
+
+Config.RarityMinLassoStrength = {
+    Common = 0,
+    Uncommon = 25,
+    Rare = 45,
+    Epic = 65,
+    Legendary = 80,
+    Mythic = 95,
+    Limited = 115,
+    Ancient = 125
 }
 
 Config.Lassos = {
     ["Rough Rope"] = {
         Strength = 15,
         Coins = 0,
-        Gems = 0
+        Gems = 0,
+        DisplayColor = Color3.fromRGB(117, 82, 52),
+        DisplayMaterial = "Fabric"
     },
 
     ["Hunter's Lasso"] = {
         Strength = 30,
-        Coins = 1000,
-        Gems = 0
+        Coins = 2500,
+        Gems = 0,
+        DisplayColor = Color3.fromRGB(177, 126, 72),
+        DisplayMaterial = "Leather"
     },
 
     ["Iron Lasso"] = {
         Strength = 50,
-        Coins = 5000,
-        Gems = 0
+        Coins = 12500,
+        Gems = 0,
+        DisplayColor = Color3.fromRGB(116, 121, 126),
+        DisplayMaterial = "Metal"
     },
 
     ["Steel Lasso"] = {
         Strength = 70,
-        Coins = 15000,
-        Gems = 0
+        Coins = 50000,
+        Gems = 0,
+        DisplayColor = Color3.fromRGB(190, 201, 210),
+        DisplayMaterial = "Metal"
     },
 
     ["Mystic Lasso"] = {
-        Strength = 90,
-        Coins = 50000,
-        Gems = 250
+        Strength = 100,
+        Coins = 0,
+        Gems = 600,
+        DisplayColor = Color3.fromRGB(151, 102, 232),
+        DisplayMaterial = "Neon"
     },
 
     ["Ancient Lasso"] = {
-        Strength = 125,
-        Coins = 150000,
-        Gems = 750
+        Strength = 135,
+        Coins = 0,
+        Gems = 1500,
+        DisplayColor = Color3.fromRGB(232, 183, 74),
+        DisplayMaterial = "Neon"
     }
 }
 
@@ -157,35 +188,38 @@ Config.Potions = {
         Coins = 1200,
         Type = "XPBoost",
         Percent = 0.25,
-        Duration = 600,
-        Description = "+25% pet XP from wild-pet kills for 10 minutes."
+        Duration = 900,
+        Description = "+25% pet XP from wild-pet kills for 15 minutes."
     },
     ["Vitality Elixir"] = {
         Coins = 1800,
-        Type = "StatBoost",
+        Type = "TimedStatBoost",
         Stat = "Health",
-        Amount = 25,
-        Description = "Permanently increases one pet's Health by 25."
+        Percent = 0.20,
+        Duration = 1800,
+        Description = "+20% maximum Health for the selected pet for 30 minutes."
     },
     ["Power Elixir"] = {
         Coins = 1800,
-        Type = "StatBoost",
+        Type = "TimedStatBoost",
         Stat = "Power",
-        Amount = 5,
-        Description = "Permanently increases one pet's Power by 5."
+        Percent = 0.20,
+        Duration = 1800,
+        Description = "+20% Power for the selected pet for 30 minutes."
     },
     ["Defence Elixir"] = {
         Coins = 1800,
-        Type = "StatBoost",
+        Type = "TimedStatBoost",
         Stat = "Defence",
-        Amount = 5,
-        Description = "Permanently increases one pet's Defence by 5."
+        Percent = 0.20,
+        Duration = 1800,
+        Description = "+20% Defence for the selected pet for 30 minutes."
     },
     ["Battle Health Potion"] = {
         Coins = 900,
         Type = "BattleHeal",
         Percent = 0.35,
-        Description = "Restores 35% of your equipped pet's maximum Health."
+        Description = "Restores 35% of your equipped pet's current maximum Health during battle."
     },
     ["Instant Revive Potion"] = {
         Coins = 3500,
@@ -203,8 +237,8 @@ Config.Potions = {
         Type = "SpeedBoost",
         PlayerMultiplier = 1.25,
         PetMultiplier = 1.25,
-        Duration = 300,
-        Description = "+25% player and equipped-pet movement speed for 5 minutes."
+        Duration = 900,
+        Description = "+25% player and equipped-pet movement speed for 15 minutes."
     },
     ["Luck Potion"] = {
         Coins = 2800,
@@ -219,7 +253,7 @@ Config.Pets = {
         Health = 100,
         Power = 20,
         Defence = 12,
-        SellValue = 50
+        SellValue = 35
     },
 
     Boar = {
@@ -227,7 +261,7 @@ Config.Pets = {
         Health = 125,
         Power = 17,
         Defence = 20,
-        SellValue = 60
+        SellValue = 40
     },
 
     Fox = {
@@ -235,7 +269,7 @@ Config.Pets = {
         Health = 110,
         Power = 28,
         Defence = 15,
-        SellValue = 120
+        SellValue = 60
     },
 
     Bear = {
@@ -243,7 +277,7 @@ Config.Pets = {
         Health = 220,
         Power = 45,
         Defence = 32,
-        SellValue = 300
+        SellValue = 100
     },
 
     Griffin = {
@@ -251,7 +285,7 @@ Config.Pets = {
         Health = 300,
         Power = 65,
         Defence = 45,
-        SellValue = 800
+        SellValue = 175
     },
 
     Dragon = {
@@ -259,7 +293,7 @@ Config.Pets = {
         Health = 500,
         Power = 100,
         Defence = 70,
-        SellValue = 2200
+        SellValue = 300
     },
 
     Leviathan = {
@@ -267,7 +301,7 @@ Config.Pets = {
         Health = 800,
         Power = 145,
         Defence = 100,
-        SellValue = 6500
+        SellValue = 500
     },
 
     Starling = {
@@ -275,7 +309,7 @@ Config.Pets = {
         Health = 650,
         Power = 160,
         Defence = 80,
-        SellValue = 8000
+        SellValue = 650
     },
 
     AncientTitan = {
@@ -283,7 +317,7 @@ Config.Pets = {
         Health = 1200,
         Power = 210,
         Defence = 150,
-        SellValue = 15000
+        SellValue = 1000
     }
 }
 
@@ -301,7 +335,7 @@ Config.RobuxPets = {
 
 Config.WeeklyReward = {
     Coins = 5000,
-    Gems = 250
+    Gems = 0
 }
 
 
