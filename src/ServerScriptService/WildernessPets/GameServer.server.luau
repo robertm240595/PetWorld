@@ -301,8 +301,8 @@ ShopRemote.OnServerEvent:Connect(function(player, action, ...)
             if activeSession and activeSession.pet then
                 local refreshed = PetService:Find(player, activeSession.petId)
                 if refreshed then activeSession.pet = refreshed end
-                if activeSession.companion and activeSession.companion.Parent then
-                    activeSession.companion:SetAttribute("Health", refreshed and refreshed.CurrentHealth or 0)
+                if activeSession.companion and activeSession.companion.Parent and refreshed then
+                    syncCompanionLabel(activeSession.companion, refreshed)
                 end
             end
             local refresh = script.Parent.Systems:FindFirstChild("PetDisplayRefresh")
@@ -322,6 +322,21 @@ ShopRemote.OnServerEvent:Connect(function(player, action, ...)
         local success, message, seconds = PetService:StartHealing(player, value)
         if success then BarnService:RefreshVisuals(player) end
         ShopRemote:FireClient(player, "BarnResult", success, message, seconds or 0)
+
+    elseif action == "CollectHealed" then
+        local allowed, gateMessage = BarnService:CanUse(player)
+        if not allowed then
+            ShopRemote:FireClient(player, "BarnResult", false, gateMessage)
+            return
+        end
+
+        local success, message = PetService:CollectHealed(player, value)
+        if success then
+            BarnService:RefreshVisuals(player)
+            local refresh = script.Parent.Systems:FindFirstChild("PetDisplayRefresh")
+            if refresh then refresh:Fire(player) end
+        end
+        ShopRemote:FireClient(player, "BarnResult", success, message, 0)
     end
 end)
 
@@ -441,7 +456,8 @@ end
 local function syncCompanionLabel(model, pet)
     if not model or not model.Parent or not model.PrimaryPart or not pet then return end
 
-    local maximumHealth = math.max(1, tonumber(pet.Health) or 1)
+    local stats = PetService:GetEffectiveStats(pet)
+    local maximumHealth = math.max(1, tonumber(stats.Health) or 1)
     local currentHealth = math.clamp(tonumber(pet.CurrentHealth) or maximumHealth, 0, maximumHealth)
     pet.CurrentHealth = currentHealth
 
@@ -530,8 +546,9 @@ local function createCompanion(player, pet)
     model:SetAttribute("PetId", pet.Id)
     model:SetAttribute("Species", pet.Species)
     model:SetAttribute("AnimationSpecies", (info and info.AnimationSpecies) or pet.Species)
-    model:SetAttribute("Health", math.clamp(tonumber(pet.CurrentHealth) or tonumber(pet.Health) or 1, 0, math.max(1, tonumber(pet.Health) or 1)))
-    model:SetAttribute("MaxHealth", math.max(1, tonumber(pet.Health) or 1))
+    local effectiveStats = PetService:GetEffectiveStats(pet)
+    model:SetAttribute("Health", math.clamp(tonumber(pet.CurrentHealth) or effectiveStats.Health, 0, effectiveStats.Health))
+    model:SetAttribute("MaxHealth", effectiveStats.Health)
     model:SetAttribute("Captured", false)
     model:SetAttribute("InCombat", false)
     model.Parent = companionsFolder()
@@ -714,7 +731,15 @@ local function rewardCombatKill(player, session, target)
     local rank = rarityInfo and rarityInfo.Rank or 1
     local info = Config.Pets[target:GetAttribute("Species") or ""]
     local baseXP = math.max(20, rank * 30)
-    local coins = math.max(3, math.floor(((info and info.SellValue) or 40) * .1))
+    local sellValue = math.floor(
+        ((info and info.SellValue) or 35)
+        * ((rarityInfo and rarityInfo.SellMultiplier) or 1)
+        * (tonumber(Config.BeastTraderSellMultiplier) or 1)
+    )
+    local coins = math.max(
+        1,
+        math.floor(sellValue * (tonumber(Config.WildKillCoinRatio) or 0.15))
+    )
     local part = monsterPart(target)
     local destination = session.companion and session.companion.PrimaryPart and session.companion.PrimaryPart.Position
 
@@ -732,13 +757,15 @@ end
 
 local function petBaseDamage(pet)
     local level = math.max(1, tonumber(pet.Level) or 1)
-    local power = math.max(1, tonumber(pet.Power) or 1)
+    local stats = PetService:GetEffectiveStats(pet)
+    local power = math.max(1, tonumber(stats.Power) or 1)
     return math.max(1, math.floor(power * (1 + (level-1)*.06)))
 end
 
 local function wildPetDamage(target, pet)
     local power = math.max(1, tonumber(target:GetAttribute("Power")) or 1)
-    local defence = math.max(0, tonumber(pet.Defence) or 0)
+    local stats = PetService:GetEffectiveStats(pet)
+    local defence = math.max(0, tonumber(stats.Defence) or 0)
     local scale = tonumber((Config.Combat or {}).WildDamageDefenceScale) or 0.45
     return math.max(1, math.floor(power - defence * scale))
 end
