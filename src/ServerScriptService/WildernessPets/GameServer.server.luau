@@ -308,30 +308,65 @@ end
 local function syncCompanionLabel(model, pet)
     if not model or not model.Parent or not model.PrimaryPart or not pet then return end
 
+    local currentHealth = math.max(0, tonumber(pet.Health) or 1)
+    local maximumHealth = math.max(1, tonumber(pet.Health) or currentHealth)
+    model:SetAttribute("Health", currentHealth)
+    model:SetAttribute("MaxHealth", maximumHealth)
+
     local gui = model.PrimaryPart:FindFirstChild("CompanionName")
     if not gui then
         gui = Instance.new("BillboardGui")
         gui.Name = "CompanionName"
-        gui.Size = UDim2.fromOffset(160, 30)
+        gui.Size = UDim2.fromOffset(170, 48)
         gui.MaxDistance = 55
         gui.AlwaysOnTop = false
-        gui.StudsOffsetWorldSpace = Vector3.new(0, model:GetExtentsSize().Y * 0.55 + 0.65, 0)
+        gui.StudsOffsetWorldSpace = Vector3.new(0, model:GetExtentsSize().Y * 0.55 + 0.7, 0)
         gui.Parent = model.PrimaryPart
 
         local label = Instance.new("TextLabel")
         label.Name = "Label"
         label.BackgroundTransparency = 1
-        label.Size = UDim2.fromScale(1, 1)
+        label.Position = UDim2.fromOffset(0, 0)
+        label.Size = UDim2.new(1, 0, 0, 24)
         label.Font = Enum.Font.GothamSemibold
         label.TextSize = 14
         label.TextStrokeTransparency = 0.35
         label.TextColor3 = Color3.fromRGB(247, 235, 185)
         label.Parent = gui
+
+        local back = Instance.new("Frame")
+        back.Name = "HealthBack"
+        back.Position = UDim2.fromOffset(10, 29)
+        back.Size = UDim2.fromOffset(150, 10)
+        back.BackgroundColor3 = Color3.fromRGB(55, 35, 35)
+        back.BorderSizePixel = 0
+        back.Parent = gui
+
+        local backCorner = Instance.new("UICorner")
+        backCorner.CornerRadius = UDim.new(0, 4)
+        backCorner.Parent = back
+
+        local fill = Instance.new("Frame")
+        fill.Name = "Fill"
+        fill.Size = UDim2.fromScale(1, 1)
+        fill.BackgroundColor3 = Color3.fromRGB(86, 188, 105)
+        fill.BorderSizePixel = 0
+        fill.Parent = back
+
+        local fillCorner = Instance.new("UICorner")
+        fillCorner.CornerRadius = UDim.new(0, 4)
+        fillCorner.Parent = fill
     end
 
     local label = gui:FindFirstChild("Label")
     if label and label:IsA("TextLabel") then
         label.Text = tostring(pet.Name or pet.Species) .. "  Lv." .. tostring(pet.Level or 1)
+    end
+
+    local back = gui:FindFirstChild("HealthBack")
+    local fill = back and back:FindFirstChild("Fill")
+    if fill and fill:IsA("Frame") then
+        fill.Size = UDim2.fromScale(math.clamp(currentHealth / maximumHealth, 0, 1), 1)
     end
 end
 
@@ -356,6 +391,8 @@ local function createCompanion(player, pet)
     model:SetAttribute("PetId", pet.Id)
     model:SetAttribute("Species", pet.Species)
     model:SetAttribute("AnimationSpecies", (info and info.AnimationSpecies) or pet.Species)
+    model:SetAttribute("Health", math.max(1, tonumber(pet.Health) or 1))
+    model:SetAttribute("MaxHealth", math.max(1, tonumber(pet.Health) or 1))
     model:SetAttribute("Captured", false)
     model:SetAttribute("InCombat", false)
     model.Parent = companionsFolder()
