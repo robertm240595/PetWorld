@@ -10,7 +10,7 @@ function Service:SetDefence(player, petId)
     local data = DataService:Get(player)
     local pet = PetService:Find(player, petId)
 
-    if not data or not pet then
+    if not data or not pet or pet.Dead then
         return false
     end
 
