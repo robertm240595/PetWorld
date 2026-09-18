@@ -18,6 +18,8 @@ local state
 local petsOpen=false
 local selectedPetId
 local showPets
+local showBeastTrader
+local backpackTab = "Pets"
 
 local gui = script.Parent
 
@@ -106,7 +108,11 @@ end
 -- PET UI
 --------------------------------------------------------------
 
-showPets = function()
+showPets = function(tab)
+    if tab == "Pets" or tab == "Inventory" then
+        backpackTab = tab
+    end
+
     clear()
     petsOpen=true
     gui:SetAttribute("InventoryOpen",true)
@@ -118,36 +124,177 @@ showPets = function()
         return
     end
 
-    local panel=frame(UDim2.fromOffset(760,575),UDim2.new(.5,-380,.5,-287))
+    local pets=state.Pets or {}
+    local inventory=state.Inventory or {}
+
+    local panel=frame(UDim2.fromOffset(780,590),UDim2.new(.5,-390,.5,-295))
     panel.Name="PetBackpack"
     panel.AnchorPoint=Vector2.new(.5,.5)
-    panel.Position=UDim2.new(.5,0,.5,-30)
+    panel.Position=UDim2.new(.5,0,.5,-25)
 
     local viewport=workspace.CurrentCamera and workspace.CurrentCamera.ViewportSize or Vector2.new(1280,720)
     local fit=Instance.new("UIScale")
-    fit.Scale=math.min(1,(viewport.X-24)/760,(viewport.Y-120)/575)
+    fit.Scale=math.min(1,(viewport.X-24)/780,(viewport.Y-100)/590)
     fit.Parent=panel
 
-    text(panel,"BACKPACK  /  COLLECTED PETS",UDim2.fromOffset(20,12),UDim2.fromOffset(540,32))
+    local header=text(panel,"BACKPACK",UDim2.fromOffset(20,12),UDim2.fromOffset(420,30))
+    header.TextScaled=false
+    header.TextSize=22
+    header.TextXAlignment=Enum.TextXAlignment.Left
 
-    local count=0
-    for _,pet in ipairs(state.Pets or {}) do
-        if pet.Displayed then count+=1 end
+    local close=button(panel,"×",UDim2.fromOffset(724,10),UDim2.fromOffset(38,34))
+    close.TextScaled=false
+    close.TextSize=24
+    close.MouseButton1Click:Connect(function()
+        showHUD()
+    end)
+
+    local petTab=button(
+        panel,
+        "🐾  PETS   "..tostring(#pets).."/"..tostring(Config.MaxPets or 60),
+        UDim2.fromOffset(20,50),
+        UDim2.fromOffset(220,52)
+    )
+    petTab.TextScaled=false
+    petTab.TextSize=14
+
+    local inventoryTab=button(
+        panel,
+        "🎒  INVENTORY   "..tostring(#inventory).."/"..tostring(Config.MaxInventory or 25),
+        UDim2.fromOffset(248,50),
+        UDim2.fromOffset(250,52)
+    )
+    inventoryTab.TextScaled=false
+    inventoryTab.TextSize=14
+
+    petTab.BackgroundColor3=backpackTab=="Pets" and Color3.fromRGB(75,92,117) or Color3.fromRGB(45,51,61)
+    inventoryTab.BackgroundColor3=backpackTab=="Inventory" and Color3.fromRGB(75,92,117) or Color3.fromRGB(45,51,61)
+
+    petTab.MouseButton1Click:Connect(function()
+        showPets("Pets")
+    end)
+    inventoryTab.MouseButton1Click:Connect(function()
+        showPets("Inventory")
+    end)
+
+    if backpackTab=="Inventory" then
+        local status=text(
+            panel,
+            "Carried items  ·  "..tostring(#inventory).."/"..tostring(Config.MaxInventory or 25).." slots",
+            UDim2.fromOffset(20,108),
+            UDim2.fromOffset(730,24)
+        )
+        status.TextScaled=false
+        status.TextSize=13
+        status.TextXAlignment=Enum.TextXAlignment.Left
+
+        local list=Instance.new("ScrollingFrame")
+        list.Name="InventoryItems"
+        list.Position=UDim2.fromOffset(20,140)
+        list.Size=UDim2.fromOffset(740,425)
+        list.BackgroundTransparency=1
+        list.BorderSizePixel=0
+        list.ScrollBarThickness=5
+        list.AutomaticCanvasSize=Enum.AutomaticSize.Y
+        list.CanvasSize=UDim2.new()
+        list.Parent=panel
+
+        local layout=Instance.new("UIListLayout")
+        layout.Padding=UDim.new(0,8)
+        layout.Parent=list
+
+        if #inventory==0 then
+            local empty=text(list,"Your inventory is empty.",UDim2.new(),UDim2.fromOffset(720,55))
+            empty.TextScaled=false
+            empty.TextSize=16
+        else
+            for _,item in ipairs(inventory) do
+                if type(item)=="table" then
+                    local itemType=tostring(item.Type or "Item")
+                    local itemName=tostring(item.Name or "Unknown")
+                    local quantity=math.max(1,tonumber(item.Quantity) or 1)
+                    local row=Instance.new("Frame")
+                    row.Size=UDim2.fromOffset(720,64)
+                    row.BackgroundColor3=Color3.fromRGB(38,43,52)
+                    row.BorderSizePixel=0
+                    row.Parent=list
+                    local corner=Instance.new("UICorner")
+                    corner.CornerRadius=UDim.new(0,8)
+                    corner.Parent=row
+
+                    local itemIcon=text(
+                        row,
+                        itemType=="Lasso" and "◎" or "▣",
+                        UDim2.fromOffset(12,9),
+                        UDim2.fromOffset(44,44)
+                    )
+                    itemIcon.TextScaled=false
+                    itemIcon.TextSize=26
+
+                    local itemLabel=text(
+                        row,
+                        itemName.."  ·  "..itemType.."  ·  x"..tostring(quantity),
+                        UDim2.fromOffset(66,9),
+                        UDim2.fromOffset(430,22)
+                    )
+                    itemLabel.TextScaled=false
+                    itemLabel.TextSize=14
+                    itemLabel.TextXAlignment=Enum.TextXAlignment.Left
+
+                    local detailText=""
+                    if itemType=="Lasso" then
+                        local info=Config.Lassos[itemName]
+                        detailText="Strength "..tostring(info and info.Strength or "?")
+                        if state.Lasso==itemName then
+                            detailText=detailText.."  ·  EQUIPPED"
+                        end
+                    end
+
+                    local itemDetail=text(
+                        row,
+                        detailText,
+                        UDim2.fromOffset(66,33),
+                        UDim2.fromOffset(430,20)
+                    )
+                    itemDetail.TextScaled=false
+                    itemDetail.TextSize=11
+                    itemDetail.TextColor3=Color3.fromRGB(190,195,205)
+                    itemDetail.TextXAlignment=Enum.TextXAlignment.Left
+
+                    if itemType=="Lasso" and state.Lasso~=itemName then
+                        local equip=button(row,"EQUIP",UDim2.fromOffset(570,14),UDim2.fromOffset(130,36))
+                        equip.TextScaled=false
+                        equip.TextSize=12
+                        equip.MouseButton1Click:Connect(function()
+                            ShopRemote:FireServer("EquipLasso",itemName)
+                        end)
+                    end
+                end
+            end
+        end
+
+        return
+    end
+
+    local roamingCount=0
+    for _,pet in ipairs(pets) do
+        if pet.Displayed then roamingCount+=1 end
     end
 
     local status=text(
         panel,
-        "Plot: "..count.."/10  ·  First rename free  ·  Further renames use Gems",
-        UDim2.fromOffset(20,46),
-        UDim2.fromOffset(700,24)
+        tostring(#pets).."/"..tostring(Config.MaxPets or 60).." pets  ·  Plot: "..roamingCount.."/10  ·  First rename free",
+        UDim2.fromOffset(20,108),
+        UDim2.fromOffset(730,24)
     )
     status.TextScaled=false
     status.TextSize=13
+    status.TextXAlignment=Enum.TextXAlignment.Left
 
     local list=Instance.new("ScrollingFrame")
     list.Name="CollectedPets"
-    list.Position=UDim2.fromOffset(18,82)
-    list.Size=UDim2.fromOffset(315,470)
+    list.Position=UDim2.fromOffset(18,140)
+    list.Size=UDim2.fromOffset(315,425)
     list.BackgroundTransparency=1
     list.BorderSizePixel=0
     list.ScrollBarThickness=4
@@ -161,8 +308,8 @@ showPets = function()
 
     local detail=Instance.new("Frame")
     detail.Name="PetDetails"
-    detail.Position=UDim2.fromOffset(352,82)
-    detail.Size=UDim2.fromOffset(390,470)
+    detail.Position=UDim2.fromOffset(352,140)
+    detail.Size=UDim2.fromOffset(410,425)
     detail.BackgroundTransparency=1
     detail.Parent=panel
 
@@ -176,7 +323,7 @@ showPets = function()
         selectedPetId=pet.Id
         detail:ClearAllChildren()
 
-        local title=text(detail,pet.Name,UDim2.fromOffset(0,0),UDim2.fromOffset(382,30))
+        local title=text(detail,pet.Name,UDim2.fromOffset(0,0),UDim2.fromOffset(402,30))
         title.TextScaled=false
         title.TextSize=21
         title.TextXAlignment=Enum.TextXAlignment.Left
@@ -190,7 +337,7 @@ showPets = function()
             "\nPower rating "..rating..
             "\nXP "..pet.XP.." / "..(pet.Level*100).."   ·   Upgrade points "..pet.UpgradePoints,
             UDim2.fromOffset(0,36),
-            UDim2.fromOffset(382,124)
+            UDim2.fromOffset(402,120)
         )
         stats.TextScaled=false
         stats.TextSize=13
@@ -202,8 +349,8 @@ showPets = function()
 
         local renameBox=Instance.new("TextBox")
         renameBox.Name="RenameBox"
-        renameBox.Position=UDim2.fromOffset(0,164)
-        renameBox.Size=UDim2.fromOffset(246,36)
+        renameBox.Position=UDim2.fromOffset(0,158)
+        renameBox.Size=UDim2.fromOffset(260,36)
         renameBox.BackgroundColor3=Color3.fromRGB(38,43,52)
         renameBox.BorderSizePixel=0
         renameBox.ClearTextOnFocus=false
@@ -211,7 +358,7 @@ showPets = function()
         renameBox.TextSize=14
         renameBox.TextColor3=Color3.new(1,1,1)
         renameBox.PlaceholderColor3=Color3.fromRGB(160,165,175)
-        renameBox.PlaceholderText="New name (max "..tostring(Config.MaxPetNameLength).." characters)"
+        renameBox.PlaceholderText="New name"
         renameBox.Text=""
         renameBox.Parent=detail
         local renameCorner=Instance.new("UICorner")
@@ -219,7 +366,7 @@ showPets = function()
         renameCorner.Parent=renameBox
 
         local renameText=renameCost==0 and "RENAME · FREE" or ("RENAME · "..tostring(renameCost).." GEMS")
-        local renameButton=button(detail,renameText,UDim2.fromOffset(254,164),UDim2.fromOffset(128,36))
+        local renameButton=button(detail,renameText,UDim2.fromOffset(268,158),UDim2.fromOffset(134,36))
         renameButton.TextScaled=false
         renameButton.TextSize=11
         renameButton.MouseButton1Click:Connect(function()
@@ -228,9 +375,9 @@ showPets = function()
 
         local renameHint=text(
             detail,
-            renameCost==0 and "This pet still has its one free rename." or ("Further name changes cost "..tostring(renameCost).." Gems each."),
-            UDim2.fromOffset(0,202),
-            UDim2.fromOffset(382,23)
+            renameCost==0 and "This pet still has its one free rename." or ("Further renames cost "..tostring(renameCost).." Gems."),
+            UDim2.fromOffset(0,197),
+            UDim2.fromOffset(402,21)
         )
         renameHint.TextScaled=false
         renameHint.TextSize=11
@@ -244,7 +391,7 @@ showPets = function()
         }
 
         for i,option in ipairs(options) do
-            local b=button(detail,option[1],UDim2.fromOffset(0,234+(i-1)*46),UDim2.fromOffset(382,38))
+            local b=button(detail,option[1],UDim2.fromOffset(0,226+(i-1)*45),UDim2.fromOffset(402,37))
             b.Name=option[2]
             b.TextScaled=false
             b.TextSize=13
@@ -254,7 +401,7 @@ showPets = function()
         end
 
         for i,stat in ipairs({"Health","Power","Defence"}) do
-            local b=button(detail,"+ "..stat,UDim2.fromOffset((i-1)*128,384),UDim2.fromOffset(122,36))
+            local b=button(detail,"+ "..stat,UDim2.fromOffset((i-1)*136,372),UDim2.fromOffset(130,36))
             b.TextScaled=false
             b.TextSize=12
             b.MouseButton1Click:Connect(function()
@@ -264,7 +411,7 @@ showPets = function()
     end
 
     local chosen
-    for _,pet in ipairs(state.Pets or {}) do
+    for _,pet in ipairs(pets) do
         local b=button(
             list,
             pet.Name.."  ·  Lv."..pet.Level.."\n"..pet.Rarity.."  /  "..destination(pet),
@@ -280,25 +427,20 @@ showPets = function()
         if pet.Id==selectedPetId then chosen=pet end
     end
 
-    chosen=chosen or (state.Pets or {})[1]
+    chosen=chosen or pets[1]
     if chosen then
         details(chosen)
     else
         local empty=text(
             detail,
-            "Your collection is empty.\nSelect a wild creature and press 1 to throw your lasso.",
+            "Your pet collection is empty.\nCapture wild pets to fill it.",
             UDim2.fromOffset(0,70),
-            UDim2.fromOffset(382,130)
+            UDim2.fromOffset(402,130)
         )
         empty.TextScaled=false
         empty.TextSize=16
         empty.TextWrapped=true
     end
-
-    local close=button(panel,"×",UDim2.fromOffset(704,12),UDim2.fromOffset(36,32))
-    close.MouseButton1Click:Connect(function()
-        showHUD()
-    end)
 end
 
 --------------------------------------------------------------
