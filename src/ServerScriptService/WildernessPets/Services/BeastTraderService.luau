@@ -19,8 +19,10 @@ local function isTraderCandidate(instance)
 	end
 
 	local name = normalized(instance.Name)
-	return name:find("beasttrader", 1, true) ~= nil
-		or name:find("beastmaster", 1, true) ~= nil
+	return name == "beasttrader"
+		or name == "beasttradernpc"
+		or name == "beastmaster"
+		or name == "beastmasternpc"
 end
 
 local function getInteractionPart(model)
