@@ -4,6 +4,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local DataService = require(script.Parent.PlayerDataService)
 local PetService = require(script.Parent.PetService)
 local Animator = require(script.Parent.Parent.Systems.PetAnimator)
+local Config = require(game.ReplicatedStorage.WildernessPets.Shared.Config)
 
 local Root = ReplicatedStorage:WaitForChild("WildernessPets")
 local ShopRemote = Root:WaitForChild("Remotes"):WaitForChild("Shop")
@@ -190,6 +191,10 @@ function Service:RefreshVisuals(player)
             if slot > 3 then break end
 
             local template = templates:FindFirstChild(pet.Species)
+            local petInfo = Config.Pets[pet.Species]
+            if not template and petInfo and petInfo.AnimationSpecies then
+                template = templates:FindFirstChild(petInfo.AnimationSpecies)
+            end
             if template then
                 local model = template:Clone()
                 model.Name = "Healing_" .. tostring(pet.Id)
@@ -204,7 +209,7 @@ function Service:RefreshVisuals(player)
                     end
                 end
                 model:SetAttribute("Species", pet.Species)
-                model:SetAttribute("AnimationSpecies", pet.Species)
+                model:SetAttribute("AnimationSpecies", (petInfo and petInfo.AnimationSpecies) or pet.Species)
                 model.Parent = folder
 
                 local rig = Animator:_getRig(model)
