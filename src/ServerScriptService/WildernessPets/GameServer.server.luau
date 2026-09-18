@@ -18,8 +18,10 @@ local ShopService = require(script.Parent.Services.ShopService)
 local ArenaService = require(script.Parent.Services.ArenaService)
 local CaptureService = require(script.Parent.Services.CaptureService)
 local ActionLockService = require(script.Parent.Services.ActionLockService)
+local BeastTraderService = require(script.Parent.Services.BeastTraderService)
 local MonsterService = require(script.Parent.Services.MonsterService)
 MonsterService:Init()
+BeastTraderService:Init()
 local equipCompanion, unequipCompanion
 local plots = workspace.WildernessPets.Plots
 
@@ -86,6 +88,7 @@ GetState.OnServerInvoke = function(player)
         Coins = data.Coins,
         Gems = data.Gems,
         Lasso = data.Lasso,
+        Inventory = data.Inventory or {},
         Pets = data.Pets,
         SelectedPlot = data.SelectedPlot,
         DefencePetId = data.DefencePetId,
@@ -151,16 +154,40 @@ end)
 
 ShopRemote.OnServerEvent:Connect(function(player, action, value)
     if action == "BuyLasso" then
-        local success = ShopService:BuyLasso(player, value)
-        ShopRemote:FireClient(player, "Purchase", success)
+        local success, message = ShopService:BuyLasso(player, value)
+        ShopRemote:FireClient(player, "Purchase", success, message)
 
     elseif action == "SellPet" then
-        local amount = ShopService:SellPet(player, value)
+        local allowed, gateMessage = BeastTraderService:CanTrade(player)
+        if not allowed then
+            ShopRemote:FireClient(player, "Sold", false, 0, gateMessage)
+            return
+        end
+
+        local data = DataService:Get(player)
+        if not data then
+            ShopRemote:FireClient(player, "Sold", false, 0, "Player data unavailable.")
+            return
+        end
+
+        if data.EquippedPetId == value then
+            unequipCompanion(player, true)
+        end
+
+        local amount, message = ShopService:SellPet(player, value)
+        local success = type(amount) == "number" and amount > 0
+
+        if success then
+            local refresh = script.Parent.Systems:FindFirstChild("PetDisplayRefresh")
+            if refresh then refresh:Fire(player) end
+        end
 
         ShopRemote:FireClient(
             player,
             "Sold",
-            amount or 0
+            success,
+            success and amount or 0,
+            message or (success and "Pet sold." or "Could not sell that pet.")
         )
     end
 end)
