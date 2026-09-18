@@ -443,13 +443,15 @@ local function syncCompanionLabel(model, pet)
     if not model or not model.Parent or not model.PrimaryPart or not pet then return end
 
     local maximumHealth = math.max(1, tonumber(pet.Health) or 1)
+    local currentHealth = math.clamp(tonumber(pet.CurrentHealth) or maximumHealth, 0, maximumHealth)
+    pet.CurrentHealth = currentHealth
+
     if model:GetAttribute("MaxHealth") ~= maximumHealth then
         model:SetAttribute("MaxHealth", maximumHealth)
     end
-    if model:GetAttribute("Health") == nil then
-        model:SetAttribute("Health", maximumHealth)
+    if model:GetAttribute("Health") ~= currentHealth then
+        model:SetAttribute("Health", currentHealth)
     end
-    local currentHealth = math.clamp(tonumber(model:GetAttribute("Health")) or maximumHealth, 0, maximumHealth)
 
     local gui = model.PrimaryPart:FindFirstChild("CompanionName")
     if not gui then
@@ -529,7 +531,7 @@ local function createCompanion(player, pet)
     model:SetAttribute("PetId", pet.Id)
     model:SetAttribute("Species", pet.Species)
     model:SetAttribute("AnimationSpecies", (info and info.AnimationSpecies) or pet.Species)
-    model:SetAttribute("Health", math.max(1, tonumber(pet.Health) or 1))
+    model:SetAttribute("Health", math.clamp(tonumber(pet.CurrentHealth) or tonumber(pet.Health) or 1, 0, math.max(1, tonumber(pet.Health) or 1)))
     model:SetAttribute("MaxHealth", math.max(1, tonumber(pet.Health) or 1))
     model:SetAttribute("Captured", false)
     model:SetAttribute("InCombat", false)
@@ -543,6 +545,15 @@ local function createCompanion(player, pet)
     syncCompanionLabel(model, pet)
     return model
 end
+local function getPetSpeedMultiplier(player)
+    local data = DataService:Get(player)
+    local active = data and data.ActiveEffects
+    if type(active) == "table" and (tonumber(active.SpeedBoostUntil) or 0) > os.time() then
+        return math.max(1, tonumber(active.PetSpeedMultiplier) or 1)
+    end
+    return 1
+end
+
 local function startCompanionFollow(player, session)
     local token = (session.followToken or 0) + 1
     session.followToken = token
@@ -567,7 +578,8 @@ local function startCompanionFollow(player, session)
                     session.moveBusy = true
                     task.spawn(function()
                         if companion.Parent and combatSessions[player] == session and not session.attacking then
-                            pcall(function() PetAnimator:PlayRunTo(companion, desired, math.clamp(distance/13, .25, .9)) end)
+                            local speedMultiplier = getPetSpeedMultiplier(player)
+                            pcall(function() PetAnimator:PlayRunTo(companion, desired, math.clamp(distance/(13*speedMultiplier), .18, .9)) end)
                         end
                         session.moveBusy = false
                     end)
@@ -605,8 +617,11 @@ unequipCompanion = function(player, silent)
 end
 equipCompanion = function(player, petId)
     local data = DataService:Get(player)
+    PetService:RefreshHealing(player)
     local pet = PetService:Find(player, petId)
     if not data or not pet then return false, "Pet not found." end
+    if pet.Dead then return false, "That pet is dead. Heal it at your Barn first." end
+    if (tonumber(pet.CurrentHealth) or pet.Health) <= 0 then return false, "That pet needs healing." end
     unequipCompanion(player, true)
     local model, err = createCompanion(player, pet)
     if not model then return false, err end
@@ -720,7 +735,10 @@ local function attackTarget(player)
     local root = playerRoot(player)
     local targetPart = monsterPart(target)
     if not root or not targetPart then return false end
-    if (root.Position - targetPart.Position).Magnitude > 180 then combatTell(player, "Error", "Move closer to that creature first.") return false end
+    if (root.Position - targetPart.Position).Magnitude > (tonumber(Config.AttackCommandRange) or 50) then
+        combatTell(player, "Error", "Move a little closer before commanding your pet to attack.")
+        return false
+    end
     session.attacking = true
     ActionLockService:Begin(player, "CompanionCombat")
     target:SetAttribute("InCombat", true)
