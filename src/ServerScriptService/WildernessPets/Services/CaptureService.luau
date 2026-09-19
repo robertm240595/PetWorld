@@ -12,6 +12,7 @@ local Services = script.Parent
 local DataService = require(Services:WaitForChild("PlayerDataService"))
 local PetService = require(Services:WaitForChild("PetService"))
 local ActionLockService = require(Services:WaitForChild("ActionLockService"))
+local QuestService = require(Services:WaitForChild("QuestService"))
 local Config = require(Root:WaitForChild("Shared"):WaitForChild("Config"))
 
 local CaptureService = {}
@@ -376,6 +377,7 @@ function CaptureService:Resolve(player, challengeId, clickTime, timedOut, roundT
 		activeEffects.NextCaptureLuck = false
 	end
 
+	QuestService:OnPlayerAction(player, "CapturePet", {PetId = pet.Id})
 	player:SetAttribute("CombatTarget", "")
 
 	CaptureRemote:FireClient(
