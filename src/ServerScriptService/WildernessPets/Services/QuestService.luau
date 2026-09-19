@@ -1187,6 +1187,15 @@ local function actionObjectiveTarget(player, stage)
         end
     elseif action == "CapturePet" then
         return nearestWildTarget(player, stage or {})
+    elseif action == "EnterWyrmArena" then
+        local settings = QuestConfig.World
+        local ground = terrainPoint(settings.CaveXZ.X, settings.CaveXZ.Y, settings.CaveFallbackY)
+        return ground + Vector3.new(0, 2, -32), "Hollowfang Depths"
+    elseif action == "EnterJormungdyrrArena" then
+        local settings = QuestConfig.World
+        local xz = settings.WorldBossWaterfallXZ
+        local ground = terrainPoint(xz.X, xz.Y, settings.CaveFallbackY)
+        return ground + Vector3.new(0, 2, 0), "Northeast Waterfall"
     elseif action == "SellPet" or action == "BuybackPet" then
         for _, instance in ipairs(workspace:GetDescendants()) do
             if instance:IsA("Model") then
@@ -1464,6 +1473,26 @@ function Service:PushState(player)
     if state then
         QuestRemote:FireClient(player, "State", state)
     end
+end
+
+function Service:IsQuestCompleted(player, questId)
+    if type(questId) ~= "string" or questId == "" then return false end
+    local root = questData(player)
+    return root ~= nil
+        and type(root.Completed) == "table"
+        and root.Completed[questId] == true
+end
+
+function Service:IsQuestActive(player, questId)
+    if type(questId) ~= "string" or questId == "" then return false end
+    local root = questData(player)
+    return root ~= nil
+        and type(root.ActiveQuestIds) == "table"
+        and root.ActiveQuestIds[questId] == true
+end
+
+function Service:IsQuestActiveOrCompleted(player, questId)
+    return self:IsQuestActive(player, questId) or self:IsQuestCompleted(player, questId)
 end
 
 local function completeQuest(player, chain)
