@@ -25,6 +25,17 @@ LootConfig.CoinMultipliers = {
     Ancient = {Min = 1.25, Max = 1.85},
 }
 
+LootConfig.TraderValues = {
+    Common = {Primary = 8, Secondary = 12},
+    Uncommon = {Primary = 15, Secondary = 22},
+    Rare = {Primary = 28, Secondary = 40},
+    Epic = {Primary = 50, Secondary = 75},
+    Legendary = {Primary = 90, Secondary = 135},
+    Mythic = {Primary = 150, Secondary = 225},
+    Limited = {Primary = 180, Secondary = 270},
+    Ancient = {Primary = 300, Secondary = 450},
+}
+
 LootConfig.Drops = {
     ["Wolf"] = {Primary = "Wolf Fang", Secondary = "Wolf Hide"},
     ["Boar"] = {Primary = "Boar Tusk", Secondary = "Coarse Boar Hide"},
@@ -103,6 +114,28 @@ function LootConfig:GetChances(species, rarity)
     local defaults = self.RarityChances[rarity] or self.RarityChances.Common
     return drop and (tonumber(drop.PrimaryChance) or defaults.Primary) or defaults.Primary,
         drop and (tonumber(drop.SecondaryChance) or defaults.Secondary) or defaults.Secondary
+end
+
+function LootConfig:GetTraderValue(itemName, petsConfig)
+    if type(itemName) ~= "string" or itemName == "" then return nil end
+
+    for species, drop in pairs(self.Drops) do
+        local slot
+        if drop.Primary == itemName then
+            slot = "Primary"
+        elseif drop.Secondary == itemName then
+            slot = "Secondary"
+        end
+
+        if slot then
+            local petInfo = petsConfig and petsConfig[species]
+            local rarity = petInfo and petInfo.Rarity or "Common"
+            local tier = self.TraderValues[rarity] or self.TraderValues.Common
+            return math.max(1, math.floor(tonumber(tier[slot]) or 1)), species, rarity, slot
+        end
+    end
+
+    return nil
 end
 
 return LootConfig
