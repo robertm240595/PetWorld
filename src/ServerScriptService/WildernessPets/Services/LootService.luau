@@ -225,7 +225,7 @@ function Service:SpawnBag(player, target, baseCoins)
     return id
 end
 
-function Service:Collect(player, bagId, selectedNames)
+function Service:Collect(player, bagId, selectedNames, takeCoins)
     local record = type(bagId) == "string" and bags[bagId] or nil
     if not record or not record.Model or not record.Model.Parent then
         LootRemote:FireClient(player, "CollectResult", false, "That loot bag is no longer available.")
@@ -255,6 +255,12 @@ function Service:Collect(player, bagId, selectedNames)
     for _, name in ipairs(selectedNames) do
         if type(name) == "string" then selected[name] = true end
     end
+    takeCoins = takeCoins == true
+
+    if not takeCoins and next(selected) == nil then
+        LootRemote:FireClient(player, "CollectResult", false, "Choose something from the loot bag first.")
+        return
+    end
 
     local picked = {}
     local newSlots = 0
@@ -274,7 +280,7 @@ function Service:Collect(player, bagId, selectedNames)
             player,
             "CollectResult",
             false,
-            "Those selected materials need " .. tostring(newSlots)
+            "That loot needs " .. tostring(newSlots)
                 .. " new inventory slot(s), but your bag is "
                 .. tostring(usedSlots) .. "/" .. tostring(capacity) .. "."
         )
@@ -299,11 +305,14 @@ function Service:Collect(player, bagId, selectedNames)
         record.Items = remaining
     end
 
-    local collectedCoins = math.max(0, math.floor(tonumber(record.Coins) or 0))
+    local collectedCoins = 0
     local balance
-    if collectedCoins > 0 then
-        balance = DataService:AddCoins(player, collectedCoins)
-        record.Coins = 0
+    if takeCoins then
+        collectedCoins = math.max(0, math.floor(tonumber(record.Coins) or 0))
+        if collectedCoins > 0 then
+            balance = DataService:AddCoins(player, collectedCoins)
+            record.Coins = 0
+        end
     end
 
     local collectedItems = {}
@@ -353,7 +362,7 @@ function Service:Init()
     LootRemote.OnServerEvent:Connect(function(player, action, value)
         if action == "Collect" then
             local payload = type(value) == "table" and value or {}
-            Service:Collect(player, payload.BagId, payload.Items)
+            Service:Collect(player, payload.BagId, payload.Items, payload.TakeCoins)
         end
     end)
 end
