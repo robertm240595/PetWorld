@@ -1152,6 +1152,7 @@ local function attackTarget(player)
                     continue
                 end
                 if close <= 9 then
+                    session.basicAttackBusy = true
                     PetAnimator:PlayAttack(companion, current.Position, .72, function()
                         if combatSessions[player] == session
                             and session.attacking
@@ -1161,6 +1162,7 @@ local function attackTarget(player)
                             PetAbilityService:DamageEnemy(player, session.pet, target, damage)
                         end
                     end, .9)
+                    session.basicAttackBusy = false
 
                     local health = target:GetAttribute("Health") or 0
                     if health <= 0 or target:GetAttribute("Dead") then
@@ -1288,6 +1290,10 @@ local function abilityTarget(player, slot)
         combatTell(player, "Error", "Start a fight before using companion abilities.")
         return false
     end
+    if session.basicAttackBusy then
+        combatTell(player, "Error", "Your companion is finishing its current strike.")
+        return false
+    end
 
     local success, message, cooldown, killed = PetAbilityService:UseAbility(
         player,
@@ -1297,7 +1303,11 @@ local function abilityTarget(player, slot)
     )
 
     if not success then
-        combatTell(player, "Error", message)
+        if (tonumber(cooldown) or 0) > 0 then
+            combatTell(player, "AbilityCooldown", slot, message, cooldown)
+        else
+            combatTell(player, "Error", message)
+        end
         return false
     end
 
