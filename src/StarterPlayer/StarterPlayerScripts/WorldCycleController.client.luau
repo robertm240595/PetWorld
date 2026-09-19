@@ -645,16 +645,23 @@ local function updateTarget()
  local m=selectedTarget
  if not m or not m.Parent or m:GetAttribute("Dead") or m:GetAttribute("Captured") then clearTarget() return end
  local species=m:GetAttribute("Species") or m.Name
- local info=config.Pets[species] or {}
+ local creatureType=m:GetAttribute("CreatureType") or "Pet"
+ local info=config.Pets[species] or (config.Mounts and config.Mounts[species]) or {}
  local hp=math.max(0,m:GetAttribute("Health") or info.Health or 0)
- local maximum=math.max(1,m:GetAttribute("MaxHealth") or info.Health or hp)
+ local maximum=math.max(1,m:GetAttribute("MaxHealth") or info.Health or math.max(1,hp))
  local power=m:GetAttribute("Power") or info.Power or 1
  local defence=m:GetAttribute("Defence") or info.Defence or 1
- local rating=math.ceil((maximum*power*defence)/1000)
+ local rating=math.ceil((maximum*power*math.max(1,defence))/1000)
  targetName.Text=species
- targetDetails.Text=string.format("Lv.%d  ·  %s  ·  Power %s",m:GetAttribute("Level") or 1,m:GetAttribute("Rarity") or info.Rarity or "Common",tostring(rating))
- healthText.Text=string.format("%d / %d HP",math.ceil(hp),math.ceil(maximum))
- healthFill.Size=UDim2.fromScale(math.clamp(hp/maximum,0,1),1)
+ if creatureType=="Mount" then
+  targetDetails.Text=string.format("%s  ·  RIDEABLE MOUNT",m:GetAttribute("Rarity") or info.Rarity or "Common")
+  healthBack.Visible=false
+ else
+  healthBack.Visible=true
+  targetDetails.Text=string.format("Lv.%d  ·  %s  ·  Power %s",m:GetAttribute("Level") or 1,m:GetAttribute("Rarity") or info.Rarity or "Common",tostring(rating))
+  healthText.Text=string.format("%d / %d HP",math.ceil(hp),math.ceil(maximum))
+  healthFill.Size=UDim2.fromScale(math.clamp(hp/maximum,0,1),1)
+ end
 end
 local function setTarget(m)
  clearTarget()
@@ -910,7 +917,13 @@ local function selectAt(position) local main=playerGui:FindFirstChild("Wildernes
  -- Resolve segmented mesh children all the way to the wild creature root.
  while candidate and candidate.Parent~=wild do candidate=candidate.Parent end
  if candidate and candidate:IsA("Model") then
-  remotes.Game:FireServer("CombatSelect",candidate)
+  local questOwner=tonumber(candidate:GetAttribute("QuestOwnerUserId"))
+  if questOwner and questOwner~=player.UserId then
+   remotes.Game:FireServer("CombatSelect",nil)
+   clearTarget()
+  else
+   remotes.Game:FireServer("CombatSelect",candidate)
+  end
  else
   remotes.Game:FireServer("CombatSelect",nil)
   clearTarget()
@@ -1009,10 +1022,11 @@ remotes.Capture.OnClientEvent:Connect(function(action,...)
  elseif action=="Success" then
   local species=args[1] or "Pet"
   local imprint=tonumber(args[4])
+  local creatureType=tostring(args[5] or "Pet")
   endCaptureGame(false)
   clearTarget()
   if imprint then
-   message("Captured "..tostring(species).."  ·  Imprint "..tostring(imprint).."%")
+   message("Captured "..tostring(species).."  ·  "..(creatureType=="Mount" and "Mount" or "Pet").."  ·  Imprint "..tostring(imprint).."%")
   end
  elseif action=="Failed" then
   endCaptureGame(true)

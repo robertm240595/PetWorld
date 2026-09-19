@@ -52,6 +52,64 @@ function Service:GetSpecies(rarity,night,random)
  if not names or #names==0 then return nil end
  return names[(random or rng):NextInteger(1,#names)]
 end
+function Service:GetMountPool(night)
+ local pool={}
+ for name,info in pairs(Config.Mounts or {}) do
+  if info.SpawnMode=="Wild"
+   and info.TimeOfDay==(night and "Night" or "Day")
+   and ModelFactory:CanCreate(name) then
+   pool[info.Rarity]=pool[info.Rarity] or {}
+   table.insert(pool[info.Rarity],name)
+  end
+ end
+ for _,names in pairs(pool) do table.sort(names) end
+ return pool
+end
+
+function Service:GetSpawnChoice(night,random)
+ local roller=random or rng
+ local petPool=self:GetPool(night)
+ local mountPool=self:GetMountPool(night)
+ local choices={}
+ local total=0
+
+ for rarity,names in pairs(petPool) do
+  local rarityInfo=Config.Rarities[rarity]
+  local weight=rarityInfo and tonumber(rarityInfo.Weight) or 0
+  if #names>0 and weight>0 then
+   total+=weight
+   table.insert(choices,{Kind="Pet",Rarity=rarity,Names=names,Weight=weight})
+  end
+ end
+
+ for rarity,names in pairs(mountPool) do
+  local weight=tonumber((Config.MountRarityWeights or {})[rarity]) or 0
+  if #names>0 and weight>0 then
+   total+=weight
+   table.insert(choices,{Kind="Mount",Rarity=rarity,Names=names,Weight=weight})
+  end
+ end
+
+ if total<=0 then return nil end
+ local roll=roller:NextNumber()*total
+ table.sort(choices,function(a,b)
+  local ar=(Config.Rarities[a.Rarity] and Config.Rarities[a.Rarity].Rank) or 99
+  local br=(Config.Rarities[b.Rarity] and Config.Rarities[b.Rarity].Rank) or 99
+  if ar==br then return a.Kind<b.Kind end
+  return ar<br
+ end)
+
+ for _,choice in ipairs(choices) do
+  roll-=choice.Weight
+  if roll<0 then
+   return choice.Kind,choice.Names[roller:NextInteger(1,#choice.Names)],choice.Rarity
+  end
+ end
+
+ local last=choices[#choices]
+ return last.Kind,last.Names[roller:NextInteger(1,#last.Names)],last.Rarity
+end
+
 local function nearPlayer(pos,radius)
  for _,player in Players:GetPlayers() do
   local root=player.Character and player.Character:FindFirstChild("HumanoidRootPart")
@@ -114,7 +172,8 @@ local function label(model,info)
  text.Position=UDim2.fromOffset(0,0) text.Size=UDim2.new(1,0,0,26) text.BackgroundTransparency=1
  text.Font=Enum.Font.GothamSemibold text.TextSize=15 text.TextStrokeTransparency=.35
  text.TextColor3=rarityColors[info.Rarity] or Color3.new(1,1,1)
- text.Text=model:GetAttribute("Species").."  ·  "..info.Rarity
+ local isMount=model:GetAttribute("CreatureType")=="Mount"
+ text.Text=model:GetAttribute("Species").."  ·  "..info.Rarity..(isMount and "  ·  MOUNT" or "")
  text.Parent=gui
 
  local healthBack=Instance.new("Frame")
@@ -133,6 +192,12 @@ local function label(model,info)
 
  local function updateHealth()
   if not model.Parent and not model:GetAttribute("Health") then return end
+  if model:GetAttribute("CreatureType")=="Mount" then
+   healthBack.Visible=false
+   value.Text="RIDEABLE  ·  LASSO TO CAPTURE"
+   return
+  end
+  healthBack.Visible=true
   local hp=math.max(0,tonumber(model:GetAttribute("Health")) or 0)
   local maximum=math.max(1,tonumber(model:GetAttribute("MaxHealth")) or hp)
   fill.Size=UDim2.fromScale(math.clamp(hp/maximum,0,1),1)
@@ -170,27 +235,32 @@ function Service:SpawnSlot(index)
  local slot=slots[index]
  if not slot or slot.model and slot.model.Parent then return false end
  local night=self:IsNight()
- local rarity=self:GetRarity(night)
- local name=rarity and self:GetSpecies(rarity,night)
- if not name then return false end
+ local creatureType,name,rarity=self:GetSpawnChoice(night)
+ if not name or not rarity then return false end
  local pos=spawnPosition()
  if not pos then slot.readyAt=now()+3 return false end
  local model=ModelFactory:Create(name)
- local info=Config.Pets[name]
+ local info=creatureType=="Mount" and (Config.Mounts or {})[name] or Config.Pets[name]
  if not model or not info then slot.readyAt=now()+5 return false end
  model.Name=name.."_"..index
  for _,p in model:GetDescendants() do if p:IsA("BasePart") then p.Anchored=true p.CanCollide=false p.CanQuery=true end end
  model:SetAttribute("Species",name)
+ model:SetAttribute("CreatureType",creatureType)
  model:SetAttribute("AnimationSpecies",info.AnimationSpecies or name)
  model:SetAttribute("Rarity",info.Rarity)
  model:SetAttribute("SpawnPeriod",night and "Night" or "Day")
  model:SetAttribute("SpawnSlot",index)
  model:SetAttribute("CaptureDifficulty",Config.Rarities[info.Rarity].CaptureDifficulty)
  model:SetAttribute("Level",1)
- model:SetAttribute("Power",info.Power)
- model:SetAttribute("Defence",info.Defence)
- model:SetAttribute("PowerRating",math.ceil((info.Health*info.Power*info.Defence)/1000))
- model:SetAttribute("Health",info.Health) model:SetAttribute("MaxHealth",info.Health)
+ local rarityRank=(Config.Rarities[info.Rarity] and Config.Rarities[info.Rarity].Rank) or 1
+ local health=creatureType=="Mount" and (120+rarityRank*65) or (tonumber(info.Health) or 100)
+ local power=creatureType=="Mount" and 0 or (tonumber(info.Power) or 1)
+ local defence=creatureType=="Mount" and 0 or (tonumber(info.Defence) or 0)
+ model:SetAttribute("Power",power)
+ model:SetAttribute("Defence",defence)
+ model:SetAttribute("PowerRating",creatureType=="Mount" and 0 or math.ceil((health*power*math.max(1,defence))/1000))
+ model:SetAttribute("Health",health) model:SetAttribute("MaxHealth",health)
+ model:SetAttribute("QuestNoCombat",creatureType=="Mount")
  model:SetAttribute("Captured",false) model:SetAttribute("BeingCaptured",false)
  model:SetAttribute("InCombat",false) model:SetAttribute("Dead",false)
  local rig=Animator:_getRig(model)

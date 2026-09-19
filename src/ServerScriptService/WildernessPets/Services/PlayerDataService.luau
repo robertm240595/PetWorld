@@ -39,12 +39,15 @@ local function newData()
             NextCaptureLuck = false
         },
         Pets = {},
+        Mounts = {},
+        MountCollection = {},
         PetCollection = {},
         CollectionRewardsClaimed = {},
         QuestProgress = {},
         SelectedPlot = 0,
         DefencePetId = "",
         EquippedPetId = "",
+        EquippedMountId = "",
         PodiumPetId = "",
         ArenaRating = 1000,
         ArenaWins = 0,
@@ -165,6 +168,12 @@ function Service:Load(player)
     if type(data.Pets) ~= "table" then
         data.Pets = {}
     end
+    if type(data.Mounts) ~= "table" then
+        data.Mounts = {}
+    end
+    if type(data.MountCollection) ~= "table" then
+        data.MountCollection = {}
+    end
     if type(data.PetCollection) ~= "table" then
         data.PetCollection = {}
     end
@@ -213,6 +222,17 @@ function Service:Load(player)
             seedCollection(entry.Pet.Species)
         end
     end
+
+    for _, mount in ipairs(data.Mounts) do
+        if type(mount) == "table" and type(mount.Species) == "string" and Config.Mounts[mount.Species] then
+            mount.Id = type(mount.Id) == "string" and mount.Id or game:GetService("HttpService"):GenerateGUID(false)
+            mount.Name = type(mount.Name) == "string" and mount.Name or mount.Species
+            mount.Rarity = tostring(mount.Rarity or Config.Mounts[mount.Species].Rarity or "Common")
+            mount.Imprint = math.clamp(math.floor(tonumber(mount.Imprint) or 20), 20, 100)
+            data.MountCollection[mount.Species] = true
+        end
+    end
+    data.EquippedMountId = type(data.EquippedMountId) == "string" and data.EquippedMountId or ""
 
     local equippedLasso = type(data.Lasso) == "string" and data.Lasso or "Rough Rope"
     data.Lasso = equippedLasso

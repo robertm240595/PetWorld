@@ -25,6 +25,7 @@ QuestConfig.World = {
     CaveXZ = Vector2.new(390, -390),
     CaveFallbackY = 17,
     LeatherTraderXZ = Vector2.new(-235, 165),
+    MountQuestXZ = Vector2.new(250, 95),
     NPCs = {
         Rowan = {Name = "Warden Rowan", XZ = Vector2.new(8, -18), Shirt = Color3.fromRGB(82,94,72), Accent = Color3.fromRGB(137,119,76)},
         Bram = {Name = "Quartermaster Bram", XZ = Vector2.new(-18, -10), Shirt = Color3.fromRGB(87,77,65), Accent = Color3.fromRGB(146,119,78)},
@@ -34,6 +35,7 @@ QuestConfig.World = {
         Orin = {Name = "Sage Orin", XZ = Vector2.new(25, 12), Shirt = Color3.fromRGB(72,84,79), Accent = Color3.fromRGB(100,162,137)},
         Rook = {Name = "Captain Rook", XZ = Vector2.new(-6, 23), Shirt = Color3.fromRGB(69,76,86), Accent = Color3.fromRGB(136,146,157)},
         Vale = {Name = "Historian Vale", XZ = Vector2.new(13, 27), Shirt = Color3.fromRGB(94,72,93), Accent = Color3.fromRGB(163,119,160)},
+        Maeve = {Name = "Stablemaster Maeve", XZ = Vector2.new(31, 18), Shirt = Color3.fromRGB(103,78,57), Accent = Color3.fromRGB(198,151,88)},
     },
 }
 
@@ -171,6 +173,45 @@ QuestConfig.Chains = {
             {Id="SellPet", Type="Action", Action="SellPet", Required=1, Objective="Sell 1 non-favourite pet to the Beast Trader.", Detail="Favourited pets are protected from selling."},
             {Id="BuybackPet", Type="Action", Action="BuybackPet", Required=1, Objective="Buy a pet back from the Beast Trader.", Detail="Buyback costs more than the original sale value."},
             {Id="Report", Type="Talk", Objective="Report back to Quartermaster Bram."},
+        },
+    },
+
+    FirstMount = {
+        Id = "FirstMount",
+        Name = "Born to Ride",
+        NPC = "Maeve",
+        RequiredStrength = 25,
+        RequiredLasso = "Hunter's Lasso",
+        Priority = 9,
+        Prerequisite = "BeastHandlingTutorial",
+        Special = "FirstMount",
+        Intro = "That Hunter's Lasso tells me you're ready to handle something faster than a fighting beast. Rideable creatures are exceptionally rare, and they're not battle companions. I've tracked a young Trail Horse into the eastern wilderness. Capture it alive, then I'll show you how to ride.",
+        CompleteText = "Good seat, good hands, and the horse trusts you. From now on, keep an eye out for rideable creatures in the wild — even the Common ones are rarer than most hunters will ever see.",
+        Reward = {Coins = 4000, Gems = 0},
+        Stages = {
+            {
+                Id = "CaptureHorse",
+                Type = "Action",
+                Action = "CaptureMount",
+                Species = "Trail Horse",
+                Required = 1,
+                Objective = "Capture Maeve's Trail Horse in the eastern wilderness.",
+                Detail = "Follow the compass. This quest horse is visible only to you and uses the normal lasso minigame.",
+            },
+            {
+                Id = "EquipHorse",
+                Type = "Action",
+                Action = "EquipMount",
+                Required = 1,
+                Objective = "Open your Backpack, choose MOUNTS, and equip the Trail Horse.",
+                Detail = "Mounts are travel companions and cannot fight.",
+            },
+            {
+                Id = "Report",
+                Type = "Talk",
+                Objective = "Return to Stablemaster Maeve while your mount is equipped.",
+                Detail = "Ride back to Maeve to finish your first mount lesson.",
+            },
         },
     },
 
@@ -349,6 +390,6 @@ QuestConfig.Chains = {
     },
 }
 
-QuestConfig.NPCOrder = {"Rowan","Bram","Anya","Elara","Holt","Orin","Rook","Vale"}
+QuestConfig.NPCOrder = {"Rowan","Bram","Anya","Elara","Holt","Orin","Rook","Vale","Maeve"}
 
 return QuestConfig

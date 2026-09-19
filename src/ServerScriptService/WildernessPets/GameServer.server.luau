@@ -14,6 +14,7 @@ local PetModelFactory = require(script.Parent.Systems.PetModelFactory)
 
 local DataService = require(script.Parent.Services.PlayerDataService)
 local PetService = require(script.Parent.Services.PetService)
+local MountService = require(script.Parent.Services.MountService)
 local PlotService = require(script.Parent.Services.PlotService)
 local ShopService = require(script.Parent.Services.ShopService)
 local ArenaService = require(script.Parent.Services.ArenaService)
@@ -27,8 +28,11 @@ local BarnService = require(script.Parent.Services.BarnService)
 local MonsterService = require(script.Parent.Services.MonsterService)
 local QuestService = require(script.Parent.Services.QuestService)
 local LootService = require(script.Parent.Services.LootService)
+local WorldBossRewardService = require(script.Parent.Services.WorldBossRewardService)
 MonsterService:Init()
+MountService:Init()
 LootService:Init()
+WorldBossRewardService:Init()
 QuestService:Init()
 BeastTraderService:Init()
 LassoKeeperService:Init()
@@ -71,6 +75,7 @@ local function setupPlayer(player)
     player.CharacterAdded:Connect(function(character)
         teleportToPlot(player, character)
         task.defer(function()
+            MountService:Restore(player)
             PotionService:ApplyCharacterEffects(player)
         end)
     end)
@@ -78,6 +83,7 @@ local function setupPlayer(player)
     if player.Character then
         task.spawn(function()
             teleportToPlot(player, player.Character)
+            MountService:Restore(player)
             PotionService:ApplyCharacterEffects(player)
         end)
     end
@@ -90,7 +96,9 @@ end
 Players.PlayerAdded:Connect(setupPlayer)
 
 Players.PlayerRemoving:Connect(function(player)
+    MountService:PlayerRemoving(player)
     LootService:PlayerRemoving(player)
+    WorldBossRewardService:PlayerRemoving(player)
     QuestService:PlayerRemoving(player)
     PlotService:Release(player)
     DataService:Cleanup(player)
@@ -117,6 +125,9 @@ GetState.OnServerInvoke = function(player)
         InventoryCapacity = math.max(tonumber(Config.MaxInventory) or 25, tonumber(data.InventoryCapacity) or tonumber(Config.MaxInventory) or 25),
         BackpackName = data.BackpackName or "Starter Bag",
         Pets = PetService:GetPets(player),
+        Mounts = MountService:GetMounts(player),
+        MountCollection = data.MountCollection or {},
+        EquippedMountId = data.EquippedMountId or "",
         PetBuyback = data.PetBuyback or {},
         LassoBuyback = data.LassoBuyback or {},
         ActiveEffects = data.ActiveEffects or {},
@@ -191,6 +202,18 @@ PetsRemote.OnServerEvent:Connect(function(player, action, ...)
     elseif action == "Unequip" then
         unequipCompanion(player)
         PetsRemote:FireClient(player, "Updated", true)
+
+    elseif action == "EquipMount" then
+        local mountId = args[1]
+        local success, message = MountService:Equip(player, mountId)
+        if success then
+            QuestService:OnPlayerAction(player, "EquipMount", {MountId = mountId})
+        end
+        PetsRemote:FireClient(player, "MountUpdated", success, message)
+
+    elseif action == "UnequipMount" then
+        local success, message = MountService:Unequip(player)
+        PetsRemote:FireClient(player, "MountUpdated", success, message)
 
     elseif action == "ClaimCollectionReward" then
         local data = DataService:Get(player)
@@ -575,11 +598,17 @@ local function monsterPart(monster)
     if monster:IsA("BasePart") then return monster end
     return monster.PrimaryPart or monster:FindFirstChild("HumanoidRootPart") or monster:FindFirstChildWhichIsA("BasePart", true)
 end
-local function validMonster(monster)
+local function validSelectableCreature(monster)
     local folder = monsterFolder()
     if not folder or typeof(monster) ~= "Instance" or monster.Parent ~= folder or not monster:IsA("Model") then return false end
     if monster:GetAttribute("Dead") or monster:GetAttribute("Captured") or monster:GetAttribute("BeingCaptured") then return false end
     return monsterPart(monster) ~= nil
+end
+
+local function validMonster(monster)
+    if not validSelectableCreature(monster) then return false end
+    if monster:GetAttribute("CreatureType") == "Mount" or monster:GetAttribute("QuestNoCombat") then return false end
+    return true
 end
 local function petModel(pet)
     local info = Config.Pets[pet.Species]
@@ -752,7 +781,10 @@ unequipCompanion = function(player, silent)
         session.attacking = false
         session.attackToken = (session.attackToken or 0) + 1
         local target = session.target
-        if target and target.Parent and target:GetAttribute("CombatOwnerUserId") == player.UserId then
+        if target
+            and target.Parent
+            and target:GetAttribute("WorldBoss") ~= true
+            and target:GetAttribute("CombatOwnerUserId") == player.UserId then
             target:SetAttribute("InCombat", false)
             target:SetAttribute("CombatOwnerUserId", nil)
             if not target:GetAttribute("Dead") and not target:GetAttribute("Captured") then
@@ -813,7 +845,7 @@ local function selectCombatTarget(player, target)
     end
     local root = playerRoot(player)
     local targetPart = monsterPart(target)
-    if not root or not validMonster(target) or not targetPart then
+    if not root or not validSelectableCreature(target) or not targetPart then
         combatTell(player, "Error", "That is not a living wild creature.")
         return false
     end
@@ -826,7 +858,8 @@ local function selectCombatTarget(player, target)
         return false
     end
     local owner = target:GetAttribute("CombatOwnerUserId")
-    if target:GetAttribute("InCombat") and owner ~= player.UserId then
+    local sharedBoss = target:GetAttribute("WorldBoss") == true
+    if not sharedBoss and target:GetAttribute("InCombat") and owner ~= player.UserId then
         combatTell(player, "Error", "That creature is already in a fight.")
         return false
     end
@@ -843,7 +876,7 @@ end
 local function lassoTarget(player)
     local session = combatSessions[player] or {}
     local target = session.target
-    if not validMonster(target) then combatTell(player, "Error", "Select a living wild creature first.") return false end
+    if not validSelectableCreature(target) then combatTell(player, "Error", "Select a living wild creature first.") return false end
     if session.attacking then combatTell(player, "Error", "Your companion is already fighting.") return false end
     local ok, success, message, alreadyNotified = pcall(function() return CaptureService:Capture(player, target) end)
     if not ok then combatTell(player, "Error", "The lasso could not complete the throw.") return false end
@@ -875,6 +908,12 @@ end
 local function rewardCombatKill(player, session, target)
     if rewardGuard[target] then return end
     rewardGuard[target] = true
+
+    if target:GetAttribute("WorldBoss") == true then
+        WorldBossRewardService:ResolveBossDeath(target)
+        combatTell(player, "Reward", 0, "World Boss")
+        return
+    end
 
     if target:GetAttribute("QuestNoRewards") then
         combatTell(player, "Reward", 0, target:GetAttribute("Rarity") or "Quest")
@@ -1005,6 +1044,10 @@ local function attackTarget(player)
     session.pet = pet
 
     local target = session.target
+    if target and target:GetAttribute("CreatureType") == "Mount" then
+        combatTell(player, "Error", "Rideable mounts cannot be fought. Use your lasso if you want to capture it.")
+        return false
+    end
     if not validMonster(target) then
         combatTell(player, "Error", "Select a living wild creature first.")
         return false
@@ -1027,8 +1070,10 @@ local function attackTarget(player)
     session.petDefeated = false
     ActionLockService:Begin(player, "CompanionCombat")
 
-    target:SetAttribute("InCombat", true)
-    target:SetAttribute("CombatOwnerUserId", player.UserId)
+    if target:GetAttribute("WorldBoss") ~= true then
+        target:SetAttribute("InCombat", true)
+        target:SetAttribute("CombatOwnerUserId", player.UserId)
+    end
 
     local token = (session.attackToken or 0) + 1
     session.attackToken = token
@@ -1078,7 +1123,12 @@ local function attackTarget(player)
                             and not session.petDefeated
                             and validMonster(target) then
                             target:SetAttribute("LastHitUserId", player.UserId)
-                            MonsterService:DamageMonster(target, petBaseDamage(session.pet))
+                            local damage = petBaseDamage(session.pet)
+                            if target:GetAttribute("WorldBoss") == true then
+                                local before = math.max(0, tonumber(target:GetAttribute("Health")) or 0)
+                                WorldBossRewardService:RecordDamage(target, player, math.min(before, damage))
+                            end
+                            MonsterService:DamageMonster(target, damage)
                         end
                     end, .9)
 
@@ -1178,7 +1228,10 @@ local function recallCompanion(player)
     session.attackToken = (session.attackToken or 0) + 1
     ActionLockService:End(player, "CompanionCombat")
     local target = session.target
-    if target and target.Parent and target:GetAttribute("CombatOwnerUserId") == player.UserId then
+    if target
+        and target.Parent
+        and target:GetAttribute("WorldBoss") ~= true
+        and target:GetAttribute("CombatOwnerUserId") == player.UserId then
         target:SetAttribute("InCombat", false)
         target:SetAttribute("CombatOwnerUserId", nil)
         if not target:GetAttribute("Dead") and not target:GetAttribute("Captured") then
