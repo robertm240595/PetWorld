@@ -12,6 +12,7 @@ local PetsRemote = Remotes:WaitForChild("Pets")
 local ShopRemote = Remotes:WaitForChild("Shop")
 local ArenaRemote = Remotes:WaitForChild("Arena")
 local QuestRemote = Remotes:WaitForChild("Quest")
+local LootRemote = Remotes:WaitForChild("Loot")
 local GetState = Remotes:WaitForChild("GetState")
 local Config = require(Root:WaitForChild("Shared"):WaitForChild("Config"))
 
@@ -115,7 +116,7 @@ end
 --------------------------------------------------------------
 
 showPets = function(tab)
-    if tab == "Pets" or tab == "Inventory" then
+    if tab == "Pets" or tab == "Inventory" or tab == "Materials" then
         backpackTab = tab
     end
 
@@ -132,6 +133,14 @@ showPets = function(tab)
 
     local pets=state.Pets or {}
     local inventory=state.Inventory or {}
+    local materials=state.LootInventory or {}
+    local materialNames={}
+    for name,quantity in pairs(materials) do
+        if type(name)=="string" and (tonumber(quantity) or 0)>0 then
+            table.insert(materialNames,name)
+        end
+    end
+    table.sort(materialNames)
 
     local panel=frame(UDim2.fromOffset(820,620),UDim2.new(.5,-410,.5,-310))
     panel.Name="PetBackpack"
@@ -159,22 +168,32 @@ showPets = function(tab)
         panel,
         "🐾  PETS   "..tostring(#pets).."/"..tostring(Config.MaxPets or 60),
         UDim2.fromOffset(22,54),
-        UDim2.fromOffset(230,50)
+        UDim2.fromOffset(205,50)
     )
     petTab.TextScaled=false
-    petTab.TextSize=14
+    petTab.TextSize=13
 
     local inventoryTab=button(
         panel,
         "🎒  INVENTORY   "..tostring(#inventory).."/"..tostring(Config.MaxInventory or 25),
-        UDim2.fromOffset(260,54),
+        UDim2.fromOffset(235,54),
         UDim2.fromOffset(260,50)
     )
     inventoryTab.TextScaled=false
-    inventoryTab.TextSize=14
+    inventoryTab.TextSize=13
+
+    local materialsTab=button(
+        panel,
+        "◆  MATERIALS   "..tostring(#materialNames),
+        UDim2.fromOffset(503,54),
+        UDim2.fromOffset(265,50)
+    )
+    materialsTab.TextScaled=false
+    materialsTab.TextSize=13
 
     petTab.BackgroundColor3=backpackTab=="Pets" and Color3.fromRGB(75,92,117) or Color3.fromRGB(45,51,61)
     inventoryTab.BackgroundColor3=backpackTab=="Inventory" and Color3.fromRGB(75,92,117) or Color3.fromRGB(45,51,61)
+    materialsTab.BackgroundColor3=backpackTab=="Materials" and Color3.fromRGB(75,92,117) or Color3.fromRGB(45,51,61)
 
     petTab.MouseButton1Click:Connect(function()
         showPets("Pets")
@@ -182,6 +201,93 @@ showPets = function(tab)
     inventoryTab.MouseButton1Click:Connect(function()
         showPets("Inventory")
     end)
+    materialsTab.MouseButton1Click:Connect(function()
+        showPets("Materials")
+    end)
+
+    if backpackTab=="Materials" then
+        local totalMaterials=0
+        for _,name in ipairs(materialNames) do
+            totalMaterials+=math.max(0,math.floor(tonumber(materials[name]) or 0))
+        end
+
+        local status=text(
+            panel,
+            "Wild materials  ·  "..tostring(#materialNames).." types  ·  "..tostring(totalMaterials).." total  ·  Materials do not use inventory slots",
+            UDim2.fromOffset(22,112),
+            UDim2.fromOffset(770,24)
+        )
+        status.TextScaled=false
+        status.TextSize=13
+        status.TextXAlignment=Enum.TextXAlignment.Left
+
+        local list=Instance.new("ScrollingFrame")
+        list.Name="MaterialItems"
+        list.Position=UDim2.fromOffset(22,145)
+        list.Size=UDim2.fromOffset(776,445)
+        list.BackgroundTransparency=1
+        list.BorderSizePixel=0
+        list.ScrollBarThickness=5
+        list.AutomaticCanvasSize=Enum.AutomaticSize.Y
+        list.CanvasSize=UDim2.new()
+        list.Parent=panel
+
+        local layout=Instance.new("UIListLayout")
+        layout.Padding=UDim.new(0,8)
+        layout.Parent=list
+
+        if #materialNames==0 then
+            local empty=text(
+                list,
+                "No wild materials yet. Defeat wild pets, open their loot bags, then collect the contents.",
+                UDim2.new(),
+                UDim2.fromOffset(750,70)
+            )
+            empty.TextScaled=false
+            empty.TextSize=15
+            empty.TextWrapped=true
+        else
+            for _,name in ipairs(materialNames) do
+                local quantity=math.max(0,math.floor(tonumber(materials[name]) or 0))
+                local row=Instance.new("Frame")
+                row.Size=UDim2.fromOffset(750,58)
+                row.BackgroundColor3=Color3.fromRGB(38,43,52)
+                row.BorderSizePixel=0
+                row.Parent=list
+                local corner=Instance.new("UICorner")
+                corner.CornerRadius=UDim.new(0,8)
+                corner.Parent=row
+
+                local icon=text(row,"◆",UDim2.fromOffset(14,9),UDim2.fromOffset(38,38))
+                icon.TextScaled=false
+                icon.TextSize=22
+                icon.TextColor3=Color3.fromRGB(214,177,96)
+
+                local itemLabel=text(
+                    row,
+                    name,
+                    UDim2.fromOffset(62,8),
+                    UDim2.fromOffset(500,22)
+                )
+                itemLabel.TextScaled=false
+                itemLabel.TextSize=14
+                itemLabel.TextXAlignment=Enum.TextXAlignment.Left
+
+                local amount=text(
+                    row,
+                    "x"..tostring(quantity),
+                    UDim2.fromOffset(610,9),
+                    UDim2.fromOffset(120,34)
+                )
+                amount.TextScaled=false
+                amount.TextSize=16
+                amount.TextColor3=Color3.fromRGB(239,215,153)
+                amount.TextXAlignment=Enum.TextXAlignment.Right
+            end
+        end
+
+        return
+    end
 
     if backpackTab=="Inventory" then
         local status=text(
@@ -1681,6 +1787,12 @@ end)
 
 QuestRemote.OnClientEvent:Connect(function(action)
     if action == "Reward" then
+        showHUD()
+    end
+end)
+
+LootRemote.OnClientEvent:Connect(function(action, success)
+    if action == "CollectResult" and success == true then
         showHUD()
     end
 end)

@@ -72,7 +72,9 @@ QuestConfig.Chains = {
         Reward = {Coins = 1200, Gems = 0},
         Stages = {
             {Id="Boars", Type="Kill", Species="Boar", Required=5, Objective="Defeat 5 Boars threatening the caravan route.", Detail="Any wild Boar defeated by your companion counts."},
+            {Id="BoarTusks", Type="ItemTurnIn", Item="Boar Tusk", SourceSpecies="Boar", Required=3, Objective="Collect 3 Boar Tusks from Boar loot bags.", Detail="Open the loot bags dropped by defeated Boars, collect the materials, then bring the tusks to Bram."},
             {Id="Raccoons", Type="Kill", Species="Raccoon", Required=3, Objective="Defeat 3 Raccoons stealing the scattered supplies.", Detail="Raccoons appear at night."},
+            {Id="RaccoonPelts", Type="ItemTurnIn", Item="Raccoon Pelt", SourceSpecies="Raccoon", Required=2, Objective="Collect 2 Raccoon Pelts from Raccoon loot bags.", Detail="The pelts prove which animals were raiding the lost cargo."},
             {Id="Report", Type="Talk", Objective="Report back to Quartermaster Bram.", Detail="The road is clear. Return to the village."},
         },
     },
@@ -125,6 +127,7 @@ QuestConfig.Chains = {
         Stages = {
             {Id="MoonBats", Type="CaptureReturn", Species="Moon Bat", Required=3, Objective="Capture and return 3 Moon Bats to Astronomer Elara.", Detail="Moon Bats are active at night."},
             {Id="BarnOwls", Type="Kill", Species="Barn Owl", Required=3, Objective="Defeat 3 Barn Owls around the night wilderness.", Detail="Barn Owls are Uncommon nocturnal creatures."},
+            {Id="OwlFeathers", Type="ItemTurnIn", Item="Owl Feather", SourceSpecies="Barn Owl", Required=2, Objective="Collect 2 Owl Feathers from Barn Owl loot bags.", Detail="Elara wants the feathers to compare their strange night-time condition."},
             {Id="Report", Type="Talk", Objective="Return to Astronomer Elara with your findings."},
         },
     },
@@ -277,7 +280,9 @@ QuestConfig.Chains = {
         Reward = {Coins = 50000, Gems = 60},
         Stages = {
             {Id="Cobras", Type="Kill", Species="Dusk Cobra", Required=3, Objective="Defeat 3 Dusk Cobras while investigating the Hollowfang disturbance."},
+            {Id="DuskFangs", Type="ItemTurnIn", Item="Dusk Fang", SourceSpecies="Dusk Cobra", Required=2, Objective="Collect 2 Dusk Fangs from Dusk Cobra loot bags.", Detail="Rowan needs physical evidence that the cave disturbance is affecting Dusk Cobras."},
             {Id="Weavers", Type="Kill", Species="Void Weaver", Required=2, RequiredStrength=65, Objective="Defeat 2 Void Weavers linked to the Hollowfang disturbance."},
+            {Id="VoidSilk", Type="ItemTurnIn", Item="Void Silk", SourceSpecies="Void Weaver", Required=1, Objective="Collect 1 Void Silk from a Void Weaver loot bag.", Detail="The silk is the final proof Rowan needs from the Hollowfang area."},
             {Id="Report", Type="Talk", Objective="Report the Hollowfang evidence to Warden Rowan."},
         },
     },

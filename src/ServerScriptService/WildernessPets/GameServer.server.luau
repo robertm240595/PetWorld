@@ -26,7 +26,9 @@ local PotionService = require(script.Parent.Services.PotionService)
 local BarnService = require(script.Parent.Services.BarnService)
 local MonsterService = require(script.Parent.Services.MonsterService)
 local QuestService = require(script.Parent.Services.QuestService)
+local LootService = require(script.Parent.Services.LootService)
 MonsterService:Init()
+LootService:Init()
 QuestService:Init()
 BeastTraderService:Init()
 LassoKeeperService:Init()
@@ -88,6 +90,7 @@ end
 Players.PlayerAdded:Connect(setupPlayer)
 
 Players.PlayerRemoving:Connect(function(player)
+    LootService:PlayerRemoving(player)
     QuestService:PlayerRemoving(player)
     PlotService:Release(player)
     DataService:Cleanup(player)
@@ -111,6 +114,7 @@ GetState.OnServerInvoke = function(player)
         Gems = data.Gems,
         Lasso = data.Lasso,
         Inventory = data.Inventory or {},
+        LootInventory = data.LootInventory or {},
         Pets = PetService:GetPets(player),
         PetBuyback = data.PetBuyback or {},
         LassoBuyback = data.LassoBuyback or {},
@@ -854,7 +858,7 @@ local function rewardCombatKill(player, session, target)
         * ((rarityInfo and rarityInfo.SellMultiplier) or 1)
         * (tonumber(Config.BeastTraderSellMultiplier) or 1)
     )
-    local coins = math.max(
+    local baseCoins = math.max(
         1,
         math.floor(sellValue * (tonumber(Config.WildKillCoinRatio) or 0.15))
     )
@@ -863,12 +867,14 @@ local function rewardCombatKill(player, session, target)
 
     if part then makeExperienceOrbs(part.Position, destination) end
 
-    DataService:AddCoins(player, coins)
+    -- XP is immediate. Coins and species materials are claimed from the
+    -- player-owned loot bag that appears at the defeated creature.
     local _, _, awardedXP = PetService:AddXP(player, session.petId, baseXP)
     awardedXP = awardedXP or baseXP
+    LootService:SpawnBag(player, target, baseCoins)
 
     QuestService:OnMonsterKilled(player, target)
-    combatTell(player, "Reward", awardedXP, coins, rarity)
+    combatTell(player, "Reward", awardedXP, rarity)
 
     local refresh = script.Parent.Systems:FindFirstChild("PetDisplayRefresh")
     if refresh and refresh:IsA("BindableEvent") then refresh:Fire(player) end
