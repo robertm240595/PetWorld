@@ -754,6 +754,7 @@ local function createWyrm(parent, center, player)
     model:SetAttribute("QuestActionOnDefeat", "DefeatWyrm")
     model:SetAttribute("QuestOwnerUserId", player.UserId)
     model:SetAttribute("ArenaOwnerUserId", player.UserId)
+    model:SetAttribute("QuestStationary", true)
     model.Parent = parent
 
     local bodyColor = Color3.fromRGB(82, 55, 49)
@@ -901,6 +902,69 @@ local function createWyrm(parent, center, player)
     model:GetAttributeChangedSignal("Health"):Connect(refreshDefeatState)
 
     bossLabel(head, "HOLLOWFANG WYRM", "MINI BOSS  ·  PERSONAL QUEST ENCOUNTER", Color3.fromRGB(232, 145, 91), 170)
+
+    local healthGui = Instance.new("BillboardGui")
+    healthGui.Name = "CreatureLabel"
+    healthGui.Size = UDim2.fromOffset(260, 70)
+    healthGui.StudsOffsetWorldSpace = Vector3.new(0, 15, 0)
+    healthGui.MaxDistance = 100
+    healthGui.AlwaysOnTop = false
+    healthGui.Parent = head
+
+    local nameLabel = Instance.new("TextLabel")
+    nameLabel.Name = "CreatureName"
+    nameLabel.Size = UDim2.new(1, 0, 0, 28)
+    nameLabel.BackgroundTransparency = 1
+    nameLabel.Font = Enum.Font.GothamBold
+    nameLabel.TextSize = 17
+    nameLabel.TextStrokeTransparency = .3
+    nameLabel.TextColor3 = Color3.fromRGB(232, 145, 91)
+    nameLabel.Text = "Hollowfang Wyrm  ·  EPIC MINI BOSS"
+    nameLabel.Parent = healthGui
+
+    local healthBack = Instance.new("Frame")
+    healthBack.Name = "HealthBack"
+    healthBack.Position = UDim2.fromOffset(20, 34)
+    healthBack.Size = UDim2.fromOffset(220, 14)
+    healthBack.BackgroundColor3 = Color3.fromRGB(58, 28, 28)
+    healthBack.BorderSizePixel = 0
+    healthBack.Parent = healthGui
+
+    local backCorner = Instance.new("UICorner")
+    backCorner.CornerRadius = UDim.new(0, 5)
+    backCorner.Parent = healthBack
+
+    local healthFill = Instance.new("Frame")
+    healthFill.Name = "Fill"
+    healthFill.Size = UDim2.fromScale(1, 1)
+    healthFill.BackgroundColor3 = Color3.fromRGB(190, 80, 62)
+    healthFill.BorderSizePixel = 0
+    healthFill.Parent = healthBack
+
+    local fillCorner = Instance.new("UICorner")
+    fillCorner.CornerRadius = UDim.new(0, 5)
+    fillCorner.Parent = healthFill
+
+    local healthValue = Instance.new("TextLabel")
+    healthValue.Name = "Value"
+    healthValue.Position = UDim2.fromOffset(0, 50)
+    healthValue.Size = UDim2.new(1, 0, 0, 16)
+    healthValue.BackgroundTransparency = 1
+    healthValue.Font = Enum.Font.GothamMedium
+    healthValue.TextSize = 11
+    healthValue.TextStrokeTransparency = .4
+    healthValue.TextColor3 = Color3.fromRGB(242, 232, 206)
+    healthValue.Parent = healthGui
+
+    local function updateBossHealth()
+        local hp = math.max(0, tonumber(model:GetAttribute("Health")) or 0)
+        local maximum = math.max(1, tonumber(model:GetAttribute("MaxHealth")) or 1200)
+        healthFill.Size = UDim2.fromScale(math.clamp(hp / maximum, 0, 1), 1)
+        healthValue.Text = tostring(math.ceil(hp)) .. " / " .. tostring(math.ceil(maximum)) .. " HP"
+    end
+
+    model:GetAttributeChangedSignal("Health"):Connect(updateBossHealth)
+    updateBossHealth()
 
     return model
 end
