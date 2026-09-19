@@ -19,13 +19,17 @@ local function applyWalkSpeed(player)
     local humanoid = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
     if not humanoid then return end
 
+    local mountMultiplier = math.max(1, tonumber(player:GetAttribute("MountSpeedMultiplier")) or 1)
+
     if (tonumber(active.SpeedBoostUntil) or 0) > os.time() then
-        humanoid.WalkSpeed = 16 * math.max(1, tonumber(active.PlayerSpeedMultiplier) or 1)
+        humanoid.WalkSpeed = 16
+            * math.max(1, tonumber(active.PlayerSpeedMultiplier) or 1)
+            * mountMultiplier
     else
         active.SpeedBoostUntil = 0
         active.PlayerSpeedMultiplier = 1
         active.PetSpeedMultiplier = 1
-        humanoid.WalkSpeed = 16
+        humanoid.WalkSpeed = 16 * mountMultiplier
     end
 end
 
