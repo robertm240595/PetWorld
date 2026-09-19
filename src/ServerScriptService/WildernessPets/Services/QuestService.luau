@@ -2244,6 +2244,57 @@ local function buildNPCs()
     end
 end
 
+local function buildStablemasterDisplay()
+    local maeve = npcModels.Maeve
+    if not maeve or not maeve.Parent then return end
+
+    local horse = ModelFactory:Create("Horse")
+    if not horse then return end
+    horse.Name = "MaeveDisplayHorse"
+    horse:SetAttribute("StablemasterDisplayHorse", true)
+
+    for _, item in ipairs(horse:GetDescendants()) do
+        if item:IsA("BillboardGui") then
+            item:Destroy()
+        elseif item:IsA("BasePart") then
+            item.Anchored = true
+            item.CanCollide = false
+            item.CanTouch = false
+            item.CanQuery = false
+        end
+    end
+
+    local base = maeve:GetPivot().Position + Vector3.new(6, 0, 1)
+    local ground = terrainPoint(base.X, base.Z, base.Y)
+    horse.Parent = maeve
+    horse:PivotTo(CFrame.new(ground + Vector3.new(0, horse:GetExtentsSize().Y * .45, 0))
+        * CFrame.Angles(0, math.rad(-110), 0))
+
+    local torso = maeve:FindFirstChild("Torso")
+    local horsePart = horse.PrimaryPart or horse:FindFirstChildWhichIsA("BasePart", true)
+    if torso and horsePart then
+        local a0 = Instance.new("Attachment")
+        a0.Name = "StablemasterLassoStart"
+        a0.Position = Vector3.new(1.0, .6, 0)
+        a0.Parent = torso
+
+        local a1 = Instance.new("Attachment")
+        a1.Name = "StablemasterLassoHorse"
+        a1.Position = Vector3.new(0, .8, 1.3)
+        a1.Parent = horsePart
+
+        local rope = Instance.new("Beam")
+        rope.Name = "StablemasterLasso"
+        rope.Attachment0 = a0
+        rope.Attachment1 = a1
+        rope.Width0 = .12
+        rope.Width1 = .10
+        rope.Color = ColorSequence.new(Color3.fromRGB(154, 111, 68))
+        rope.FaceCamera = true
+        rope.Parent = maeve
+    end
+end
+
 function Service:Init()
     if started then return end
     started = true
@@ -2259,6 +2310,7 @@ function Service:Init()
     buildCave()
     buildLeatherTraderArea()
     buildNPCs()
+    buildStablemasterDisplay()
 
     QuestRemote.OnServerEvent:Connect(function(player, action, value)
         if action == "RequestState" then
