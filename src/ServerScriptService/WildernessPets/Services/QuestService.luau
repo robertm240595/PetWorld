@@ -27,7 +27,7 @@ local npcModels = {}
 local personal = {}
 local leatherTradeSessions = setmetatable({}, {__mode = "k"})
 
-local QUEST_VERSION = 4
+local QUEST_VERSION = 5
 
 local function getRoot(player)
     local character = player.Character
@@ -245,6 +245,26 @@ local function migrateQuestData(data)
         if type(id) == "string" and id ~= "" and QuestConfig.Chains[id] then
             migrated.ActiveQuestIds[id] = true
         end
+    end
+
+    if old.Version == 4 then
+        migrated.Completed = type(old.Completed) == "table" and old.Completed or {}
+        migrated.Quests = type(old.Quests) == "table" and old.Quests or {}
+        migrated.ActiveQuestIds = type(old.ActiveQuestIds) == "table" and old.ActiveQuestIds or {}
+        if type(old.ActiveQuestId) == "string" and old.ActiveQuestId ~= "" then
+            migrated.ActiveQuestIds[old.ActiveQuestId] = true
+        end
+
+        local tutorialState = migrated.Quests.BeastHandlingTutorial
+        if type(tutorialState) == "table" then
+            local oldIndex = math.max(1, math.floor(tonumber(tutorialState.StageIndex) or 1))
+            if oldIndex >= 6 then
+                tutorialState.StageIndex = oldIndex + 1
+            end
+        end
+
+        data.QuestProgress = migrated
+        return migrated
     end
 
     if old.Version == 3 then
@@ -969,7 +989,7 @@ local function actionObjectiveTarget(player, stage)
             end
         end
     elseif action == "CapturePet" then
-        return nearestWildTarget(player, {})
+        return nearestWildTarget(player, stage or {})
     elseif action == "SellPet" or action == "BuybackPet" then
         for _, instance in ipairs(workspace:GetDescendants()) do
             if instance:IsA("Model") then
@@ -1303,7 +1323,7 @@ local function advanceStage(player, chain, state)
                 {{Text="I'M READY",Action="Close"}}
             )
         elseif nextStage.Id == "StartHealing" then
-            QuestRemote:FireClient(player, "TutorialGuide", {Kind = "Clear"})
+            QuestRemote:FireClient(player, "TutorialGuide", {Kind = "Home", PetId = state.TargetPetId})
             local current = currentPersonal(player)
             if current.SparPet and current.SparPet.Parent then
                 current.SparPet:Destroy()
@@ -1777,7 +1797,9 @@ function Service:OnPlayerAction(player, actionName, details)
             if chain.Id == "BeastHandlingTutorial" then
                 local petId = type(details.PetId) == "string" and details.PetId or ""
                 if actionName == "CapturePet" then
-                    if petId == "" then
+                    local pet = petId ~= "" and PetService:Find(player, petId) or nil
+                    local requiredRarity = stage.Rarity
+                    if not pet or (requiredRarity and pet.Rarity ~= requiredRarity) then
                         matches = false
                     else
                         state.TargetPetId = petId
@@ -1822,6 +1844,14 @@ function Service:OnCompanionDefeated(player, target, petId)
     return true
 end
 
+function Service:GetTutorialHealingSeconds(player, petId)
+    local root, _, chain, state = chainStage(player, "BeastHandlingTutorial")
+    if not root or not chain or not state then return nil end
+    if root.Completed.BeastHandlingTutorial == true then return nil end
+    if state.TargetPetId == "" or state.TargetPetId ~= petId then return nil end
+    return 0
+end
+
 function Service:IsQuestMonsterAllowed(player, target)
     local owner = target and tonumber(target:GetAttribute("QuestOwnerUserId"))
     return owner == nil or owner == player.UserId
@@ -1856,6 +1886,12 @@ function Service:PlayerReady(player)
             task.defer(function()
                 if player.Parent then
                     QuestRemote:FireClient(player, "TutorialGuide", {Kind="Upgrade", PetId=tutorialState.TargetPetId})
+                end
+            end)
+        elseif tutorialStage.Id == "StartHealing" then
+            task.defer(function()
+                if player.Parent then
+                    QuestRemote:FireClient(player, "TutorialGuide", {Kind="Home", PetId=tutorialState.TargetPetId})
                 end
             end)
         end
