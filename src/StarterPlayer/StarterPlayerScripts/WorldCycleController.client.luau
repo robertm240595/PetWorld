@@ -123,6 +123,52 @@ homeButton.AutoButtonColor=true
 homeButton.Parent=hud
 round(homeButton,12)
 border(homeButton)
+local homeTutorialStroke=Instance.new("UIStroke")
+homeTutorialStroke.Name="TutorialHomeHighlight"
+homeTutorialStroke.Color=Color3.fromRGB(255,213,92)
+homeTutorialStroke.Thickness=4
+homeTutorialStroke.Transparency=1
+homeTutorialStroke.Parent=homeButton
+
+local homeTutorialLabel=label(
+ homeButton,
+ "TutorialHomeLabel",
+ "RETURN HOME",
+ UDim2.new(.5,-65,0,-27),
+ UDim2.fromOffset(130,20),
+ 11,
+ Color3.fromRGB(255,220,120)
+)
+homeTutorialLabel.Font=Enum.Font.GothamBold
+homeTutorialLabel.TextXAlignment=Enum.TextXAlignment.Center
+homeTutorialLabel.Visible=false
+
+local homeTutorialTween
+local function setHomeTutorialHighlight(enabled)
+ if homeTutorialTween then
+  homeTutorialTween:Cancel()
+  homeTutorialTween=nil
+ end
+ if enabled then
+  homeTutorialStroke.Transparency=.08
+  homeTutorialLabel.Visible=true
+  homeTutorialTween=TweenService:Create(
+   homeTutorialStroke,
+   TweenInfo.new(.65,Enum.EasingStyle.Sine,Enum.EasingDirection.InOut,-1,true),
+   {Transparency=.68}
+  )
+  homeTutorialTween:Play()
+ else
+  homeTutorialStroke.Transparency=1
+  homeTutorialLabel.Visible=false
+ end
+end
+
+setHomeTutorialHighlight(player:GetAttribute("TutorialHomeGuide")==true)
+player:GetAttributeChangedSignal("TutorialHomeGuide"):Connect(function()
+ setHomeTutorialHighlight(player:GetAttribute("TutorialHomeGuide")==true)
+end)
+
 local homeCooldown=label(homeButton,"Cooldown","",UDim2.new(0,0,1,-16),UDim2.new(1,0,0,13),9,palette.muted)
 homeCooldown.TextXAlignment=Enum.TextXAlignment.Center
 homeButton.Activated:Connect(function()
@@ -901,6 +947,9 @@ UIS.TouchTapInWorld:Connect(function(position,processed) if not processed then s
 remotes.Game.OnClientEvent:Connect(function(action,kind,...)
  if action=="HomeTeleport" then
   local response=(...)
+  if kind then
+   setHomeTutorialHighlight(false)
+  end
   message(response or (kind and "Returned to your plot." or "You can't return to your plot yet."))
   return
  end
@@ -973,7 +1022,7 @@ remotes.Capture.OnClientEvent:Connect(function(action,...)
   message(tostring(args[1] or "The lasso attempt failed."))
  end
 end)
-RunService.RenderStepped:Connect(function()
+RunService.RenderStepped:Connect(function(dt)
  hud.Enabled=player:GetAttribute("VillageReady")==true
 
  local mainUI=playerGui:FindFirstChild("WildernessPetsUI")

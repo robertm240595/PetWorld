@@ -76,6 +76,15 @@ function Service:Touch(player)
 	publish(player, state)
 end
 
+function Service:AllowReturnHomeNow(player)
+	if not player then
+		return
+	end
+	local state = getState(player)
+	state.blockedUntil = now()
+	publish(player, state)
+end
+
 function Service:GetRemaining(player)
 	local state = getState(player)
 	return math.max(0, (state.blockedUntil or 0) - now())
