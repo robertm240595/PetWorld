@@ -1,5 +1,7 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+local TextChatService = game:GetService("TextChatService")
 
 local Root = ReplicatedStorage:WaitForChild("WildernessPets")
 local QuestRemote = Root.Remotes:WaitForChild("Quest")
@@ -1473,15 +1475,9 @@ local function completeQuest(player, chain)
     root.Completed[chain.Id] = true
     root.Quests[chain.Id] = nil
     root.ActiveQuestIds[chain.Id] = nil
+
     if chain.Id == "FirstMount" then
-        if nextStage.Id == "EquipHorse" then
-            QuestRemote:FireClient(player, "TutorialGuide", {
-                Kind = "Mount",
-                MountId = state.TargetMountId,
-            })
-        elseif nextStage.Id == "Report" then
-            QuestRemote:FireClient(player, "TutorialGuide", {Kind = "Clear"})
-        end
+        QuestRemote:FireClient(player, "TutorialGuide", {Kind = "Clear"})
     end
 
     if chain.Id == "BeastHandlingTutorial" then
@@ -1523,6 +1519,109 @@ local function completeQuest(player, chain)
         text .. (rewardText(chain.Reward) ~= "" and ("\n\nReward: " .. rewardText(chain.Reward) .. ".") or ""),
         options
     )
+end
+
+
+local function normalizeQuestLookup(value)
+    return tostring(value or ""):lower():gsub("^%s+",""):gsub("%s+$","")
+end
+
+function Service:DebugFinishQuest(player, requestedQuest)
+    if not RunService:IsStudio() then
+        return false, "This test command only works in Roblox Studio."
+    end
+
+    local root, _, entries = activeChainEntries(player)
+    if not root then
+        return false, "Quest data is not ready yet."
+    end
+    if #entries == 0 then
+        return false, "You do not have an active quest to finish."
+    end
+
+    table.sort(entries, function(a, b)
+        local priorityA = tonumber(a.Chain.Priority) or math.huge
+        local priorityB = tonumber(b.Chain.Priority) or math.huge
+        if priorityA == priorityB then
+            return tostring(a.Chain.Id) < tostring(b.Chain.Id)
+        end
+        return priorityA < priorityB
+    end)
+
+    local requested = normalizeQuestLookup(requestedQuest)
+    local chosen
+
+    if requested == "" then
+        chosen = entries[1]
+    else
+        for _, entry in ipairs(entries) do
+            local id = normalizeQuestLookup(entry.Chain.Id)
+            local name = normalizeQuestLookup(entry.Chain.Name)
+            if requested == id or requested == name then
+                chosen = entry
+                break
+            end
+        end
+    end
+
+    if not chosen then
+        local ids = {}
+        for _, entry in ipairs(entries) do
+            table.insert(ids, entry.Chain.Id)
+        end
+        return false,
+            "Active quest not found. Active quest IDs: "
+            .. table.concat(ids, ", ")
+    end
+
+    local questName = chosen.Chain.Name
+    local questId = chosen.Chain.Id
+
+    completeQuest(player, chosen.Chain)
+
+    QuestRemote:FireClient(
+        player,
+        "Toast",
+        "[STUDIO TEST] Completed quest: "
+            .. tostring(questName)
+            .. " ("
+            .. tostring(questId)
+            .. ")"
+    )
+
+    return true, questId
+end
+
+local function installStudioFinishQuestCommand()
+    if not RunService:IsStudio() then return end
+    if TextChatService:FindFirstChild("FinishQuestStudioCommand") then return end
+
+    local command = Instance.new("TextChatCommand")
+    command.Name = "FinishQuestStudioCommand"
+    command.PrimaryAlias = "/finishquest"
+    command.SecondaryAlias = "/fq"
+    command.Parent = TextChatService
+
+    command.Triggered:Connect(function(textSource, unfilteredText)
+        local player = textSource and Players:GetPlayerByUserId(textSource.UserId)
+        if not player then return end
+
+        local message = tostring(unfilteredText or "")
+        local argument = message
+            :gsub("^%s*/finishquest%s*", "")
+            :gsub("^%s*/fq%s*", "")
+            :gsub("^%s+", "")
+            :gsub("%s+$", "")
+
+        local success, result = Service:DebugFinishQuest(player, argument)
+        if not success then
+            QuestRemote:FireClient(
+                player,
+                "Toast",
+                "[STUDIO TEST] " .. tostring(result or "Could not finish quest.")
+            )
+        end
+    end)
 end
 
 local function advanceStage(player, chain, state)
@@ -2405,6 +2504,8 @@ end
 function Service:Init()
     if started then return end
     started = true
+
+    installStudioFinishQuestCommand()
 
     world = workspace:WaitForChild("WildernessPets")
     local old = world:FindFirstChild("QuestWorld")
