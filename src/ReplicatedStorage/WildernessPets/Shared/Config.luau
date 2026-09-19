@@ -57,13 +57,15 @@ Config.PlotCount = 12
 Config.PlotSize = 108
 Config.PlotSpacing = 285
 
-Config.WildMonsterCount = 64
+Config.WildMonsterCount = 96
 Config.WildSpawn = {
-    MinRadius = 190,
+    MinRadius = 175,
     MaxRadius = 640,
-    Attempts = 90,
-    RoamMinDistance = 45,
-    RoamMaxDistance = 120
+    FallbackHalfExtent = 640,
+    BoundaryMargin = 18,
+    Attempts = 120,
+    RoamMinDistance = 60,
+    RoamMaxDistance = 165
 }
 
 Config.Rarities = {
