@@ -439,6 +439,14 @@ local function applyNpcState(npcs, miraMarker)
                 local owner = tonumber(model:GetAttribute("QuestOwnerUserId"))
                 local visible = owner == player.UserId
                 setLocalModelVisible(model, visible)
+                local miraTalkable = visible
+                    and currentState
+                    and (currentState.Stage == "FindMira" or currentState.Stage == "ReportRowan")
+                for _, item in ipairs(model:GetDescendants()) do
+                    if item:IsA("ProximityPrompt") then
+                        item.Enabled = miraTalkable == true
+                    end
+                end
                 ensureMarker(model, visible and miraMarker and "?" or nil)
             end
         end
