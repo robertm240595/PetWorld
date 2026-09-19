@@ -921,6 +921,15 @@ local function rewardCombatKill(player, session, target)
         return
     end
 
+    local questAction = target:GetAttribute("QuestActionOnDefeat")
+    if type(questAction) == "string" and questAction ~= "" then
+        QuestService:OnPlayerAction(player, questAction, {
+            Target = target,
+            BossId = target:GetAttribute("BossId"),
+            Species = target:GetAttribute("Species"),
+        })
+    end
+
     if target:GetAttribute("QuestNoRewards") then
         combatTell(player, "Reward", 0, target:GetAttribute("Rarity") or "Quest")
         return
