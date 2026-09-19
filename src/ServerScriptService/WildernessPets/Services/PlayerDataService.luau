@@ -24,6 +24,7 @@ local function newData()
         Inventory = {
             {Type = "Lasso", Name = "Rough Rope", Quantity = 1}
         },
+        LootInventory = {},
         PetBuyback = {},
         LassoBuyback = {},
         ActiveEffects = {
@@ -109,6 +110,9 @@ function Service:Load(player)
 
     if type(data.Inventory) ~= "table" then
         data.Inventory = {}
+    end
+    if type(data.LootInventory) ~= "table" then
+        data.LootInventory = {}
     end
     if type(data.Pets) ~= "table" then
         data.Pets = {}
