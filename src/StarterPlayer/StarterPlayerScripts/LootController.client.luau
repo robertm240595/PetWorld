@@ -362,6 +362,8 @@ LootRemote.OnClientEvent:Connect(function(action, first, second)
             end
             toast(second or "Could not collect this loot.", false)
         end
+    elseif action == "BossReward" then
+        toast(second or (first and "World boss reward collected." or "World boss reward unavailable."), first == true)
     elseif action == "Error" then
         toast(first or "That loot is unavailable.", false)
     end
