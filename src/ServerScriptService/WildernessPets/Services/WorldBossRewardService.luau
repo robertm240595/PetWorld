@@ -5,6 +5,7 @@ local Root = ReplicatedStorage:WaitForChild("WildernessPets")
 local LootRemote = Root.Remotes:WaitForChild("Loot")
 local Config = require(Root.Shared.Config)
 
+local DataService = require(script.Parent.PlayerDataService)
 local PetService = require(script.Parent.PetService)
 local MountService = require(script.Parent.MountService)
 
@@ -131,11 +132,26 @@ end
 local function grantReward(player, record)
     local reward = record.Reward
     local granted = {}
+    local data = DataService:Get(player)
+    if not data then
+        return false, "Player data is unavailable."
+    end
+
+    -- Validate both collection capacities before granting either ultra-rare
+    -- reward. This keeps a pouch retry atomic if both 0.01% rolls hit.
+    data.Pets = type(data.Pets) == "table" and data.Pets or {}
+    data.Mounts = type(data.Mounts) == "table" and data.Mounts or {}
+    if reward.AncientPet and #data.Pets >= math.max(1, tonumber(Config.MaxPets) or 60) then
+        return false, "Your pet collection is full. Make space before opening this boss pouch."
+    end
+    if reward.AncientMount and #data.Mounts >= math.max(1, tonumber(Config.MaxMounts) or 40) then
+        return false, "Your mount collection is full. Make space before opening this boss pouch."
+    end
 
     if reward.AncientPet then
         local pet = PetService:Create(player, reward.AncientPet)
         if not pet then
-            return false, "Your pet collection is full. Make space before opening this boss pouch."
+            return false, "The Ancient pet reward could not be granted."
         end
         table.insert(granted, reward.AncientPet .. " Ancient pet")
     end
@@ -143,7 +159,7 @@ local function grantReward(player, record)
     if reward.AncientMount then
         local mount = MountService:Create(player, reward.AncientMount)
         if not mount then
-            return false, "Your mount collection is full. Make space before opening this boss pouch."
+            return false, "The Ancient mount reward could not be granted."
         end
         table.insert(granted, reward.AncientMount .. " Ancient mount")
     end
@@ -152,7 +168,6 @@ local function grantReward(player, record)
     -- can add its guaranteed Coins/materials without this dormant hook
     -- inventing boss economy values before the encounters are designed.
     if reward.Coins > 0 then
-        local DataService = require(script.Parent.PlayerDataService)
         DataService:AddCoins(player, reward.Coins)
         table.insert(granted, tostring(reward.Coins) .. " Coins")
     end
