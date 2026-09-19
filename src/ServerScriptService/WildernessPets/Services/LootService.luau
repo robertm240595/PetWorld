@@ -7,6 +7,7 @@ local Config = require(Root.Shared.Config)
 local LootConfig = require(Root.Shared.LootConfig)
 
 local DataService = require(script.Parent.PlayerDataService)
+local ShopService = require(script.Parent.ShopService)
 
 local Service = {}
 local started = false
@@ -20,44 +21,17 @@ local function playerRoot(player)
     return character and character:FindFirstChild("HumanoidRootPart")
 end
 
-local function ensureMaterials(data)
-    data.LootInventory = type(data.LootInventory) == "table" and data.LootInventory or {}
-    return data.LootInventory
-end
-
 function Service:GetCount(player, itemName)
-    local data = DataService:Get(player)
-    if not data then return 0 end
-    local materials = ensureMaterials(data)
-    return math.max(0, math.floor(tonumber(materials[itemName]) or 0))
+    return ShopService:CountInventoryItem(player, "Loot", itemName)
 end
 
 function Service:AddItem(player, itemName, quantity)
-    local data = DataService:Get(player)
-    if not data or type(itemName) ~= "string" or itemName == "" then return false end
-
-    local materials = ensureMaterials(data)
-    quantity = math.max(1, math.floor(tonumber(quantity) or 1))
-    materials[itemName] = math.max(0, math.floor(tonumber(materials[itemName]) or 0)) + quantity
-    return true, materials[itemName]
+    if type(itemName) ~= "string" or itemName == "" then return false, "Invalid loot item." end
+    return ShopService:AddInventoryItem(player, "Loot", itemName, quantity)
 end
 
 function Service:ConsumeItem(player, itemName, quantity)
-    local data = DataService:Get(player)
-    if not data then return false end
-
-    local materials = ensureMaterials(data)
-    quantity = math.max(1, math.floor(tonumber(quantity) or 1))
-    local current = math.max(0, math.floor(tonumber(materials[itemName]) or 0))
-    if current < quantity then return false end
-
-    current -= quantity
-    if current <= 0 then
-        materials[itemName] = nil
-    else
-        materials[itemName] = current
-    end
-    return true
+    return ShopService:ConsumeInventoryItem(player, "Loot", itemName, quantity)
 end
 
 local function randomCoins(baseCoins, rarity)
@@ -181,8 +155,10 @@ local function clientPayload(record)
         BagId = record.Id,
         Species = record.Species,
         Rarity = record.Rarity,
-        Coins = record.Coins,
+        Coins = math.max(0, tonumber(record.Coins) or 0),
         Items = items,
+        InventorySlots = ShopService:CountInventorySlots(record.Player),
+        InventoryCapacity = ShopService:GetInventoryCapacity(record.Player),
     }
 end
 
@@ -217,6 +193,7 @@ function Service:SpawnBag(player, target, baseCoins)
     local record = {
         Id = id,
         OwnerUserId = player.UserId,
+        Player = player,
         Species = species,
         Rarity = rarity,
         Coins = rolled.Coins,
@@ -239,7 +216,7 @@ function Service:SpawnBag(player, target, baseCoins)
     -- Replicate only after ownership, contents, and prompt handling are ready.
     model.Parent = folder
 
-    task.delay(math.max(30, tonumber(LootConfig.BagLifetimeSeconds) or 120), function()
+    task.delay(math.max(1, tonumber(LootConfig.BagLifetimeSeconds) or 30), function()
         if bags[id] == record then
             removeBag(record)
         end
@@ -248,7 +225,7 @@ function Service:SpawnBag(player, target, baseCoins)
     return id
 end
 
-function Service:Collect(player, bagId)
+function Service:Collect(player, bagId, selectedNames)
     local record = type(bagId) == "string" and bags[bagId] or nil
     if not record or not record.Model or not record.Model.Parent then
         LootRemote:FireClient(player, "CollectResult", false, "That loot bag is no longer available.")
@@ -273,16 +250,80 @@ function Service:Collect(player, bagId)
         return
     end
 
-    for _, item in ipairs(record.Items or {}) do
-        self:AddItem(player, item.Name, item.Quantity)
+    selectedNames = type(selectedNames) == "table" and selectedNames or {}
+    local selected = {}
+    for _, name in ipairs(selectedNames) do
+        if type(name) == "string" then selected[name] = true end
     end
 
-    local balance = DataService:AddCoins(player, record.Coins)
-    local payload = clientPayload(record)
-    payload.CoinBalance = balance
-    removeBag(record)
+    local picked = {}
+    local newSlots = 0
+    for _, item in ipairs(record.Items or {}) do
+        if selected[item.Name] then
+            table.insert(picked, item)
+            if ShopService:CountInventoryItem(player, "Loot", item.Name) <= 0 then
+                newSlots += 1
+            end
+        end
+    end
 
-    LootRemote:FireClient(player, "CollectResult", true, payload)
+    local usedSlots = ShopService:CountInventorySlots(player)
+    local capacity = ShopService:GetInventoryCapacity(player)
+    if usedSlots + newSlots > capacity then
+        LootRemote:FireClient(
+            player,
+            "CollectResult",
+            false,
+            "Those selected materials need " .. tostring(newSlots)
+                .. " new inventory slot(s), but your bag is "
+                .. tostring(usedSlots) .. "/" .. tostring(capacity) .. "."
+        )
+        return
+    end
+
+    for _, item in ipairs(picked) do
+        local added, reason = self:AddItem(player, item.Name, item.Quantity)
+        if not added then
+            LootRemote:FireClient(player, "CollectResult", false, reason or "Inventory changed before loot could be collected.")
+            return
+        end
+    end
+
+    if #picked > 0 then
+        local pickedSet = {}
+        for _, item in ipairs(picked) do pickedSet[item.Name] = true end
+        local remaining = {}
+        for _, item in ipairs(record.Items or {}) do
+            if not pickedSet[item.Name] then table.insert(remaining, item) end
+        end
+        record.Items = remaining
+    end
+
+    local collectedCoins = math.max(0, math.floor(tonumber(record.Coins) or 0))
+    local balance
+    if collectedCoins > 0 then
+        balance = DataService:AddCoins(player, collectedCoins)
+        record.Coins = 0
+    end
+
+    local collectedItems = {}
+    for _, item in ipairs(picked) do
+        table.insert(collectedItems, {Name=item.Name, Quantity=item.Quantity})
+    end
+
+    local bagEmpty = (tonumber(record.Coins) or 0) <= 0 and #(record.Items or {}) == 0
+    local remainingPayload = bagEmpty and nil or clientPayload(record)
+    if bagEmpty then removeBag(record) end
+
+    LootRemote:FireClient(player, "CollectResult", true, {
+        BagId = bagId,
+        Coins = collectedCoins,
+        Items = collectedItems,
+        CoinBalance = balance,
+        Remaining = remainingPayload,
+        InventorySlots = ShopService:CountInventorySlots(player),
+        InventoryCapacity = ShopService:GetInventoryCapacity(player),
+    })
 end
 
 function Service:PlayerRemoving(player)
@@ -311,7 +352,8 @@ function Service:Init()
 
     LootRemote.OnServerEvent:Connect(function(player, action, value)
         if action == "Collect" then
-            Service:Collect(player, value)
+            local payload = type(value) == "table" and value or {}
+            Service:Collect(player, payload.BagId, payload.Items)
         end
     end)
 end

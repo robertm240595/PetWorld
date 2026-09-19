@@ -24,6 +24,8 @@ local function newData()
         Inventory = {
             {Type = "Lasso", Name = "Rough Rope", Quantity = 1}
         },
+        InventoryCapacity = Config.MaxInventory or 25,
+        BackpackName = "Starter Bag",
         LootInventory = {},
         PetBuyback = {},
         LassoBuyback = {},
@@ -114,6 +116,52 @@ function Service:Load(player)
     if type(data.LootInventory) ~= "table" then
         data.LootInventory = {}
     end
+
+    data.InventoryCapacity = math.max(
+        tonumber(Config.MaxInventory) or 25,
+        math.floor(tonumber(data.InventoryCapacity) or tonumber(Config.MaxInventory) or 25)
+    )
+    data.BackpackName = type(data.BackpackName) == "string" and data.BackpackName or "Starter Bag"
+
+    -- Migrate the previous unlimited material dictionary into ordinary,
+    -- slot-limited stackable Loot inventory entries without deleting any
+    -- previously collected material.
+    local migratedLoot = {}
+    for itemName, quantity in pairs(data.LootInventory) do
+        local amount = math.max(0, math.floor(tonumber(quantity) or 0))
+        if type(itemName) == "string" and itemName ~= "" and amount > 0 then
+            migratedLoot[itemName] = (migratedLoot[itemName] or 0) + amount
+        end
+    end
+
+    for _, item in ipairs(data.Inventory) do
+        if type(item) == "table" then
+            item.Quantity = math.max(1, math.floor(tonumber(item.Quantity) or 1))
+            if item.Type == "Loot" and type(item.Name) == "string" then
+                migratedLoot[item.Name] = (migratedLoot[item.Name] or 0) + item.Quantity
+                item._MergedLegacyLoot = true
+            end
+        end
+    end
+
+    for index = #data.Inventory, 1, -1 do
+        local item = data.Inventory[index]
+        if type(item) == "table" and item._MergedLegacyLoot then
+            table.remove(data.Inventory, index)
+        end
+    end
+
+    local lootNames = {}
+    for itemName in pairs(migratedLoot) do table.insert(lootNames, itemName) end
+    table.sort(lootNames)
+    for _, itemName in ipairs(lootNames) do
+        table.insert(data.Inventory, {
+            Type = "Loot",
+            Name = itemName,
+            Quantity = migratedLoot[itemName],
+        })
+    end
+    data.LootInventory = {}
     if type(data.Pets) ~= "table" then
         data.Pets = {}
     end
@@ -191,7 +239,7 @@ function Service:Load(player)
         end
     end
 
-    if not ownsEquippedLasso and #data.Inventory < (Config.MaxInventory or 25) then
+    if not ownsEquippedLasso and #data.Inventory < data.InventoryCapacity then
         table.insert(data.Inventory, {
             Type = "Lasso",
             Name = equippedLasso,

@@ -642,6 +642,9 @@ QuestRemote.OnClientEvent:Connect(function(action, value)
         local parts = {}
         if (tonumber(value.Coins) or 0) > 0 then table.insert(parts, "+" .. tostring(value.Coins) .. " Coins") end
         if (tonumber(value.Gems) or 0) > 0 then table.insert(parts, "+" .. tostring(value.Gems) .. " Gems") end
+        if type(value.Backpack) == "string" and value.Backpack ~= "" then
+            table.insert(parts, tostring(value.Backpack) .. " · " .. tostring(value.InventoryCapacity or "?") .. " slots")
+        end
         local message = table.concat(parts, "  ·  ")
         if value.CoinBalance ~= nil then message ..= "  ·  Coins " .. tostring(value.CoinBalance) end
         if value.GemBalance ~= nil then message ..= "  ·  Gems " .. tostring(value.GemBalance) end

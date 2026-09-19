@@ -8,6 +8,20 @@ Config.StartGems = 0
 Config.MaxPets = 60
 Config.MaxPetNameLength = 18
 Config.MaxInventory = 25
+Config.Backpacks = {
+    ["Starter Bag"] = {Capacity = 25, Coins = 0, Gems = 0},
+    ["Leather Satchel"] = {Capacity = 30, Coins = 0, Gems = 0, QuestReward = true},
+    ["Trail Pack"] = {Capacity = 40, Coins = 15000, Gems = 0},
+    ["Ranger Pack"] = {Capacity = 50, Coins = 50000, Gems = 0},
+    ["Expedition Pack"] = {Capacity = 60, Coins = 150000, Gems = 0},
+    ["Oversized Backpack"] = {Capacity = 80, Coins = 0, Gems = 1500, Premium = true},
+}
+Config.BackpackOrder = {
+    "Trail Pack",
+    "Ranger Pack",
+    "Expedition Pack",
+    "Oversized Backpack",
+}
 Config.BeastTraderSellMultiplier = 1.10
 Config.WildKillCoinRatio = 0.15
 Config.PetSellLevelBonusPerLevel = 0.025

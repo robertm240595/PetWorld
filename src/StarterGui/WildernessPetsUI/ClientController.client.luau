@@ -26,6 +26,7 @@ local showBeastTrader
 local showLassoKeeper
 local showPetMerchant
 local showBarn
+local showLeatherTrader
 local backpackTab = "Pets"
 local beastTraderTab = "Sell"
 local lassoKeeperTab = "Buy"
@@ -118,7 +119,7 @@ end
 --------------------------------------------------------------
 
 showPets = function(tab)
-    if tab == "Pets" or tab == "Inventory" or tab == "Materials" then
+    if tab == "Pets" or tab == "Inventory" then
         backpackTab = tab
     end
 
@@ -135,14 +136,7 @@ showPets = function(tab)
 
     local pets=state.Pets or {}
     local inventory=state.Inventory or {}
-    local materials=state.LootInventory or {}
-    local materialNames={}
-    for name,quantity in pairs(materials) do
-        if type(name)=="string" and (tonumber(quantity) or 0)>0 then
-            table.insert(materialNames,name)
-        end
-    end
-    table.sort(materialNames)
+    local inventoryCapacity=math.max(1,tonumber(state.InventoryCapacity) or tonumber(Config.MaxInventory) or 25)
 
     local panel=frame(UDim2.fromOffset(820,620),UDim2.new(.5,-410,.5,-310))
     panel.Name="PetBackpack"
@@ -170,32 +164,22 @@ showPets = function(tab)
         panel,
         "🐾  PETS   "..tostring(#pets).."/"..tostring(Config.MaxPets or 60),
         UDim2.fromOffset(22,54),
-        UDim2.fromOffset(205,50)
+        UDim2.fromOffset(360,50)
     )
     petTab.TextScaled=false
     petTab.TextSize=13
 
     local inventoryTab=button(
         panel,
-        "🎒  INVENTORY   "..tostring(#inventory).."/"..tostring(Config.MaxInventory or 25),
-        UDim2.fromOffset(235,54),
-        UDim2.fromOffset(260,50)
+        "🎒  INVENTORY   "..tostring(#inventory).."/"..tostring(inventoryCapacity),
+        UDim2.fromOffset(390,54),
+        UDim2.fromOffset(378,50)
     )
     inventoryTab.TextScaled=false
     inventoryTab.TextSize=13
 
-    local materialsTab=button(
-        panel,
-        "◆  MATERIALS   "..tostring(#materialNames),
-        UDim2.fromOffset(503,54),
-        UDim2.fromOffset(265,50)
-    )
-    materialsTab.TextScaled=false
-    materialsTab.TextSize=13
-
     petTab.BackgroundColor3=backpackTab=="Pets" and Color3.fromRGB(75,92,117) or Color3.fromRGB(45,51,61)
     inventoryTab.BackgroundColor3=backpackTab=="Inventory" and Color3.fromRGB(75,92,117) or Color3.fromRGB(45,51,61)
-    materialsTab.BackgroundColor3=backpackTab=="Materials" and Color3.fromRGB(75,92,117) or Color3.fromRGB(45,51,61)
 
     petTab.MouseButton1Click:Connect(function()
         showPets("Pets")
@@ -203,98 +187,11 @@ showPets = function(tab)
     inventoryTab.MouseButton1Click:Connect(function()
         showPets("Inventory")
     end)
-    materialsTab.MouseButton1Click:Connect(function()
-        showPets("Materials")
-    end)
-
-    if backpackTab=="Materials" then
-        local totalMaterials=0
-        for _,name in ipairs(materialNames) do
-            totalMaterials+=math.max(0,math.floor(tonumber(materials[name]) or 0))
-        end
-
-        local status=text(
-            panel,
-            "Wild materials  ·  "..tostring(#materialNames).." types  ·  "..tostring(totalMaterials).." total  ·  Materials do not use inventory slots",
-            UDim2.fromOffset(22,112),
-            UDim2.fromOffset(770,24)
-        )
-        status.TextScaled=false
-        status.TextSize=13
-        status.TextXAlignment=Enum.TextXAlignment.Left
-
-        local list=Instance.new("ScrollingFrame")
-        list.Name="MaterialItems"
-        list.Position=UDim2.fromOffset(22,145)
-        list.Size=UDim2.fromOffset(776,445)
-        list.BackgroundTransparency=1
-        list.BorderSizePixel=0
-        list.ScrollBarThickness=5
-        list.AutomaticCanvasSize=Enum.AutomaticSize.Y
-        list.CanvasSize=UDim2.new()
-        list.Parent=panel
-
-        local layout=Instance.new("UIListLayout")
-        layout.Padding=UDim.new(0,8)
-        layout.Parent=list
-
-        if #materialNames==0 then
-            local empty=text(
-                list,
-                "No wild materials yet. Defeat wild pets, open their loot bags, then collect the contents.",
-                UDim2.new(),
-                UDim2.fromOffset(750,70)
-            )
-            empty.TextScaled=false
-            empty.TextSize=15
-            empty.TextWrapped=true
-        else
-            for _,name in ipairs(materialNames) do
-                local quantity=math.max(0,math.floor(tonumber(materials[name]) or 0))
-                local row=Instance.new("Frame")
-                row.Size=UDim2.fromOffset(750,58)
-                row.BackgroundColor3=Color3.fromRGB(38,43,52)
-                row.BorderSizePixel=0
-                row.Parent=list
-                local corner=Instance.new("UICorner")
-                corner.CornerRadius=UDim.new(0,8)
-                corner.Parent=row
-
-                local icon=text(row,"◆",UDim2.fromOffset(14,9),UDim2.fromOffset(38,38))
-                icon.TextScaled=false
-                icon.TextSize=22
-                icon.TextColor3=Color3.fromRGB(214,177,96)
-
-                local itemLabel=text(
-                    row,
-                    name,
-                    UDim2.fromOffset(62,8),
-                    UDim2.fromOffset(500,22)
-                )
-                itemLabel.TextScaled=false
-                itemLabel.TextSize=14
-                itemLabel.TextXAlignment=Enum.TextXAlignment.Left
-
-                local amount=text(
-                    row,
-                    "x"..tostring(quantity),
-                    UDim2.fromOffset(610,9),
-                    UDim2.fromOffset(120,34)
-                )
-                amount.TextScaled=false
-                amount.TextSize=16
-                amount.TextColor3=Color3.fromRGB(239,215,153)
-                amount.TextXAlignment=Enum.TextXAlignment.Right
-            end
-        end
-
-        return
-    end
 
     if backpackTab=="Inventory" then
         local status=text(
             panel,
-            "Items  ·  "..tostring(#inventory).."/"..tostring(Config.MaxInventory or 25).." slots  ·  Equip your preferred lasso here",
+            tostring(state.BackpackName or "Backpack").."  ·  "..tostring(#inventory).."/"..tostring(inventoryCapacity).." slots  ·  Loot materials share these slots",
             UDim2.fromOffset(22,112),
             UDim2.fromOffset(770,24)
         )
@@ -339,7 +236,7 @@ showPets = function(tab)
 
                     local itemIcon=text(
                         row,
-                        itemType=="Lasso" and "◎" or "✦",
+                        itemType=="Lasso" and "◎" or (itemType=="Loot" and "◆" or "✦"),
                         UDim2.fromOffset(12,12),
                         UDim2.fromOffset(44,44)
                     )
@@ -366,6 +263,8 @@ showPets = function(tab)
                     elseif itemType=="Potion" then
                         local info=Config.Potions and Config.Potions[itemName]
                         detailText=info and tostring(info.Description or "") or ""
+                    elseif itemType=="Loot" then
+                        detailText="Wild loot material  ·  Used for quests and trading"
                     end
 
                     local itemDetail=text(
@@ -1100,6 +999,138 @@ showPetMerchant = function()
 end
 
 --------------------------------------------------------------
+-- LEATHER TRADER / BACKPACKS
+--------------------------------------------------------------
+
+showLeatherTrader = function()
+    clear()
+    gui:SetAttribute("InventoryOpen",true)
+
+    state=GetState:InvokeServer()
+    if not state then return end
+
+    local panel=frame(UDim2.fromOffset(720,560),UDim2.new(.5,-360,.5,-280))
+    panel.Name="LeatherTraderShop"
+    panel.AnchorPoint=Vector2.new(.5,.5)
+    panel.Position=UDim2.new(.5,0,.5,0)
+
+    local viewport=workspace.CurrentCamera and workspace.CurrentCamera.ViewportSize or Vector2.new(1280,720)
+    local fit=Instance.new("UIScale")
+    fit.Scale=math.min(1,(viewport.X-30)/720,(viewport.Y-40)/560)
+    fit.Parent=panel
+
+    local title=text(panel,"LEATHER TRADER",UDim2.fromOffset(20,14),UDim2.fromOffset(500,30))
+    title.TextScaled=false
+    title.TextSize=22
+    title.TextXAlignment=Enum.TextXAlignment.Left
+
+    local currentCapacity=math.max(1,tonumber(state.InventoryCapacity) or tonumber(Config.MaxInventory) or 25)
+    local subtitle=text(
+        panel,
+        tostring(state.BackpackName or "Backpack")
+            .."  ·  "..tostring(currentCapacity).." inventory slots\n"
+            .."Corvin's packs permanently increase your item-slot capacity.",
+        UDim2.fromOffset(20,52),
+        UDim2.fromOffset(650,46)
+    )
+    subtitle.TextScaled=false
+    subtitle.TextSize=11
+    subtitle.TextWrapped=true
+    subtitle.TextXAlignment=Enum.TextXAlignment.Left
+
+    local close=button(panel,"×",UDim2.fromOffset(664,10),UDim2.fromOffset(38,34))
+    close.TextScaled=false
+    close.TextSize=24
+    close.MouseButton1Click:Connect(showHUD)
+
+    local list=Instance.new("ScrollingFrame")
+    list.Name="BackpackUpgrades"
+    list.Position=UDim2.fromOffset(20,112)
+    list.Size=UDim2.fromOffset(680,425)
+    list.BackgroundTransparency=1
+    list.BorderSizePixel=0
+    list.ScrollBarThickness=5
+    list.AutomaticCanvasSize=Enum.AutomaticSize.Y
+    list.CanvasSize=UDim2.new()
+    list.Parent=panel
+
+    local layout=Instance.new("UIListLayout")
+    layout.Padding=UDim.new(0,10)
+    layout.Parent=list
+
+    for _,name in ipairs(Config.BackpackOrder or {}) do
+        local info=Config.Backpacks and Config.Backpacks[name]
+        if info then
+            local capacity=math.max(1,tonumber(info.Capacity) or 25)
+            local coins=math.max(0,tonumber(info.Coins) or 0)
+            local gems=math.max(0,tonumber(info.Gems) or 0)
+            local premium=info.Premium==true
+
+            local row=Instance.new("Frame")
+            row.Size=UDim2.fromOffset(655,82)
+            row.BackgroundColor3=premium and Color3.fromRGB(57,47,71) or Color3.fromRGB(38,43,52)
+            row.BorderSizePixel=0
+            row.Parent=list
+            local corner=Instance.new("UICorner")
+            corner.CornerRadius=UDim.new(0,8)
+            corner.Parent=row
+
+            local nameLabel=text(
+                row,
+                tostring(name).."  ·  "..tostring(capacity).." SLOTS",
+                UDim2.fromOffset(14,8),
+                UDim2.fromOffset(390,23)
+            )
+            nameLabel.TextScaled=false
+            nameLabel.TextSize=14
+            nameLabel.TextXAlignment=Enum.TextXAlignment.Left
+
+            local descText
+            if premium then
+                descText="Largest backpack available  ·  Premium Gem upgrade"
+            elseif capacity<=currentCapacity then
+                descText="Already owned or smaller than your current backpack"
+            else
+                descText="+"..tostring(capacity-currentCapacity).." slots over your current bag"
+            end
+
+            local desc=text(
+                row,
+                descText,
+                UDim2.fromOffset(14,37),
+                UDim2.fromOffset(390,24)
+            )
+            desc.TextScaled=false
+            desc.TextSize=10
+            desc.TextColor3=Color3.fromRGB(190,195,205)
+            desc.TextXAlignment=Enum.TextXAlignment.Left
+
+            local priceText=gems>0 and (tostring(gems).." GEMS") or (tostring(coins).." COINS")
+            local buy=button(
+                row,
+                capacity<=currentCapacity and "OWNED / SMALLER" or ("BUY\n"..priceText),
+                UDim2.fromOffset(465,17),
+                UDim2.fromOffset(172,48)
+            )
+            buy.TextScaled=false
+            buy.TextSize=11
+
+            if capacity<=currentCapacity then
+                buy.Active=false
+                buy.AutoButtonColor=false
+                buy.BackgroundColor3=Color3.fromRGB(56,58,61)
+            else
+                buy.MouseButton1Click:Connect(function()
+                    buy.Active=false
+                    buy.Text="BUYING..."
+                    ShopRemote:FireServer("BuyBackpack",name)
+                end)
+            end
+        end
+    end
+end
+
+--------------------------------------------------------------
 -- ARENA
 --------------------------------------------------------------
 
@@ -1646,6 +1677,9 @@ ShopRemote.OnClientEvent:Connect(function(action, ...)
     elseif action=="OpenPetMerchant" then
         showPetMerchant()
 
+    elseif action=="OpenLeatherTrader" then
+        showLeatherTrader()
+
     elseif action=="OpenBarn" then
         showBarn()
 
@@ -1682,6 +1716,22 @@ ShopRemote.OnClientEvent:Connect(function(action, ...)
             end
         end
         notify(message or (success and "Lasso equipped." or "Could not equip lasso."))
+
+    elseif action=="BackpackResult" then
+        local success=args[1]==true
+        local message=args[2]
+        local inTrader=gui:FindFirstChild("LeatherTraderShop")~=nil
+        local inBackpack=gui:FindFirstChild("PetBackpack")~=nil
+        if success then
+            if inTrader then
+                showLeatherTrader()
+            elseif inBackpack then
+                showPets("Inventory")
+            else
+                showHUD()
+            end
+        end
+        notify(message or (success and "Backpack upgraded." or "Could not upgrade backpack."))
 
     elseif action=="PotionResult" then
         local success=args[1]==true

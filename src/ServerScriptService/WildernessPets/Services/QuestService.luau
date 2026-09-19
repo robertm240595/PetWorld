@@ -3,12 +3,14 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Root = ReplicatedStorage:WaitForChild("WildernessPets")
 local QuestRemote = Root.Remotes:WaitForChild("Quest")
+local ShopRemote = Root.Remotes:WaitForChild("Shop")
 local QuestConfig = require(Root.Shared.QuestConfig)
 local Config = require(Root.Shared.Config)
 
 local DataService = require(script.Parent.PlayerDataService)
 local PetService = require(script.Parent.PetService)
 local LootService = require(script.Parent.LootService)
+local ShopService = require(script.Parent.ShopService)
 local ModelFactory = require(script.Parent.Parent.Systems.PetModelFactory)
 local Animator = require(script.Parent.Parent.Systems.PetAnimator)
 
@@ -19,8 +21,11 @@ local questWorld
 local caveModel
 local caveEntrance
 local caveInner
+local leatherTraderModel
+local leatherTraderPosition
 local npcModels = {}
 local personal = {}
+local leatherTradeSessions = setmetatable({}, {__mode = "k"})
 
 local QUEST_VERSION = 4
 
@@ -201,6 +206,15 @@ local function rewardText(reward)
     end
     if (tonumber(reward.Gems) or 0) > 0 then
         table.insert(parts, tostring(math.floor(reward.Gems)) .. " Gems")
+    end
+    if type(reward.Backpack) == "string" and reward.Backpack ~= "" then
+        table.insert(
+            parts,
+            tostring(reward.Backpack)
+                .. " ("
+                .. tostring(math.max(0, math.floor(tonumber(reward.Capacity) or 0)))
+                .. " slots)"
+        )
     end
     return table.concat(parts, " + ")
 end
@@ -485,6 +499,44 @@ local function inspectCount(player, stage)
     return count
 end
 
+local function multiItemProgress(player, stage)
+    local total = 0
+    local requiredTotal = 0
+    local ready = true
+    local parts = {}
+    local firstMissing
+
+    for _, requirement in ipairs(type(stage.Requirements) == "table" and stage.Requirements or {}) do
+        local itemName = tostring(requirement.Item or "")
+        local required = math.max(1, math.floor(tonumber(requirement.Required) or 1))
+        local count = math.min(required, LootService:GetCount(player, itemName))
+        total += count
+        requiredTotal += required
+
+        table.insert(parts, itemName .. " " .. tostring(count) .. "/" .. tostring(required))
+        if count < required then
+            ready = false
+            firstMissing = firstMissing or requirement
+        end
+    end
+
+    return total, requiredTotal, ready, parts, firstMissing
+end
+
+local function consumeMultiItems(player, stage)
+    local _, _, ready = multiItemProgress(player, stage)
+    if not ready then return false end
+
+    for _, requirement in ipairs(type(stage.Requirements) == "table" and stage.Requirements or {}) do
+        local itemName = tostring(requirement.Item or "")
+        local required = math.max(1, math.floor(tonumber(requirement.Required) or 1))
+        if not LootService:ConsumeItem(player, itemName, required) then
+            return false
+        end
+    end
+    return true
+end
+
 local function stageCount(player, state, stage)
     if stage.Type == "CaptureReturn" then
         return #eligiblePets(player, stage)
@@ -492,6 +544,9 @@ local function stageCount(player, state, stage)
         return inspectCount(player, stage)
     elseif stage.Type == "ItemTurnIn" then
         return LootService:GetCount(player, stage.Item)
+    elseif stage.Type == "MultiItemTurnIn" then
+        local total = multiItemProgress(player, stage)
+        return total
     elseif stage.Type == "Kill" then
         return state.Count
     elseif stage.Type == "Talk" then
@@ -568,11 +623,23 @@ local function grantReward(player, chain)
     if coins > 0 then coinBalance = DataService:AddCoins(player, coins) end
     if gems > 0 then gemBalance = DataService:AddGems(player, gems) end
 
+    local backpackName
+    local capacity
+    if type(reward.Backpack) == "string" and reward.Backpack ~= "" then
+        local upgraded = ShopService:UpgradeInventoryCapacity(player, reward.Backpack)
+        if upgraded then
+            backpackName = reward.Backpack
+            capacity = ShopService:GetInventoryCapacity(player)
+        end
+    end
+
     QuestRemote:FireClient(player, "Reward", {
         Coins = coins,
         Gems = gems,
         CoinBalance = coinBalance,
         GemBalance = gemBalance,
+        Backpack = backpackName,
+        InventoryCapacity = capacity,
     })
 end
 
@@ -922,12 +989,18 @@ end
 
 local function stageReadyForNPC(player, chain, state, stage)
     if not stage then return false end
+    if chain and chain.Special == "LeatherTrader" then
+        return false
+    end
     if stage.Type == "Talk" then
         return true
     elseif stage.Type == "CaptureReturn" then
         return stageCount(player, state, stage) >= math.max(1, tonumber(stage.Required) or 1)
     elseif stage.Type == "InspectPet" or stage.Type == "ItemTurnIn" then
         return stageCount(player, state, stage) >= math.max(1, tonumber(stage.Required) or 1)
+    elseif stage.Type == "MultiItemTurnIn" then
+        local _, _, ready = multiItemProgress(player, stage)
+        return ready
     end
     return false
 end
@@ -1013,7 +1086,22 @@ function Service:GetClientState(player)
         local targetPosition
         local targetLabel
 
-        if chain.Special == "Hollowfang" then
+        if chain.Special == "LeatherTrader" then
+            if stage.Id == "FindTrader" then
+                targetPosition = leatherTraderPosition
+                targetLabel = "Leather Trader's Hut"
+            elseif stage.Id == "GatherHides" then
+                local _, _, ready, _, missing = multiItemProgress(player, stage)
+                if ready then
+                    targetPosition = leatherTraderPosition
+                    targetLabel = "Leather Trader Corvin"
+                elseif missing then
+                    targetPosition, targetLabel = nearestWildTarget(player, {
+                        Species = missing.SourceSpecies,
+                    })
+                end
+            end
+        elseif chain.Special == "Hollowfang" then
             if stage.Id == "Bears" then
                 targetPosition = caveEntrance
                 targetLabel = "Hollowfang Cave"
@@ -1049,8 +1137,15 @@ function Service:GetClientState(player)
         end
 
         local progressText
-        if stage.Type == "Talk" then
-            progressText = "READY TO REPORT"
+        local detailText = stage.Detail or ""
+        if stage.Type == "MultiItemTurnIn" then
+            local total, totalRequired, ready, parts = multiItemProgress(player, stage)
+            progressText = ready
+                and "READY TO DELIVER"
+                or (tostring(total) .. " / " .. tostring(totalRequired) .. " MATERIALS")
+            detailText = table.concat(parts, "  ·  ")
+        elseif stage.Type == "Talk" then
+            progressText = chain.Special == "LeatherTrader" and "FIND CORVIN" or "READY TO REPORT"
         elseif stage.Type == "Spar" then
             progressText = "CHALLENGE READY"
         else
@@ -1066,7 +1161,7 @@ function Service:GetClientState(player)
             ObjectiveType = stage.Type,
             ObjectiveTypeLabel = QuestConfig.ObjectiveTypes[stage.Type] or string.upper(stage.Type),
             Objective = stage.Objective or "",
-            Detail = stage.Detail or "",
+            Detail = detailText,
             Progress = progressText,
             TargetPosition = targetPosition,
             TargetLabel = targetLabel,
@@ -1162,7 +1257,7 @@ local function completeQuest(player, chain)
 
     sendDialogue(
         player,
-        npcName(chain.NPC),
+        chain.Special == "LeatherTrader" and "Leather Trader Corvin" or npcName(chain.NPC),
         text .. (rewardText(chain.Reward) ~= "" and ("\n\nReward: " .. rewardText(chain.Reward) .. ".") or ""),
         options
     )
@@ -1394,6 +1489,88 @@ function Service:TalkToNPC(player, npcId)
     sendDialogue(player, npcName(npcId), "Nothing urgent for you right now. Keep improving your beasts and equipment; more work will open up as you're ready for it.", {{Text="CLOSE",Action="Close"}})
 end
 
+function Service:TalkToLeatherTrader(player)
+    if not leatherTraderModel or not leatherTraderModel.Parent then return end
+    if not near(player, leatherTraderModel:GetPivot().Position, 16) then return end
+
+    local root = questData(player)
+    if not root then return end
+
+    local _, _, chain, state, stage = chainStage(player, "BiggerBag")
+    if chain and state and stage then
+        if stage.Id == "FindTrader" then
+            sendDialogue(
+                player,
+                "Leather Trader Corvin",
+                "Rowan sent you? Then he finally noticed that tiny starter bag of yours. I can make something better, but good leather doesn't appear by wishing for it. Bring me a few clean hides from the Common wildlife around here and I'll put together a proper field satchel.",
+                {
+                    {Text="WHAT DO YOU NEED?", Action="LeatherTraderFound"},
+                    {Text="I'LL COME BACK", Action="Close"},
+                }
+            )
+            return
+        elseif stage.Id == "GatherHides" then
+            local _, _, ready, parts = multiItemProgress(player, stage)
+            if ready then
+                sendDialogue(
+                    player,
+                    "Leather Trader Corvin",
+                    "That's the lot. Good hides, too. Hand them over and I'll stitch the satchel while the fire is hot.",
+                    {
+                        {Text="HAND OVER MATERIALS", Action="LeatherTurnIn"},
+                        {Text="KEEP THEM FOR NOW", Action="Close"},
+                    }
+                )
+            else
+                sendDialogue(
+                    player,
+                    "Leather Trader Corvin",
+                    "You're not carrying everything yet. I need:\n\n" .. table.concat(parts, "\n") .. "\n\nBring the full bundle back to me.",
+                    {{Text="CLOSE",Action="Close"}}
+                )
+            end
+            return
+        end
+    end
+
+    if root.Completed.BiggerBag == true then
+        leatherTradeSessions[player] = {
+            expiresAt = os.clock() + 30,
+        }
+        ShopRemote:FireClient(player, "OpenLeatherTrader")
+        return
+    end
+
+    sendDialogue(
+        player,
+        "Leather Trader Corvin",
+        "I keep to myself out here. If Warden Rowan has business with me, he'll send word.",
+        {{Text="CLOSE",Action="Close"}}
+    )
+end
+
+function Service:CanLeatherTrade(player)
+    local root = questData(player)
+    if not root or root.Completed.BiggerBag ~= true then
+        return false, "Finish Corvin's leather-working quest first."
+    end
+
+    local session = leatherTradeSessions[player]
+    if not session or os.clock() > session.expiresAt then
+        leatherTradeSessions[player] = nil
+        return false, "Speak to Leather Trader Corvin first."
+    end
+    if not leatherTraderModel or not leatherTraderModel.Parent then
+        return false, "Leather Trader Corvin is unavailable."
+    end
+    if not near(player, leatherTraderModel:GetPivot().Position, 20) then
+        return false, "Move closer to Leather Trader Corvin."
+    end
+
+    session.expiresAt = os.clock() + 30
+    return true
+end
+
 function Service:TalkToMira(player)
     local _, _, chain, state, stage = chainStage(player, "HollowfangRescue")
     local current = personal[player]
@@ -1423,6 +1600,33 @@ function Service:HandleAction(player, action)
     local acceptId = action:match("^Accept:(.+)$")
     if acceptId then
         acceptQuest(player, acceptId)
+        return
+    end
+
+    if action == "LeatherTraderFound" then
+        local _, _, chain, state, stage = chainStage(player, "BiggerBag")
+        if not chain or not state or not stage or stage.Id ~= "FindTrader" then return end
+        if not leatherTraderModel or not near(player, leatherTraderModel:GetPivot().Position, 16) then return end
+        advanceStage(player, chain, state)
+        sendDialogue(
+            player,
+            "Leather Trader Corvin",
+            "Bring me 2 Wolf Hides, 2 Hare Pelts and 2 Coarse Boar Hides. Open the loot bags you want, take only the materials worth carrying, and come back when you've got the full bundle.",
+            {{Text="I'LL GET THEM",Action="Close"}}
+        )
+        return
+    end
+
+    if action == "LeatherTurnIn" then
+        local _, _, chain, state, stage = chainStage(player, "BiggerBag")
+        if not chain or not state or not stage or stage.Id ~= "GatherHides" then return end
+        if not leatherTraderModel or not near(player, leatherTraderModel:GetPivot().Position, 16) then return end
+        if not consumeMultiItems(player, stage) then
+            sendDialogue(player, "Leather Trader Corvin", "You're missing part of the material bundle.", {{Text="CLOSE",Action="Close"}})
+            Service:PushState(player)
+            return
+        end
+        advanceStage(player, chain, state)
         return
     end
 
@@ -1664,6 +1868,7 @@ end
 
 function Service:PlayerRemoving(player)
     destroyPersonal(player)
+    leatherTradeSessions[player] = nil
 end
 
 local function buildCave()
@@ -1728,6 +1933,90 @@ local function buildCave()
     label.Parent = surface
 end
 
+local function buildLeatherTraderArea()
+    local settings = QuestConfig.World
+    local ground = terrainPoint(settings.LeatherTraderXZ.X, settings.LeatherTraderXZ.Y, settings.CaveFallbackY)
+    leatherTraderPosition = ground + Vector3.new(0, .15, 0)
+
+    local area = Instance.new("Model")
+    area.Name = "LeatherTraderCamp"
+    area.Parent = questWorld
+
+    local wood = Color3.fromRGB(92, 66, 43)
+    local darkWood = Color3.fromRGB(65, 47, 34)
+    local hide = Color3.fromRGB(149, 112, 75)
+
+    local hutCenter = leatherTraderPosition + Vector3.new(0, 0, -12)
+    makePart(area, "HutFloor", Vector3.new(18,1,14), CFrame.new(hutCenter + Vector3.new(0,.3,0)), darkWood, Enum.Material.WoodPlanks)
+    makePart(area, "HutBack", Vector3.new(18,10,1), CFrame.new(hutCenter + Vector3.new(0,5,-6.5)), wood, Enum.Material.WoodPlanks)
+    makePart(area, "HutLeft", Vector3.new(1,10,14), CFrame.new(hutCenter + Vector3.new(-8.5,5,0)), wood, Enum.Material.WoodPlanks)
+    makePart(area, "HutRight", Vector3.new(1,10,14), CFrame.new(hutCenter + Vector3.new(8.5,5,0)), wood, Enum.Material.WoodPlanks)
+    makePart(area, "HutRoof", Vector3.new(20,1.2,16), CFrame.new(hutCenter + Vector3.new(0,10.2,0)) * CFrame.Angles(0,0,math.rad(4)), darkWood, Enum.Material.WoodPlanks)
+
+    local fireCenter = leatherTraderPosition + Vector3.new(-5, .5, 5)
+    for i=1,3 do
+        local log = makePart(
+            area,
+            "FireLog"..tostring(i),
+            Vector3.new(5,.55,.65),
+            CFrame.new(fireCenter) * CFrame.Angles(0, math.rad((i-1)*60), math.rad(90)),
+            darkWood,
+            Enum.Material.Wood
+        )
+        log.CanCollide = false
+    end
+    local flame = makePart(area,"CampFlame",Vector3.new(1.5,2.8,1.5),CFrame.new(fireCenter+Vector3.new(0,1.5,0)),Color3.fromRGB(255,132,44),Enum.Material.Neon,Enum.PartType.Ball)
+    flame.CanCollide=false
+    flame.CanQuery=false
+    local light=Instance.new("PointLight")
+    light.Color=Color3.fromRGB(255,170,80)
+    light.Brightness=2
+    light.Range=18
+    light.Parent=flame
+
+    for rackIndex, xOffset in ipairs({7, 12}) do
+        local base = leatherTraderPosition + Vector3.new(xOffset,0,2)
+        local left = makePart(area,"Rack"..rackIndex.."Left",Vector3.new(.5,6,.5),CFrame.new(base+Vector3.new(-2,3,0)),wood,Enum.Material.Wood)
+        local right = makePart(area,"Rack"..rackIndex.."Right",Vector3.new(.5,6,.5),CFrame.new(base+Vector3.new(2,3,0)),wood,Enum.Material.Wood)
+        local top = makePart(area,"Rack"..rackIndex.."Top",Vector3.new(4.5,.45,.45),CFrame.new(base+Vector3.new(0,5.6,0)),wood,Enum.Material.Wood)
+        left.CanCollide=false right.CanCollide=false top.CanCollide=false
+        local hanging = makePart(area,"Rack"..rackIndex.."Hide",Vector3.new(3.1,3.8,.25),CFrame.new(base+Vector3.new(0,3.3,0)),hide,Enum.Material.Fabric)
+        hanging.CanCollide=false
+    end
+
+    local model = Instance.new("Model")
+    model.Name = "LeatherTrader"
+    model:SetAttribute("LeatherTrader", true)
+
+    local seated = leatherTraderPosition + Vector3.new(0,0,4)
+    local root = makePart(model,"HumanoidRootPart",Vector3.new(2,2,1),CFrame.new(seated+Vector3.new(0,2,0)),Color3.new(),Enum.Material.SmoothPlastic)
+    root.Transparency=1 root.CanCollide=false
+    local torso=makePart(model,"Torso",Vector3.new(2.3,2.8,1.2),CFrame.new(seated+Vector3.new(0,2.7,0)),Color3.fromRGB(100,72,52),Enum.Material.Fabric)
+    torso.CanCollide=false
+    local head=makePart(model,"Head",Vector3.new(1.8,1.8,1.8),CFrame.new(seated+Vector3.new(0,4.8,0)),Color3.fromRGB(207,164,127),Enum.Material.SmoothPlastic,Enum.PartType.Ball)
+    head.CanCollide=false
+    local leg1=makePart(model,"LeftLeg",Vector3.new(.75,2.2,.8),CFrame.new(seated+Vector3.new(-.65,1.1,1.0))*CFrame.Angles(math.rad(55),0,0),Color3.fromRGB(61,57,52),Enum.Material.Fabric)
+    local leg2=makePart(model,"RightLeg",Vector3.new(.75,2.2,.8),CFrame.new(seated+Vector3.new(.65,1.1,1.0))*CFrame.Angles(math.rad(55),0,0),Color3.fromRGB(61,57,52),Enum.Material.Fabric)
+    leg1.CanCollide=false leg2.CanCollide=false
+    model.PrimaryPart=root
+    model.Parent=area
+    billboard(torso,"Leather Trader Corvin","LEATHERWORKER",Color3.fromRGB(228,190,116))
+
+    local prompt=Instance.new("ProximityPrompt")
+    prompt.Name="LeatherTraderPrompt"
+    prompt.ActionText="Talk"
+    prompt.ObjectText="Leather Trader Corvin"
+    prompt.MaxActivationDistance=12
+    prompt.HoldDuration=.1
+    prompt.RequiresLineOfSight=false
+    prompt.Parent=torso
+    prompt.Triggered:Connect(function(player)
+        Service:TalkToLeatherTrader(player)
+    end)
+
+    leatherTraderModel=model
+end
+
 local function buildNPCs()
     for _, npcId in ipairs(QuestConfig.NPCOrder) do
         local spec = QuestConfig.World.NPCs[npcId]
@@ -1750,6 +2039,7 @@ function Service:Init()
     questWorld.Parent = world
 
     buildCave()
+    buildLeatherTraderArea()
     buildNPCs()
 
     QuestRemote.OnServerEvent:Connect(function(player, action, value)

@@ -114,7 +114,8 @@ GetState.OnServerInvoke = function(player)
         Gems = data.Gems,
         Lasso = data.Lasso,
         Inventory = data.Inventory or {},
-        LootInventory = data.LootInventory or {},
+        InventoryCapacity = math.max(tonumber(Config.MaxInventory) or 25, tonumber(data.InventoryCapacity) or tonumber(Config.MaxInventory) or 25),
+        BackpackName = data.BackpackName or "Starter Bag",
         Pets = PetService:GetPets(player),
         PetBuyback = data.PetBuyback or {},
         LassoBuyback = data.LassoBuyback or {},
@@ -363,6 +364,22 @@ ShopRemote.OnServerEvent:Connect(function(player, action, ...)
             QuestService:OnPlayerAction(player, "BuybackPet")
         end
         ShopRemote:FireClient(player, "PetBuybackResult", success, message)
+
+    elseif action == "BuyBackpack" then
+        local allowed, gateMessage = QuestService:CanLeatherTrade(player)
+        if not allowed then
+            ShopRemote:FireClient(player, "BackpackResult", false, gateMessage)
+            return
+        end
+
+        local success, message = ShopService:BuyBackpack(player, value)
+        ShopRemote:FireClient(
+            player,
+            "BackpackResult",
+            success,
+            message,
+            ShopService:GetInventoryCapacity(player)
+        )
 
     elseif action == "BuyPotion" then
         local allowed, gateMessage = PetMerchantService:CanTrade(player)

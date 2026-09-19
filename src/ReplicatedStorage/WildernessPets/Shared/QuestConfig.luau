@@ -7,6 +7,7 @@ QuestConfig.ObjectiveTypes = {
     InspectPet = "SHOW PET",
     Action = "GAMEPLAY TASK",
     ItemTurnIn = "ITEM TURN-IN",
+    MultiItemTurnIn = "MATERIAL TURN-IN",
     Spar = "CHALLENGE",
 }
 
@@ -23,6 +24,7 @@ QuestConfig.LassoTiers = {
 QuestConfig.World = {
     CaveXZ = Vector2.new(390, -390),
     CaveFallbackY = 17,
+    LeatherTraderXZ = Vector2.new(-235, 165),
     NPCs = {
         Rowan = {Name = "Warden Rowan", XZ = Vector2.new(8, -18), Shirt = Color3.fromRGB(82,94,72), Accent = Color3.fromRGB(137,119,76)},
         Bram = {Name = "Quartermaster Bram", XZ = Vector2.new(-18, -10), Shirt = Color3.fromRGB(87,77,65), Accent = Color3.fromRGB(146,119,78)},
@@ -83,6 +85,38 @@ QuestConfig.Chains = {
             {Id="StartHealing", Type="Action", Action="StartHealing", Required=1, Objective="Place your defeated companion into your Pet Barn.", Detail="Rowan's lesson was deliberate: defeated pets must be healed at the Barn on your plot."},
             {Id="CollectHealing", Type="Action", Action="CollectHealed", Required=1, Objective="Wait for the healing timer, then collect your companion.", Detail="Barn healing continues in real time. Return when the timer reaches zero."},
             {Id="Report", Type="Talk", Objective="Return to Warden Rowan after your companion recovers.", Detail="Report back to finish the handling tutorial and unlock the village quest roster."},
+        },
+    },
+
+    BiggerBag = {
+        Id = "BiggerBag",
+        Name = "We're Gonna Need a Bigger Bag",
+        NPC = "Rowan",
+        RequiredStrength = 0,
+        Priority = 3,
+        Prerequisite = "BeastHandlingTutorial",
+        Special = "LeatherTrader",
+        Intro = "You're ready for real field work now, but that little starter bag won't last long once you begin bringing back hides, claws and other useful materials. There's a leatherworker named Corvin living out in the western forest. Find his hut and tell him I sent you. If you can prove you're bringing useful materials home, he may be willing to make you something larger.",
+        CompleteText = "Corvin works quietly, but nobody in the region makes stronger field gear. That new satchel should give you room to carry proper expedition supplies.",
+        Reward = {Coins = 0, Gems = 0, Backpack = "Leather Satchel", Capacity = 30},
+        Stages = {
+            {
+                Id = "FindTrader",
+                Type = "Talk",
+                Objective = "Find Leather Trader Corvin at his hut in the western forest.",
+                Detail = "Follow the compass into the wild. Corvin lives outside the village beside a camp fire and tanning racks.",
+            },
+            {
+                Id = "GatherHides",
+                Type = "MultiItemTurnIn",
+                Requirements = {
+                    {Item = "Wolf Hide", Required = 2, SourceSpecies = "Wolf"},
+                    {Item = "Hare Pelt", Required = 2, SourceSpecies = "Hare"},
+                    {Item = "Coarse Boar Hide", Required = 2, SourceSpecies = "Boar"},
+                },
+                Objective = "Collect Common-pet hides and pelts for Corvin.",
+                Detail = "Bring Corvin 2 Wolf Hides, 2 Hare Pelts and 2 Coarse Boar Hides from wild-pet loot bags.",
+            },
         },
     },
 
@@ -198,7 +232,7 @@ QuestConfig.Chains = {
         RequiredStrength = 45,
         RequiredLasso = "Iron Lasso",
         Priority = 20,
-        Prerequisite = "StarterWolves",
+        Prerequisite = "BiggerBag",
         Special = "Hollowfang",
         Intro = "I have another urgent report. Scout Mira went northeast to Hollowfang Cave to investigate frightened wildlife and never returned. Three Bears have the entrance blocked. Take your best beast and save Scout Mira!",
         CompleteText = "Mira's findings confirm this is bigger than a few frightened Bears. I'll send word to the outer posts and keep Hollowfang under watch.",
