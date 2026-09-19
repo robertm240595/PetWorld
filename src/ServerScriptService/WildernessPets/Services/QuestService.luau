@@ -15,17 +15,13 @@ local Service = {}
 local started = false
 local world
 local questWorld
-local rowan
 local caveModel
 local caveEntrance
 local caveInner
+local npcModels = {}
 local personal = {}
 
-local STAGE_NOT_STARTED = "NotStarted"
-local STAGE_WOLVES = "WolfReturn"
-local STAGE_BEARS = "BearRescue"
-local STAGE_BEAR_CLEARED = "BearCleared"
-local STAGE_COMPLETE = "Complete"
+local QUEST_VERSION = 2
 
 local function getRoot(player)
     local character = player.Character
@@ -102,20 +98,23 @@ local function billboard(part, title, subtitle, color)
     subLabel.TextSize = 11
     subLabel.TextStrokeTransparency = 0.45
     subLabel.TextColor3 = Color3.fromRGB(224, 226, 218)
-    subLabel.Text = subtitle or ""
+    subLabel.Text = subtitle or "QUEST GIVER"
     subLabel.Parent = gui
 end
 
-local function makeNPC(parent, name, position, shirtColor, accentColor)
+local function makeNPC(parent, id, spec)
+    local position = terrainPoint(spec.XZ.X, spec.XZ.Y, QuestConfig.World.CaveFallbackY)
     local model = Instance.new("Model")
-    model.Name = name
+    model.Name = "QuestNPC_" .. id
+    model:SetAttribute("QuestNpcId", id)
+    model:SetAttribute("QuestNPC", spec.Name)
 
     local root = makePart(
         model,
         "HumanoidRootPart",
         Vector3.new(2.2, 3.0, 1.3),
         CFrame.new(position + Vector3.new(0, 2.7, 0)),
-        shirtColor,
+        spec.Shirt,
         Enum.Material.SmoothPlastic
     )
     root.CanCollide = false
@@ -126,7 +125,7 @@ local function makeNPC(parent, name, position, shirtColor, accentColor)
         "Torso",
         Vector3.new(2.2, 3.0, 1.2),
         CFrame.new(position + Vector3.new(0, 2.8, 0)),
-        shirtColor,
+        spec.Shirt,
         Enum.Material.Fabric
     )
     torso.CanCollide = false
@@ -147,14 +146,30 @@ local function makeNPC(parent, name, position, shirtColor, accentColor)
     legLeft.CanCollide = false
     legRight.CanCollide = false
 
-    local armLeft = makePart(model, "LeftArm", Vector3.new(.65, 2.6, .65), CFrame.new(position + Vector3.new(-1.45, 2.9, 0)), accentColor, Enum.Material.Fabric)
-    local armRight = makePart(model, "RightArm", Vector3.new(.65, 2.6, .65), CFrame.new(position + Vector3.new(1.45, 2.9, 0)), accentColor, Enum.Material.Fabric)
+    local armLeft = makePart(model, "LeftArm", Vector3.new(.65, 2.6, .65), CFrame.new(position + Vector3.new(-1.45, 2.9, 0)), spec.Accent, Enum.Material.Fabric)
+    local armRight = makePart(model, "RightArm", Vector3.new(.65, 2.6, .65), CFrame.new(position + Vector3.new(1.45, 2.9, 0)), spec.Accent, Enum.Material.Fabric)
     armLeft.CanCollide = false
     armRight.CanCollide = false
 
     model.PrimaryPart = root
     model.Parent = parent
-    return model, torso
+    billboard(torso, spec.Name, "QUEST GIVER", Color3.fromRGB(245, 210, 110))
+
+    local prompt = Instance.new("ProximityPrompt")
+    prompt.Name = "QuestPrompt"
+    prompt.ActionText = "Talk"
+    prompt.ObjectText = spec.Name
+    prompt.MaxActivationDistance = 12
+    prompt.HoldDuration = 0
+    prompt.RequiresLineOfSight = false
+    prompt.Parent = torso
+
+    prompt.Triggered:Connect(function(player)
+        Service:TalkToNPC(player, id)
+    end)
+
+    npcModels[id] = model
+    return model
 end
 
 local function addPrompt(part, objectText)
@@ -169,44 +184,182 @@ local function addPrompt(part, objectText)
     return prompt
 end
 
-local function ensureProgress(player)
-    local data = DataService:Get(player)
-    if not data then return nil end
-
-    data.QuestProgress = type(data.QuestProgress) == "table" and data.QuestProgress or {}
-    local progress = data.QuestProgress[QuestConfig.Chain.Id]
-    if type(progress) ~= "table" then
-        progress = {
-            Stage = STAGE_NOT_STARTED,
-            BearsKilled = 0,
-        }
-        data.QuestProgress[QuestConfig.Chain.Id] = progress
-    end
-
-    local valid = {
-        [STAGE_NOT_STARTED] = true,
-        [STAGE_WOLVES] = true,
-        [STAGE_BEARS] = true,
-        [STAGE_BEAR_CLEARED] = true,
-        [STAGE_COMPLETE] = true,
-    }
-    if not valid[progress.Stage] then progress.Stage = STAGE_NOT_STARTED end
-    progress.BearsKilled = math.clamp(
-        math.floor(tonumber(progress.BearsKilled) or 0),
-        0,
-        QuestConfig.Chain.BearQuest.Required
-    )
-
-    return progress
+local function sendDialogue(player, npcName, text, options)
+    QuestRemote:FireClient(player, "Dialogue", {
+        NPC = npcName,
+        Text = text,
+        Options = options or {},
+    })
 end
 
-local function availableWolfPets(player)
-    local data = DataService:Get(player)
-    if not data then return {} end
+local function rewardText(reward)
+    reward = reward or {}
+    local parts = {}
+    if (tonumber(reward.Coins) or 0) > 0 then
+        table.insert(parts, tostring(math.floor(reward.Coins)) .. " Coins")
+    end
+    if (tonumber(reward.Gems) or 0) > 0 then
+        table.insert(parts, tostring(math.floor(reward.Gems)) .. " Gems")
+    end
+    return table.concat(parts, " + ")
+end
 
+local function migrateQuestData(data)
+    data.QuestProgress = type(data.QuestProgress) == "table" and data.QuestProgress or {}
+    local old = data.QuestProgress
+    if old.Version == QUEST_VERSION then
+        old.Completed = type(old.Completed) == "table" and old.Completed or {}
+        old.Quests = type(old.Quests) == "table" and old.Quests or {}
+        old.ActiveQuestId = type(old.ActiveQuestId) == "string" and old.ActiveQuestId or ""
+        return old
+    end
+
+    local migrated = {
+        Version = QUEST_VERSION,
+        ActiveQuestId = "",
+        Completed = {},
+        Quests = {},
+    }
+
+    local legacy = old.HollowfangRescue
+    if type(legacy) == "table" then
+        local stage = legacy.Stage
+        if stage == "WolfReturn" then
+            migrated.ActiveQuestId = "StarterWolves"
+            migrated.Quests.StarterWolves = {StageIndex = 1, Count = 0}
+        elseif stage == "BearRescue" then
+            migrated.Completed.StarterWolves = true
+            migrated.ActiveQuestId = "HollowfangRescue"
+            migrated.Quests.HollowfangRescue = {
+                StageIndex = 1,
+                Count = math.clamp(math.floor(tonumber(legacy.BearsKilled) or 0), 0, 3),
+            }
+        elseif stage == "BearCleared" then
+            migrated.Completed.StarterWolves = true
+            migrated.ActiveQuestId = "HollowfangRescue"
+            migrated.Quests.HollowfangRescue = {StageIndex = 2, Count = 0}
+        elseif stage == "Complete" then
+            migrated.Completed.StarterWolves = true
+            migrated.Completed.HollowfangRescue = true
+        end
+    end
+
+    data.QuestProgress = migrated
+    return migrated
+end
+
+local function questData(player)
+    local data = DataService:Get(player)
+    if not data then return nil, nil end
+    return migrateQuestData(data), data
+end
+
+local function questState(root, questId)
+    root.Quests = type(root.Quests) == "table" and root.Quests or {}
+    local state = root.Quests[questId]
+    if type(state) ~= "table" then
+        state = {StageIndex = 1, Count = 0}
+        root.Quests[questId] = state
+    end
+    state.StageIndex = math.max(1, math.floor(tonumber(state.StageIndex) or 1))
+    state.Count = math.max(0, math.floor(tonumber(state.Count) or 0))
+    return state
+end
+
+local function strongestOwnedLasso(data)
+    local strongest = 0
+    local strongestName = "Rough Rope"
+
+    local function consider(name)
+        local info = type(name) == "string" and Config.Lassos[name] or nil
+        local strength = info and tonumber(info.Strength) or 0
+        if strength > strongest then
+            strongest = strength
+            strongestName = name
+        end
+    end
+
+    consider(data and data.Lasso)
+    for _, item in ipairs(data and data.Inventory or {}) do
+        if type(item) == "table"
+            and item.Type == "Lasso"
+            and (tonumber(item.Quantity) or 0) > 0 then
+            consider(item.Name)
+        end
+    end
+
+    return strongest, strongestName
+end
+
+local function prerequisiteMet(root, chain)
+    if not chain.Prerequisite then return true end
+    return root.Completed[chain.Prerequisite] == true
+end
+
+local function progressionLassoStrength(data)
+    local owned = strongestOwnedLasso(data)
+    return math.max(owned, tonumber(data and data.MaxLassoStrengthUnlocked) or 0)
+end
+
+local function chainUnlocked(root, data, chain)
+    if root.Completed[chain.Id] then return false end
+    if not prerequisiteMet(root, chain) then return false end
+    return progressionLassoStrength(data) >= math.max(0, tonumber(chain.RequiredStrength) or 0)
+end
+
+local function availableChainsForNPC(root, data, npcId)
     local result = {}
+    for id, chain in pairs(QuestConfig.Chains) do
+        if chain.NPC == npcId and chainUnlocked(root, data, chain) then
+            table.insert(result, chain)
+        end
+    end
+    table.sort(result, function(a, b)
+        local ap = tonumber(a.Priority) or 999
+        local bp = tonumber(b.Priority) or 999
+        if ap == bp then return a.Id < b.Id end
+        return ap < bp
+    end)
+    return result
+end
+
+local function npcName(npcId)
+    local spec = QuestConfig.World.NPCs[npcId]
+    return spec and spec.Name or tostring(npcId)
+end
+
+local function npcPosition(npcId)
+    local model = npcModels[npcId]
+    return model and model:GetPivot().Position or nil
+end
+
+local function currentPersonal(player)
+    local state = personal[player]
+    if not state then
+        state = {Bears = {}, Mira = nil}
+        personal[player] = state
+    end
+    return state
+end
+
+local function destroyPersonal(player)
+    local state = personal[player]
+    if not state then return end
+    for _, bear in ipairs(state.Bears or {}) do
+        if bear and bear.Parent then bear:Destroy() end
+    end
+    if state.Mira and state.Mira.Parent then state.Mira:Destroy() end
+    personal[player] = nil
+end
+
+local function eligiblePets(player, stage)
+    local _, data = questData(player)
+    if not data then return {} end
+    local result = {}
+
     for _, pet in ipairs(PetService:GetPets(player)) do
-        if pet.Species == QuestConfig.Chain.WolfQuest.Species
+        local speciesMatches = not stage.Species or pet.Species == stage.Species
+        if speciesMatches
             and not pet.Dead
             and not pet.Favourite
             and not pet.Displayed
@@ -230,21 +383,22 @@ local function availableWolfPets(player)
     return result
 end
 
-local function removeWolfTurnIn(player, count)
-    local data = DataService:Get(player)
+local function removeTurnInPets(player, stage)
+    local _, data = questData(player)
     if not data then return false end
 
-    local eligible = availableWolfPets(player)
-    if #eligible < count then return false end
+    local required = math.max(1, math.floor(tonumber(stage.Required) or 1))
+    local eligible = eligiblePets(player, stage)
+    if #eligible < required then return false end
 
-    local chosen = {}
-    for index = 1, count do
-        chosen[eligible[index].Id] = true
+    local selected = {}
+    for index = 1, required do
+        selected[eligible[index].Id] = true
     end
 
     for index = #data.Pets, 1, -1 do
         local pet = data.Pets[index]
-        if chosen[pet.Id] then
+        if selected[pet.Id] then
             table.remove(data.Pets, index)
         end
     end
@@ -256,33 +410,67 @@ local function removeWolfTurnIn(player, count)
     return true
 end
 
-local function sendDialogue(player, npcName, text, actionText, action)
-    QuestRemote:FireClient(player, "Dialogue", {
-        NPC = npcName,
-        Text = text,
-        ActionText = actionText,
-        Action = action,
+local function inspectCount(player, stage)
+    local count = 0
+    for _, pet in ipairs(PetService:GetPets(player)) do
+        local rarityMatches = not stage.Rarity or pet.Rarity == stage.Rarity
+        local imprintMatches = not stage.MinimumImprint
+            or (tonumber(pet.Imprint) or 0) >= tonumber(stage.MinimumImprint)
+        if rarityMatches and imprintMatches and not pet.Dead then
+            count += 1
+        end
+    end
+    return count
+end
+
+local function stageCount(player, state, stage)
+    if stage.Type == "CaptureReturn" then
+        return #eligiblePets(player, stage)
+    elseif stage.Type == "InspectPet" then
+        return inspectCount(player, stage)
+    elseif stage.Type == "Kill" then
+        return state.Count
+    elseif stage.Type == "Talk" then
+        return 0
+    end
+    return state.Count
+end
+
+local function currentChainStage(player)
+    local root, data = questData(player)
+    if not root or root.ActiveQuestId == "" then return root, data, nil, nil, nil end
+
+    local chain = QuestConfig.Chains[root.ActiveQuestId]
+    if not chain then
+        root.ActiveQuestId = ""
+        return root, data, nil, nil, nil
+    end
+
+    local state = questState(root, chain.Id)
+    local stage = chain.Stages[state.StageIndex]
+    if not stage then
+        return root, data, chain, state, nil
+    end
+
+    return root, data, chain, state, stage
+end
+
+local function grantReward(player, chain)
+    local reward = chain.Reward or {}
+    local coins = math.max(0, math.floor(tonumber(reward.Coins) or 0))
+    local gems = math.max(0, math.floor(tonumber(reward.Gems) or 0))
+    local coinBalance
+    local gemBalance
+
+    if coins > 0 then coinBalance = DataService:AddCoins(player, coins) end
+    if gems > 0 then gemBalance = DataService:AddGems(player, gems) end
+
+    QuestRemote:FireClient(player, "Reward", {
+        Coins = coins,
+        Gems = gems,
+        CoinBalance = coinBalance,
+        GemBalance = gemBalance,
     })
-end
-
-local function currentPersonal(player)
-    local state = personal[player]
-    if not state then
-        state = {Bears = {}, Mira = nil}
-        personal[player] = state
-    end
-    return state
-end
-
-local function destroyPersonal(player)
-    local state = personal[player]
-    if not state then return end
-
-    for _, bear in ipairs(state.Bears or {}) do
-        if bear and bear.Parent then bear:Destroy() end
-    end
-    if state.Mira and state.Mira.Parent then state.Mira:Destroy() end
-    personal[player] = nil
 end
 
 local function questBearLabel(model, player)
@@ -291,7 +479,7 @@ local function questBearLabel(model, player)
 
     local gui = Instance.new("BillboardGui")
     gui.Name = "QuestBearLabel"
-    gui.Size = UDim2.fromOffset(210, 32)
+    gui.Size = UDim2.fromOffset(220, 32)
     gui.StudsOffsetWorldSpace = Vector3.new(0, model:GetExtentsSize().Y * .55 + .8, 0)
     gui.MaxDistance = 65
     gui.Parent = root
@@ -338,7 +526,7 @@ local function spawnQuestBear(player, index, position)
     model:SetAttribute("QuestStationary", true)
     model:SetAttribute("QuestNoCapture", true)
     model:SetAttribute("QuestOwnerUserId", player.UserId)
-    model:SetAttribute("QuestId", QuestConfig.Chain.Id)
+    model:SetAttribute("QuestId", "HollowfangRescue")
     model:SetAttribute("QuestObjective", "HollowfangBears")
 
     local rig = Animator:_getRig(model)
@@ -382,31 +570,41 @@ local function createMira(player, outside)
     local state = currentPersonal(player)
     if state.Mira and state.Mira.Parent then state.Mira:Destroy() end
 
-    local position = outside and caveEntrance + Vector3.new(0, 0, 7)
-        or caveInner
+    local position = outside and caveEntrance + Vector3.new(0, 0, 7) or caveInner
+    local spec = {
+        Name = "Scout Mira",
+        XZ = Vector2.new(position.X, position.Z),
+        Shirt = Color3.fromRGB(82, 104, 83),
+        Accent = Color3.fromRGB(136, 162, 112),
+    }
 
-    local model, torso = makeNPC(
-        questWorld,
-        "ScoutMira_" .. tostring(player.UserId),
-        position,
-        Color3.fromRGB(82, 104, 83),
-        Color3.fromRGB(136, 162, 112)
-    )
+    local model = Instance.new("Model")
+    model.Name = "ScoutMira_" .. tostring(player.UserId)
     model:SetAttribute("QuestOwnerUserId", player.UserId)
     model:SetAttribute("QuestNPC", "Scout Mira")
+    model:SetAttribute("QuestMira", true)
 
-    billboard(
-        torso,
-        "Scout Mira",
-        outside and "RESCUED SCOUT" or "TRAPPED SCOUT",
-        Color3.fromRGB(170, 228, 160)
-    )
+    local root = makePart(model, "HumanoidRootPart", Vector3.new(2.2,3,1.3), CFrame.new(position + Vector3.new(0,2.7,0)), spec.Shirt)
+    root.CanCollide = false
+    root.Transparency = 1
+    local torso = makePart(model, "Torso", Vector3.new(2.2,3,1.2), CFrame.new(position + Vector3.new(0,2.8,0)), spec.Shirt, Enum.Material.Fabric)
+    torso.CanCollide = false
+    local head = makePart(model, "Head", Vector3.new(1.8,1.8,1.8), CFrame.new(position + Vector3.new(0,5.1,0)), Color3.fromRGB(218,179,143), Enum.Material.SmoothPlastic, Enum.PartType.Ball)
+    head.CanCollide = false
+    local leftLeg = makePart(model, "LeftLeg", Vector3.new(.8,2.2,.9), CFrame.new(position + Vector3.new(-.55,.95,0)), Color3.fromRGB(62,68,72), Enum.Material.Fabric)
+    local rightLeg = makePart(model, "RightLeg", Vector3.new(.8,2.2,.9), CFrame.new(position + Vector3.new(.55,.95,0)), Color3.fromRGB(62,68,72), Enum.Material.Fabric)
+    leftLeg.CanCollide = false
+    rightLeg.CanCollide = false
+    model.PrimaryPart = root
+    model.Parent = questWorld
 
+    billboard(torso, "Scout Mira", outside and "RESCUED SCOUT" or "TRAPPED SCOUT", Color3.fromRGB(170,228,160))
     local prompt = addPrompt(torso, "Scout Mira")
     prompt.Enabled = outside
     prompt.Triggered:Connect(function(triggeringPlayer)
-        if triggeringPlayer ~= player then return end
-        Service:TalkToMira(player)
+        if triggeringPlayer == player then
+            Service:TalkToMira(player)
+        end
     end)
 
     state.Mira = model
@@ -430,20 +628,23 @@ local function moveMiraOutside(player)
 end
 
 local function spawnBearObjective(player)
-    local progress = ensureProgress(player)
-    if not progress or progress.Stage ~= STAGE_BEARS then return end
+    local root, _, chain, state, stage = currentChainStage(player)
+    if not root or not chain or chain.Id ~= "HollowfangRescue" or not stage or stage.Id ~= "Bears" then
+        return
+    end
 
-    local state = currentPersonal(player)
-    for _, bear in ipairs(state.Bears) do
+    local current = currentPersonal(player)
+    for _, bear in ipairs(current.Bears) do
         if bear and bear.Parent then bear:Destroy() end
     end
-    state.Bears = {}
+    current.Bears = {}
 
-    if not state.Mira or not state.Mira.Parent then
+    if not current.Mira or not current.Mira.Parent then
         createMira(player, false)
     end
 
-    local remaining = math.max(0, QuestConfig.Chain.BearQuest.Required - progress.BearsKilled)
+    local required = math.max(1, tonumber(stage.Required) or 3)
+    local remaining = math.max(0, required - state.Count)
     local offsets = {
         Vector3.new(-12, 0, 20),
         Vector3.new(0, 0, 27),
@@ -453,289 +654,622 @@ local function spawnBearObjective(player)
     for index = 1, remaining do
         local rough = caveEntrance + offsets[index]
         local ground = terrainPoint(rough.X, rough.Z, rough.Y)
-        local bear = spawnQuestBear(player, progress.BearsKilled + index, ground)
-        if bear then table.insert(state.Bears, bear) end
+        local bear = spawnQuestBear(player, state.Count + index, ground)
+        if bear then table.insert(current.Bears, bear) end
     end
 end
 
+local function nearestWildTarget(player, stage)
+    local root = getRoot(player)
+    local folder = world and world:FindFirstChild("WildMonsters")
+    if not root or not folder then return nil, nil end
+
+    local bestModel
+    local bestDistance = math.huge
+    for _, model in ipairs(folder:GetChildren()) do
+        if model:IsA("Model")
+            and not model:GetAttribute("Dead")
+            and not model:GetAttribute("Captured")
+            and not model:GetAttribute("QuestOwnerUserId") then
+            local speciesMatches = not stage.Species or model:GetAttribute("Species") == stage.Species
+            local rarityMatches = not stage.Rarity or model:GetAttribute("Rarity") == stage.Rarity
+            local part = model.PrimaryPart or model:FindFirstChildWhichIsA("BasePart", true)
+            if speciesMatches and rarityMatches and part then
+                local distance = (root.Position - part.Position).Magnitude
+                if distance < bestDistance then
+                    bestDistance = distance
+                    bestModel = model
+                end
+            end
+        end
+    end
+
+    if not bestModel then return nil, nil end
+    local part = bestModel.PrimaryPart or bestModel:FindFirstChildWhichIsA("BasePart", true)
+    if not part then return nil, nil end
+    return part.Position, tostring(bestModel:GetAttribute("Species") or stage.Species or stage.Rarity or "Quest target")
+end
+
+local function actionObjectiveTarget(player, stage)
+    local action = stage and stage.Action
+    if action == "StartHealing" or action == "CollectHealed" then
+        local plots = world and world:FindFirstChild("Plots")
+        if plots then
+            for _, plot in ipairs(plots:GetChildren()) do
+                local owner = tonumber(plot:GetAttribute("OwnerUserId") or plot:GetAttribute("Owner"))
+                if owner == player.UserId then
+                    local barn = plot:FindFirstChild("HealingBarn")
+                    local promptPart = barn and barn:FindFirstChild("BarnPrompt")
+                    if promptPart and promptPart:IsA("BasePart") then
+                        return promptPart.Position, "Your Pet Barn"
+                    end
+                end
+            end
+        end
+    elseif action == "SellPet" or action == "BuybackPet" then
+        for _, instance in ipairs(workspace:GetDescendants()) do
+            if instance:IsA("Model") then
+                local normalized = instance.Name:lower():gsub("[^%w]", "")
+                if normalized == "beasttrader"
+                    or normalized == "beasttradernpc"
+                    or normalized == "beastmaster"
+                    or normalized == "beastmasternpc" then
+                    local part = instance.PrimaryPart or instance:FindFirstChildWhichIsA("BasePart", true)
+                    if part then return part.Position, "Beast Trader" end
+                end
+            end
+        end
+    end
+    return nil, nil
+end
+
+local function stageReadyForNPC(player, chain, state, stage)
+    if not stage then return false end
+    if stage.Type == "Talk" then
+        return true
+    elseif stage.Type == "CaptureReturn" then
+        return stageCount(player, state, stage) >= math.max(1, tonumber(stage.Required) or 1)
+    elseif stage.Type == "InspectPet" then
+        return stageCount(player, state, stage) >= math.max(1, tonumber(stage.Required) or 1)
+    end
+    return false
+end
+
+local function npcAvailability(player)
+    local root, data, activeChain, activeState, activeStage = currentChainStage(player)
+    local result = {}
+    if not root or not data then return result end
+
+    local starterComplete = root.Completed.StarterWolves == true
+    local strength = progressionLassoStrength(data)
+
+    for _, npcId in ipairs(QuestConfig.NPCOrder) do
+        local visible = npcId == "Rowan"
+        if not visible and starterComplete then
+            for _, chain in pairs(QuestConfig.Chains) do
+                if chain.NPC == npcId then
+                    if root.Completed[chain.Id]
+                        or (prerequisiteMet(root, chain)
+                            and strength >= math.max(0, tonumber(chain.RequiredStrength) or 0)) then
+                        visible = true
+                        break
+                    end
+                end
+            end
+        end
+
+        local marker
+        if activeChain then
+            if activeChain.NPC == npcId and stageReadyForNPC(player, activeChain, activeState, activeStage) then
+                marker = "?"
+            end
+        else
+            local available = availableChainsForNPC(root, data, npcId)
+            if #available > 0 then marker = "!" end
+        end
+
+        result[npcId] = {
+            Visible = visible,
+            Marker = marker,
+            Name = npcName(npcId),
+        }
+    end
+
+    return result
+end
+
 function Service:GetClientState(player)
-    local progress = ensureProgress(player)
-    if not progress then return nil end
+    local root, data, chain, state, stage = currentChainStage(player)
+    if not root or not data then return nil end
 
-    local chain = QuestConfig.Chain
-    if progress.Stage == STAGE_NOT_STARTED then
-        return {
-            Chain = chain.Name,
-            Stage = progress.Stage,
-            Active = true,
-            Title = "New Quest",
-            ObjectiveType = "Talk",
-            ObjectiveTypeLabel = QuestConfig.ObjectiveTypes.Talk,
-            Objective = "Speak to Warden Rowan in the centre village.",
-            Progress = "0 / 1",
-            TargetPosition = rowan and rowan:GetPivot().Position or nil,
-            TargetLabel = chain.QuestGiver,
-        }
-    end
-
-    if progress.Stage == STAGE_WOLVES then
-        local count = #availableWolfPets(player)
-        local required = chain.WolfQuest.Required
-        return {
-            Chain = chain.Name,
-            Stage = progress.Stage,
-            Active = true,
-            Title = chain.WolfQuest.Title,
-            ObjectiveType = chain.WolfQuest.ObjectiveType,
-            ObjectiveTypeLabel = QuestConfig.ObjectiveTypes[chain.WolfQuest.ObjectiveType],
-            Objective = "Capture and return " .. tostring(required) .. " Wolves to Warden Rowan.",
-            Detail = "Only healthy Wolves free in your backpack can be handed over. Favourited/equipped/displayed Wolves stay protected.",
-            Progress = tostring(math.min(count, required)) .. " / " .. tostring(required),
-            TargetPosition = count >= required and (rowan and rowan:GetPivot().Position or nil) or nil,
-            TargetLabel = count >= required and chain.QuestGiver or nil,
-            Reward = tostring(chain.WolfQuest.RewardCoins) .. " Coins",
-        }
-    end
-
-    if progress.Stage == STAGE_BEARS then
-        local required = chain.BearQuest.Required
-        return {
-            Chain = chain.Name,
-            Stage = progress.Stage,
-            Active = true,
-            Title = chain.BearQuest.Title,
-            ObjectiveType = chain.BearQuest.ObjectiveType,
-            ObjectiveTypeLabel = QuestConfig.ObjectiveTypes[chain.BearQuest.ObjectiveType],
-            Objective = "Defeat the " .. tostring(required) .. " Bears outside " .. chain.CaveName .. ".",
-            Detail = "Follow the quest diamond on your compass northeast. The orange-labelled quest Bears cannot be captured.",
-            Progress = tostring(progress.BearsKilled) .. " / " .. tostring(required),
-            TargetPosition = caveEntrance,
-            TargetLabel = chain.CaveName,
-            Reward = tostring(chain.BearQuest.RewardCoins) .. " Coins",
-        }
-    end
-
-    if progress.Stage == STAGE_BEAR_CLEARED then
-        return {
-            Chain = chain.Name,
-            Stage = progress.Stage,
-            Active = true,
-            Title = chain.BearQuest.Title,
-            ObjectiveType = "Talk",
-            ObjectiveTypeLabel = QuestConfig.ObjectiveTypes.Talk,
-            Objective = "Speak to Scout Mira outside " .. chain.CaveName .. ".",
-            Detail = "The cave entrance is safe. Mira has come out.",
-            Progress = "3 / 3",
-            TargetPosition = caveEntrance + Vector3.new(0, 0, 7),
-            TargetLabel = chain.RescueNPC,
-            Reward = tostring(chain.BearQuest.RewardCoins) .. " Coins",
-        }
-    end
-
-    return {
-        Chain = chain.Name,
-        Stage = STAGE_COMPLETE,
-        Active = false,
-        Completed = true,
-        Title = chain.Name,
-        ObjectiveType = "Talk",
-        ObjectiveTypeLabel = "COMPLETE",
-        Objective = chain.BearQuest.Complete,
-        Progress = "COMPLETE",
+    local payload = {
+        Tracker = nil,
+        NPCs = npcAvailability(player),
+        ActiveQuestId = root.ActiveQuestId,
+        StrongestLassoStrength = strongestOwnedLasso(data),
+        ProgressionLassoStrength = progressionLassoStrength(data),
+        MiraMarker = false,
     }
+
+    if not chain or not stage then
+        if not root.Completed.StarterWolves then
+            payload.Tracker = {
+                Chain = "Getting Started",
+                QuestId = "TutorialTalk",
+                Stage = "MeetRowan",
+                Active = true,
+                Title = "Getting Started",
+                ObjectiveType = "Talk",
+                ObjectiveTypeLabel = QuestConfig.ObjectiveTypes.Talk,
+                Objective = "Speak to Warden Rowan in the centre village.",
+                Detail = "Look for the gold ! above Warden Rowan.",
+                Progress = "0 / 1",
+                TargetPosition = npcPosition("Rowan"),
+                TargetLabel = npcName("Rowan"),
+                Reward = "",
+            }
+        end
+        return payload
+    end
+
+    local required = math.max(1, math.floor(tonumber(stage.Required) or 1))
+    local count = math.min(stageCount(player, state, stage), required)
+    local targetPosition
+    local targetLabel
+
+    if chain.Special == "Hollowfang" then
+        if stage.Id == "Bears" then
+            targetPosition = caveEntrance
+            targetLabel = "Hollowfang Cave"
+        elseif stage.Id == "FindMira" then
+            targetPosition = caveEntrance + Vector3.new(0, 0, 7)
+            targetLabel = "Scout Mira"
+            payload.MiraMarker = true
+        elseif stage.Id == "ReportRowan" then
+            targetPosition = npcPosition("Rowan")
+            targetLabel = npcName("Rowan")
+        end
+    elseif stage.Type == "Talk" then
+        targetPosition = npcPosition(chain.NPC)
+        targetLabel = npcName(chain.NPC)
+    elseif (stage.Type == "CaptureReturn" or stage.Type == "InspectPet") and count >= required then
+        targetPosition = npcPosition(chain.NPC)
+        targetLabel = npcName(chain.NPC)
+    elseif stage.Type == "CaptureReturn" or stage.Type == "Kill" then
+        targetPosition, targetLabel = nearestWildTarget(player, stage)
+    elseif stage.Type == "Action" then
+        targetPosition, targetLabel = actionObjectiveTarget(player, stage)
+    end
+
+    local progressText
+    if stage.Type == "Talk" then
+        progressText = "READY TO REPORT"
+    else
+        progressText = tostring(count) .. " / " .. tostring(required)
+    end
+
+    payload.Tracker = {
+        Chain = chain.Name,
+        QuestId = chain.Id,
+        Stage = stage.Id,
+        Active = true,
+        Title = chain.Name,
+        ObjectiveType = stage.Type,
+        ObjectiveTypeLabel = QuestConfig.ObjectiveTypes[stage.Type] or string.upper(stage.Type),
+        Objective = stage.Objective or "",
+        Detail = stage.Detail or "",
+        Progress = progressText,
+        TargetPosition = targetPosition,
+        TargetLabel = targetLabel,
+        Reward = rewardText(chain.Reward),
+    }
+
+    return payload
 end
 
 function Service:PushState(player)
     local state = self:GetClientState(player)
-    if state then QuestRemote:FireClient(player, "State", state) end
-end
-
-function Service:TalkToRowan(player)
-    local progress = ensureProgress(player)
-    if not progress or not rowan then return end
-    if not near(player, rowan:GetPivot().Position, 16) then return end
-
-    local chain = QuestConfig.Chain
-    if progress.Stage == STAGE_NOT_STARTED then
-        sendDialogue(
-            player,
-            chain.QuestGiver,
-            chain.WolfQuest.Intro,
-            "ACCEPT QUEST",
-            "AcceptWolfQuest"
-        )
-    elseif progress.Stage == STAGE_WOLVES then
-        local count = #availableWolfPets(player)
-        if count >= chain.WolfQuest.Required then
-            sendDialogue(
-                player,
-                chain.QuestGiver,
-                "You brought all five alive. I'll take the five lowest-level eligible Wolves so any favourites or active companions stay safely yours.",
-                "HAND OVER 5 WOLVES",
-                "TurnInWolves"
-            )
-        else
-            sendDialogue(
-                player,
-                chain.QuestGiver,
-                chain.WolfQuest.Progress
-                    .. "\n\nReady to hand over: "
-                    .. tostring(count)
-                    .. "/"
-                    .. tostring(chain.WolfQuest.Required)
-                    .. ".",
-                nil,
-                nil
-            )
-        end
-    elseif progress.Stage == STAGE_BEARS then
-        sendDialogue(player, chain.QuestGiver, chain.BearQuest.Intro, nil, nil)
-    elseif progress.Stage == STAGE_BEAR_CLEARED then
-        sendDialogue(player, chain.QuestGiver, "The cave is clear? Find Mira at the entrance and make sure she's fit to travel.", nil, nil)
-    else
-        sendDialogue(player, chain.QuestGiver, "Mira made it back. Hollowfang is quiet for now, but I doubt that is the end of the story.", nil, nil)
+    if state then
+        QuestRemote:FireClient(player, "State", state)
     end
 end
 
-function Service:TalkToMira(player)
-    local progress = ensureProgress(player)
-    local state = personal[player]
-    if not progress or not state or not state.Mira or not state.Mira.Parent then return end
-    if state.Mira:GetAttribute("QuestOwnerUserId") ~= player.UserId then return end
-    if not near(player, state.Mira:GetPivot().Position, 16) then return end
+local function completeQuest(player, chain)
+    local root = questData(player)
+    if not root or root.ActiveQuestId ~= chain.Id then return end
 
-    if progress.Stage == STAGE_BEAR_CLEARED then
+    root.Completed[chain.Id] = true
+    root.Quests[chain.Id] = nil
+    root.ActiveQuestId = ""
+
+    if chain.Id == "HollowfangRescue" then
+        local current = personal[player]
+        if current and current.Mira and current.Mira.Parent then
+            current.Mira:Destroy()
+            current.Mira = nil
+        end
+    end
+
+    grantReward(player, chain)
+    Service:PushState(player)
+
+    local text = chain.CompleteText
+    local options = {}
+
+    if chain.Id == "StarterWolves" then
+        local _, data = questData(player)
+        local hollowfang = QuestConfig.Chains.HollowfangRescue
+        local strength = progressionLassoStrength(data)
+        if strength >= (hollowfang.RequiredStrength or 45) then
+            text ..= "\n\nBefore you go, I have another urgent report. " .. hollowfang.Intro
+            options = {
+                {Text = "TAKE YOUR BEST BEAST — SAVE MIRA", Action = "Accept:HollowfangRescue"},
+                {Text = "NOT NOW", Action = "Close"},
+            }
+        else
+            text ..= "\n\nBefore you go: Scout Mira is missing near Hollowfang Cave. I need someone to save her, but the Bears there are Rare and dangerous. Come back when you own an Iron Lasso or better. When you're ready, take your best beast and save Scout Mira."
+            options = {
+                {Text = "I'LL COME BACK PREPARED", Action = "Close"},
+            }
+        end
+    end
+
+    sendDialogue(
+        player,
+        npcName(chain.NPC),
+        text .. (rewardText(chain.Reward) ~= "" and ("\n\nReward: " .. rewardText(chain.Reward) .. ".") or ""),
+        options
+    )
+end
+
+local function advanceStage(player, chain, state)
+    state.StageIndex += 1
+    state.Count = 0
+    local nextStage = chain.Stages[state.StageIndex]
+
+    if not nextStage then
+        completeQuest(player, chain)
+        return
+    end
+
+    if chain.Special == "Hollowfang" and nextStage.Id == "FindMira" then
+        moveMiraOutside(player)
+        QuestRemote:FireClient(player, "Toast", "The last Hollowfang Bear falls. Scout Mira is coming out of the cave!")
+    end
+
+    Service:PushState(player)
+end
+
+local function acceptQuest(player, questId)
+    local root, data = questData(player)
+    local chain = QuestConfig.Chains[questId]
+    if not root or not data or not chain then return end
+    if root.ActiveQuestId ~= "" then
+        sendDialogue(player, npcName(chain.NPC), "Finish your current quest before taking another job.", {{Text="CLOSE",Action="Close"}})
+        return
+    end
+    if not chainUnlocked(root, data, chain) then
+        local requiredName = chain.RequiredLasso or "a stronger lasso"
+        sendDialogue(player, npcName(chain.NPC), "You're not equipped for this job yet. Come back when you own " .. requiredName .. " or better.", {{Text="CLOSE",Action="Close"}})
+        return
+    end
+
+    local model = npcModels[chain.NPC]
+    if model and not near(player, model:GetPivot().Position, 18) then return end
+
+    root.ActiveQuestId = chain.Id
+    root.Quests[chain.Id] = {StageIndex = 1, Count = 0}
+
+    if chain.Special == "Hollowfang" then
+        destroyPersonal(player)
+        spawnBearObjective(player)
+    end
+
+    Service:PushState(player)
+    sendDialogue(
+        player,
+        npcName(chain.NPC),
+        chain.Special == "Hollowfang"
+            and "Good. Take your best beast and head northeast. Follow the quest marker to Hollowfang Cave. Clear the Bears first; Mira cannot get out while they're at the entrance."
+            or "It's yours. Check the quest tracker for your first objective.",
+        {{Text="LET'S GO",Action="Close"}}
+    )
+end
+
+local function offerQuest(player, chain)
+    local requirement = ""
+    if chain.RequiredLasso then
+        requirement = "\n\nRequired equipment: " .. chain.RequiredLasso .. " or better."
+    end
+    sendDialogue(
+        player,
+        npcName(chain.NPC),
+        chain.Intro .. requirement .. "\n\nReward: " .. rewardText(chain.Reward) .. ".",
+        {
+            {Text = "ACCEPT QUEST", Action = "Accept:" .. chain.Id},
+            {Text = "NOT NOW", Action = "Close"},
+        }
+    )
+end
+
+function Service:TalkToNPC(player, npcId)
+    local root, data, chain, state, stage = currentChainStage(player)
+    local model = npcModels[npcId]
+    if not root or not data or not model then return end
+    if not near(player, model:GetPivot().Position, 16) then return end
+
+    if chain then
+        if chain.NPC ~= npcId then
+            sendDialogue(
+                player,
+                npcName(npcId),
+                "You already have an active quest. Finish that job first, then come back and we'll talk.",
+                {{Text="CLOSE",Action="Close"}}
+            )
+            return
+        end
+
+        if stage.Type == "CaptureReturn" then
+            local count = stageCount(player, state, stage)
+            local required = math.max(1, tonumber(stage.Required) or 1)
+            if count >= required then
+                sendDialogue(
+                    player,
+                    npcName(npcId),
+                    "You have what I asked for. I'll only take eligible animals that are healthy, unfavourited, and not assigned to another role.",
+                    {
+                        {Text = "HAND OVER " .. tostring(required), Action = "TurnIn:" .. chain.Id},
+                        {Text = "KEEP THEM FOR NOW", Action = "Close"},
+                    }
+                )
+            else
+                sendDialogue(
+                    player,
+                    npcName(npcId),
+                    "You're making progress. You currently have " .. tostring(count) .. " of " .. tostring(required) .. " eligible " .. tostring(stage.Species or "pets") .. ".",
+                    {{Text="CLOSE",Action="Close"}}
+                )
+            end
+            return
+        end
+
+        if stage.Type == "InspectPet" then
+            local count = stageCount(player, state, stage)
+            if count >= math.max(1, tonumber(stage.Required) or 1) then
+                sendDialogue(
+                    player,
+                    npcName(npcId),
+                    "Yes — that's exactly the kind of beast I needed to examine. You keep it; I only need a closer look.",
+                    {
+                        {Text = "SHOW PET", Action = "Inspect:" .. chain.Id},
+                        {Text = "NOT YET", Action = "Close"},
+                    }
+                )
+            else
+                sendDialogue(player, npcName(npcId), "You don't have a suitable pet for this step yet. Check the quest tracker for the requirement.", {{Text="CLOSE",Action="Close"}})
+            end
+            return
+        end
+
+        if stage.Type == "Talk" then
+            if chain.Special == "Hollowfang" and stage.Id == "ReportRowan" then
+                sendDialogue(
+                    player,
+                    npcName(npcId),
+                    "Mira is safe? Good. Tell me everything she saw inside Hollowfang.",
+                    {
+                        {Text = "REPORT MIRA'S FINDINGS", Action = "Talk:" .. chain.Id},
+                        {Text = "NOT YET", Action = "Close"},
+                    }
+                )
+            else
+                sendDialogue(
+                    player,
+                    npcName(npcId),
+                    "You've finished the field work. Give me your report and we'll close this job properly.",
+                    {
+                        {Text = "REPORT BACK", Action = "Talk:" .. chain.Id},
+                        {Text = "NOT YET", Action = "Close"},
+                    }
+                )
+            end
+            return
+        end
+
         sendDialogue(
             player,
-            QuestConfig.Chain.RescueNPC,
-            QuestConfig.Chain.BearQuest.Rescue,
-            "HELP MIRA TO SAFETY",
-            "CompleteRescue"
+            npcName(npcId),
+            stage.Objective or "Keep working on the objective in your quest tracker.",
+            {{Text="CLOSE",Action="Close"}}
         )
-    elseif progress.Stage == STAGE_BEARS then
-        sendDialogue(player, QuestConfig.Chain.RescueNPC, "I can't get past them! Clear the Bears outside first!", nil, nil)
+        return
+    end
+
+    local available = availableChainsForNPC(root, data, npcId)
+    if #available > 0 then
+        offerQuest(player, available[1])
+        return
+    end
+
+    if npcId == "Rowan" and root.Completed.StarterWolves then
+        local hollowfang = QuestConfig.Chains.HollowfangRescue
+        if not root.Completed.HollowfangRescue then
+            local strength = progressionLassoStrength(data)
+            if strength < hollowfang.RequiredStrength then
+                sendDialogue(
+                    player,
+                    npcName(npcId),
+                    "Scout Mira is still on my mind. Hollowfang is Rare-pet country, so I won't send you there under-equipped. Come back when you own an Iron Lasso or better.",
+                    {{Text="CLOSE",Action="Close"}}
+                )
+                return
+            end
+        end
+    end
+
+    sendDialogue(player, npcName(npcId), "Nothing urgent for you right now. Keep improving your beasts and equipment; more work will open up as you're ready for it.", {{Text="CLOSE",Action="Close"}})
+end
+
+function Service:TalkToMira(player)
+    local root, _, chain, state, stage = currentChainStage(player)
+    local current = personal[player]
+    if not root or not chain or chain.Id ~= "HollowfangRescue" or not current or not current.Mira or not current.Mira.Parent then return end
+    if current.Mira:GetAttribute("QuestOwnerUserId") ~= player.UserId then return end
+    if not near(player, current.Mira:GetPivot().Position, 16) then return end
+
+    if stage and stage.Id == "FindMira" then
+        sendDialogue(
+            player,
+            "Scout Mira",
+            "You actually made it. Listen carefully: those Bears weren't hunting me — they were trying to get away from something deeper inside Hollowfang. I found fresh gouges in the stone, far too large for a Bear, and scales caught between the rocks. I need Rowan to hear this before anyone else goes into those tunnels.",
+            {
+                {Text = "I'LL REPORT THIS TO ROWAN", Action = "MiraReport"},
+                {Text = "NOT YET", Action = "Close"},
+            }
+        )
+    elseif stage and stage.Id == "ReportRowan" then
+        sendDialogue(player, "Scout Mira", "Please get my findings to Rowan. Whatever frightened those Bears may still be below us.", {{Text="CLOSE",Action="Close"}})
     end
 end
 
 function Service:HandleAction(player, action)
-    local progress = ensureProgress(player)
-    if not progress then return end
+    if type(action) ~= "string" then return end
+    if action == "Close" then return end
 
-    local chain = QuestConfig.Chain
-
-    if action == "AcceptWolfQuest" then
-        if progress.Stage ~= STAGE_NOT_STARTED or not rowan or not near(player, rowan:GetPivot().Position, 16) then return end
-        progress.Stage = STAGE_WOLVES
-        self:PushState(player)
-        sendDialogue(player, chain.QuestGiver, "Bring them back alive. When you have five available Wolves, the compass will point you back to me.", nil, nil)
+    local acceptId = action:match("^Accept:(.+)$")
+    if acceptId then
+        acceptQuest(player, acceptId)
         return
     end
 
-    if action == "TurnInWolves" then
-        if progress.Stage ~= STAGE_WOLVES or not rowan or not near(player, rowan:GetPivot().Position, 16) then return end
-        if not removeWolfTurnIn(player, chain.WolfQuest.Required) then
-            sendDialogue(player, chain.QuestGiver, "I still need five available, healthy Wolves. Put away any displayed/equipped ones and unfavourite only the animals you intend to hand over.", nil, nil)
-            self:PushState(player)
+    local root, _, chain, state, stage = currentChainStage(player)
+    if not root or not chain or not state or not stage then return end
+
+    local turnInId = action:match("^TurnIn:(.+)$")
+    if turnInId then
+        if turnInId ~= chain.Id or stage.Type ~= "CaptureReturn" then return end
+        local model = npcModels[chain.NPC]
+        if model and not near(player, model:GetPivot().Position, 16) then return end
+        if not removeTurnInPets(player, stage) then
+            sendDialogue(player, npcName(chain.NPC), "I can't take the requested animals yet. Make sure enough eligible pets are free in your backpack.", {{Text="CLOSE",Action="Close"}})
+            Service:PushState(player)
             return
         end
-
-        local balance = DataService:AddCoins(player, chain.WolfQuest.RewardCoins)
-        QuestRemote:FireClient(player, "Reward", {
-            Coins = chain.WolfQuest.RewardCoins,
-            Balance = balance,
-        })
-        progress.Stage = STAGE_BEARS
-        progress.BearsKilled = 0
-        spawnBearObjective(player)
-        self:PushState(player)
-        sendDialogue(
-            player,
-            chain.QuestGiver,
-            chain.WolfQuest.TurnIn
-                .. "\n\n+"
-                .. tostring(chain.WolfQuest.RewardCoins)
-                .. " Coins.\n\n"
-                .. chain.BearQuest.Intro
-                .. (balance and ("\n\nCoin balance: " .. tostring(balance)) or ""),
-            nil,
-            nil
-        )
+        advanceStage(player, chain, state)
         return
     end
 
-    if action == "CompleteRescue" then
-        local state = personal[player]
-        if progress.Stage ~= STAGE_BEAR_CLEARED
-            or not state
-            or not state.Mira
-            or not state.Mira.Parent
-            or not near(player, state.Mira:GetPivot().Position, 16) then
-            return
-        end
+    local inspectId = action:match("^Inspect:(.+)$")
+    if inspectId then
+        if inspectId ~= chain.Id or stage.Type ~= "InspectPet" then return end
+        local model = npcModels[chain.NPC]
+        if model and not near(player, model:GetPivot().Position, 16) then return end
+        if stageCount(player, state, stage) < math.max(1, tonumber(stage.Required) or 1) then return end
+        advanceStage(player, chain, state)
+        return
+    end
 
-        local balance = DataService:AddCoins(player, chain.BearQuest.RewardCoins)
-        QuestRemote:FireClient(player, "Reward", {
-            Coins = chain.BearQuest.RewardCoins,
-            Balance = balance,
-        })
-        progress.Stage = STAGE_COMPLETE
-        self:PushState(player)
+    local talkId = action:match("^Talk:(.+)$")
+    if talkId then
+        if talkId ~= chain.Id or stage.Type ~= "Talk" then return end
+        local model = npcModels[chain.NPC]
+        if model and not near(player, model:GetPivot().Position, 16) then return end
+        advanceStage(player, chain, state)
+        return
+    end
+
+    if action == "MiraReport" then
+        if chain.Id ~= "HollowfangRescue" or stage.Id ~= "FindMira" then return end
+        local current = personal[player]
+        if not current or not current.Mira or not current.Mira.Parent or not near(player, current.Mira:GetPivot().Position, 16) then return end
+        advanceStage(player, chain, state)
         sendDialogue(
             player,
-            chain.RescueNPC,
-            chain.BearQuest.Rescue
-                .. "\n\n+"
-                .. tostring(chain.BearQuest.RewardCoins)
-                .. " Coins."
-                .. (balance and ("\nCoin balance: " .. tostring(balance)) or "")
-                .. "\n\n"
-                .. chain.BearQuest.Complete,
-            nil,
-            nil
+            "Scout Mira",
+            "Tell Rowan exactly this: the Bears were fleeing deeper tunnels, the stone is freshly gouged, and I found scales where no scaled beast should be. I'll follow once I've caught my breath.",
+            {{Text="REPORT TO ROWAN",Action="Close"}}
         )
-
-        task.delay(1, function()
-            local current = personal[player]
-            if current and current.Mira and current.Mira.Parent then current.Mira:Destroy() end
-            if current then current.Mira = nil end
-        end)
         return
     end
 end
 
 function Service:OnMonsterKilled(player, target)
-    if not player or not target or target:GetAttribute("KillRecorded") then return false end
-    if target:GetAttribute("QuestId") ~= QuestConfig.Chain.Id
-        or target:GetAttribute("QuestObjective") ~= "HollowfangBears"
-        or tonumber(target:GetAttribute("QuestOwnerUserId")) ~= player.UserId then
+    if not player or not target then return false end
+
+    local root, _, chain, state, stage = currentChainStage(player)
+    if not root or not chain or not state or not stage or stage.Type ~= "Kill" then
         return false
     end
 
-    local progress = ensureProgress(player)
-    if not progress or progress.Stage ~= STAGE_BEARS then return false end
-
-    target:SetAttribute("KillRecorded", true)
-    progress.BearsKilled = math.min(
-        QuestConfig.Chain.BearQuest.Required,
-        progress.BearsKilled + 1
-    )
-
-    if progress.BearsKilled >= QuestConfig.Chain.BearQuest.Required then
-        progress.Stage = STAGE_BEAR_CLEARED
-        moveMiraOutside(player)
-        QuestRemote:FireClient(player, "Toast", "The last Bear falls. Scout Mira is coming out of Hollowfang Cave!")
+    if chain.Special == "Hollowfang" then
+        if target:GetAttribute("KillRecorded") then return false end
+        if target:GetAttribute("QuestId") ~= chain.Id
+            or target:GetAttribute("QuestObjective") ~= "HollowfangBears"
+            or tonumber(target:GetAttribute("QuestOwnerUserId")) ~= player.UserId then
+            return false
+        end
+        target:SetAttribute("KillRecorded", true)
     else
-        QuestRemote:FireClient(
-            player,
-            "Toast",
-            "Hollowfang Bear defeated  ·  "
-                .. tostring(progress.BearsKilled)
-                .. "/"
-                .. tostring(QuestConfig.Chain.BearQuest.Required)
-        )
+        local species = target:GetAttribute("Species")
+        local rarity = target:GetAttribute("Rarity")
+        if stage.Species and species ~= stage.Species then return false end
+        if stage.Rarity and rarity ~= stage.Rarity then return false end
     end
 
-    self:PushState(player)
+    state.Count = math.min(
+        math.max(1, tonumber(stage.Required) or 1),
+        state.Count + 1
+    )
+
+    QuestRemote:FireClient(
+        player,
+        "Toast",
+        (stage.Species or stage.Rarity or "Quest target")
+            .. " progress  ·  "
+            .. tostring(state.Count)
+            .. "/"
+            .. tostring(stage.Required or 1)
+    )
+
+    if state.Count >= math.max(1, tonumber(stage.Required) or 1) then
+        advanceStage(player, chain, state)
+    else
+        Service:PushState(player)
+    end
+    return true
+end
+
+function Service:OnPlayerAction(player, actionName)
+    if type(actionName) ~= "string" then return false end
+
+    local _, _, chain, state, stage = currentChainStage(player)
+    if not chain or not state or not stage or stage.Type ~= "Action" then
+        return false
+    end
+    if stage.Action ~= actionName then
+        return false
+    end
+
+    state.Count = math.min(
+        math.max(1, tonumber(stage.Required) or 1),
+        state.Count + 1
+    )
+
+    QuestRemote:FireClient(
+        player,
+        "Toast",
+        tostring(stage.Objective or actionName)
+            .. "  ·  "
+            .. tostring(state.Count)
+            .. "/"
+            .. tostring(stage.Required or 1)
+    )
+
+    if state.Count >= math.max(1, tonumber(stage.Required) or 1) then
+        advanceStage(player, chain, state)
+    else
+        Service:PushState(player)
+    end
     return true
 end
 
@@ -745,18 +1279,21 @@ function Service:IsQuestMonsterAllowed(player, target)
 end
 
 function Service:PlayerReady(player)
-    local progress = ensureProgress(player)
-    if not progress then return end
+    local root = questData(player)
+    if not root then return end
 
     destroyPersonal(player)
-    if progress.Stage == STAGE_BEARS then
-        spawnBearObjective(player)
-    elseif progress.Stage == STAGE_BEAR_CLEARED then
-        createMira(player, true)
+    local _, _, chain, _, stage = currentChainStage(player)
+    if chain and chain.Id == "HollowfangRescue" and stage then
+        if stage.Id == "Bears" then
+            spawnBearObjective(player)
+        elseif stage.Id == "FindMira" or stage.Id == "ReportRowan" then
+            createMira(player, true)
+        end
     end
 
     task.defer(function()
-        if player.Parent then self:PushState(player) end
+        if player.Parent then Service:PushState(player) end
     end)
 end
 
@@ -826,22 +1363,13 @@ local function buildCave()
     label.Parent = surface
 end
 
-local function buildRowan()
-    local settings = QuestConfig.World
-    local ground = terrainPoint(settings.RowanXZ.X, settings.RowanXZ.Y, settings.CaveFallbackY)
-    local model, torso = makeNPC(
-        questWorld,
-        "WardenRowan",
-        ground,
-        Color3.fromRGB(82, 94, 72),
-        Color3.fromRGB(137, 119, 76)
-    )
-    billboard(torso, "Warden Rowan", "QUEST WARDEN", Color3.fromRGB(245, 210, 110))
-    local prompt = addPrompt(torso, "Warden Rowan")
-    prompt.Triggered:Connect(function(player)
-        Service:TalkToRowan(player)
-    end)
-    rowan = model
+local function buildNPCs()
+    for _, npcId in ipairs(QuestConfig.NPCOrder) do
+        local spec = QuestConfig.World.NPCs[npcId]
+        if spec then
+            makeNPC(questWorld, npcId, spec)
+        end
+    end
 end
 
 function Service:Init()
@@ -857,7 +1385,7 @@ function Service:Init()
     questWorld.Parent = world
 
     buildCave()
-    buildRowan()
+    buildNPCs()
 
     QuestRemote.OnServerEvent:Connect(function(player, action, value)
         if action == "RequestState" then

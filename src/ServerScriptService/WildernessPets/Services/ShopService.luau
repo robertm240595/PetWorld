@@ -7,6 +7,11 @@ local Service = {}
 
 local function setEquippedLasso(player, data, name)
     data.Lasso = name
+    local info = Config.Lassos[name]
+    data.MaxLassoStrengthUnlocked = math.max(
+        tonumber(data.MaxLassoStrengthUnlocked) or 0,
+        tonumber(info and info.Strength) or 0
+    )
     player:SetAttribute("EquippedLassoName", name)
 end
 
