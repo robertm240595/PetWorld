@@ -9,6 +9,7 @@ local Config = require(Root.Shared.Config)
 
 local DataService = require(script.Parent.PlayerDataService)
 local PetService = require(script.Parent.PetService)
+local MountService = require(script.Parent.MountService)
 local LootService = require(script.Parent.LootService)
 local ShopService = require(script.Parent.ShopService)
 local ModelFactory = require(script.Parent.Parent.Systems.PetModelFactory)
@@ -341,12 +342,13 @@ local function questState(root, questId)
     root.Quests = type(root.Quests) == "table" and root.Quests or {}
     local state = root.Quests[questId]
     if type(state) ~= "table" then
-        state = {StageIndex = 1, Count = 0, TargetPetId = ""}
+        state = {StageIndex = 1, Count = 0, TargetPetId = "", TargetMountId = ""}
         root.Quests[questId] = state
     end
     state.StageIndex = math.max(1, math.floor(tonumber(state.StageIndex) or 1))
     state.Count = math.max(0, math.floor(tonumber(state.Count) or 0))
     state.TargetPetId = type(state.TargetPetId) == "string" and state.TargetPetId or ""
+    state.TargetMountId = type(state.TargetMountId) == "string" and state.TargetMountId or ""
     return state
 end
 
@@ -431,7 +433,7 @@ end
 local function currentPersonal(player)
     local state = personal[player]
     if not state then
-        state = {Bears = {}, Mira = nil, SparPet = nil}
+        state = {Bears = {}, Mira = nil, SparPet = nil, MountHorse = nil}
         personal[player] = state
     end
     return state
@@ -445,6 +447,7 @@ local function destroyPersonal(player)
     end
     if state.Mira and state.Mira.Parent then state.Mira:Destroy() end
     if state.SparPet and state.SparPet.Parent then state.SparPet:Destroy() end
+    if state.MountHorse and state.MountHorse.Parent then state.MountHorse:Destroy() end
     personal[player] = nil
 end
 
@@ -940,6 +943,98 @@ local function spawnTutorialSpar(player)
     Animator:PlayIdle(model)
 end
 
+local function spawnQuestMountHorse(player)
+    local _, _, chain, state, stage = chainStage(player, "SaddleUp")
+    if not chain or not state or not stage or stage.Id ~= "CaptureHorse" then return end
+
+    local current = currentPersonal(player)
+    if current.MountHorse and current.MountHorse.Parent then
+        return current.MountHorse
+    end
+
+    local maeve = npcPosition("Maeve") or Vector3.new(34, 15, 21)
+    local rough = maeve + Vector3.new(125, 0, 95)
+    local ground = terrainPoint(rough.X, rough.Z, maeve.Y)
+
+    local model = ModelFactory:Create("Horse")
+    if not model then return end
+    model.Name = "QuestHorse_" .. tostring(player.UserId)
+
+    for _, item in ipairs(model:GetDescendants()) do
+        if item:IsA("BillboardGui") then
+            item:Destroy()
+        elseif item:IsA("BasePart") then
+            item.Anchored = true
+            item.CanCollide = false
+            item.CanTouch = false
+            item.CanQuery = true
+        end
+    end
+
+    model:SetAttribute("Species", "Horse")
+    model:SetAttribute("AnimationSpecies", "ShadowStag")
+    model:SetAttribute("Rarity", "Common")
+    model:SetAttribute("CreatureType", "Mount")
+    model:SetAttribute("Rideable", true)
+    model:SetAttribute("Invulnerable", true)
+    model:SetAttribute("Level", 1)
+    model:SetAttribute("Power", 0)
+    model:SetAttribute("Defence", 999999)
+    model:SetAttribute("Health", 1)
+    model:SetAttribute("MaxHealth", 1)
+    model:SetAttribute("CaptureDifficulty", Config.Rarities.Common.CaptureDifficulty)
+    model:SetAttribute("Captured", false)
+    model:SetAttribute("BeingCaptured", false)
+    model:SetAttribute("InCombat", false)
+    model:SetAttribute("Dead", false)
+    model:SetAttribute("QuestStationary", true)
+    model:SetAttribute("QuestMountTutorial", true)
+    model:SetAttribute("QuestPrivateCreature", true)
+    model:SetAttribute("QuestOwnerUserId", player.UserId)
+    model:SetAttribute("QuestId", "SaddleUp")
+    model:SetAttribute("QuestObjective", "CaptureHorse")
+
+    local rig = Animator:_getRig(model)
+    if not rig then
+        model:Destroy()
+        return
+    end
+    rig.base = CFrame.new(ground + Vector3.new(0, rig.clearance + .06, 0))
+        * CFrame.Angles(0, math.rad(160), 0)
+    Animator:Stop(model)
+
+    local wild = world:FindFirstChild("WildMonsters")
+    if not wild then
+        model:Destroy()
+        return
+    end
+
+    local rootPart = model.PrimaryPart or model:FindFirstChildWhichIsA("BasePart", true)
+    if rootPart then
+        local gui = Instance.new("BillboardGui")
+        gui.Name = "QuestMountLabel"
+        gui.Size = UDim2.fromOffset(220, 38)
+        gui.StudsOffsetWorldSpace = Vector3.new(0, model:GetExtentsSize().Y * .55 + .8, 0)
+        gui.MaxDistance = 70
+        gui.Parent = rootPart
+
+        local text = Instance.new("TextLabel")
+        text.BackgroundTransparency = 1
+        text.Size = UDim2.fromScale(1, 1)
+        text.Font = Enum.Font.GothamBold
+        text.TextSize = 13
+        text.TextStrokeTransparency = .3
+        text.TextColor3 = Color3.fromRGB(245, 205, 118)
+        text.Text = "MAEVE'S TRACKED HORSE"
+        text.Parent = gui
+    end
+
+    model.Parent = wild
+    current.MountHorse = model
+    Animator:PlayIdle(model)
+    return model
+end
+
 local function nearestWildTarget(player, stage)
     local root = getRoot(player)
     local folder = world and world:FindFirstChild("WildMonsters")
@@ -1011,6 +1106,12 @@ local function stageReadyForNPC(player, chain, state, stage)
     if not stage then return false end
     if chain and chain.Special == "LeatherTrader" then
         return false
+    end
+    if chain and chain.Special == "MountTutorial" and stage.Id == "ReturnMounted" then
+        local data = DataService:Get(player)
+        return data ~= nil
+            and state.TargetMountId ~= ""
+            and data.EquippedMountId == state.TargetMountId
     end
     if stage.Type == "Talk" then
         return true
@@ -1106,7 +1207,23 @@ function Service:GetClientState(player)
         local targetPosition
         local targetLabel
 
-        if chain.Special == "LeatherTrader" then
+        if chain.Special == "MountTutorial" then
+            if stage.Id == "CaptureHorse" then
+                local current = currentPersonal(player)
+                local horse = current.MountHorse
+                local part = horse and horse.Parent and (horse.PrimaryPart or horse:FindFirstChildWhichIsA("BasePart", true))
+                if part then
+                    targetPosition = part.Position
+                    targetLabel = "Maeve's Tracked Horse"
+                else
+                    targetPosition = npcPosition("Maeve")
+                    targetLabel = npcName("Maeve")
+                end
+            elseif stage.Id == "ReturnMounted" then
+                targetPosition = npcPosition("Maeve")
+                targetLabel = npcName("Maeve")
+            end
+        elseif chain.Special == "LeatherTrader" then
             if stage.Id == "FindTrader" then
                 targetPosition = leatherTraderPosition
                 targetLabel = "Leather Trader's Hut"
@@ -1252,6 +1369,17 @@ local function completeQuest(player, chain)
     root.Completed[chain.Id] = true
     root.Quests[chain.Id] = nil
     root.ActiveQuestIds[chain.Id] = nil
+    if chain.Id == "SaddleUp" then
+        if nextStage.Id == "EquipHorse" then
+            QuestRemote:FireClient(player, "TutorialGuide", {
+                Kind = "Mount",
+                MountId = state.TargetMountId,
+            })
+        elseif nextStage.Id == "ReturnMounted" then
+            QuestRemote:FireClient(player, "TutorialGuide", {Kind = "Clear"})
+        end
+    end
+
     if chain.Id == "BeastHandlingTutorial" then
         player:SetAttribute("TutorialHomeGuide", false)
     end
@@ -1263,6 +1391,10 @@ local function completeQuest(player, chain)
     elseif chain.Id == "BeastHandlingTutorial" and current and current.SparPet and current.SparPet.Parent then
         current.SparPet:Destroy()
         current.SparPet = nil
+    end
+    if chain.Id == "SaddleUp" and current and current.MountHorse and current.MountHorse.Parent then
+        current.MountHorse:Destroy()
+        current.MountHorse = nil
     end
 
     grantReward(player, chain)
@@ -1372,10 +1504,12 @@ local function acceptQuest(player, questId)
     if model and not near(player, model:GetPivot().Position, 18) then return end
 
     root.ActiveQuestIds[chain.Id] = true
-    root.Quests[chain.Id] = {StageIndex = 1, Count = 0, TargetPetId = ""}
+    root.Quests[chain.Id] = {StageIndex = 1, Count = 0, TargetPetId = "", TargetMountId = ""}
 
     if chain.Special == "Hollowfang" then
         spawnBearObjective(player)
+    elseif chain.Special == "MountTutorial" then
+        spawnQuestMountHorse(player)
     end
 
     Service:PushState(player)
@@ -1883,6 +2017,19 @@ function Service:PlayerReady(player)
             spawnBearObjective(player)
         elseif hollowStage.Id == "FindMira" or hollowStage.Id == "ReportRowan" then
             createMira(player, true)
+        end
+    end
+
+    local _, _, mountQuest, mountState, mountStage = chainStage(player, "SaddleUp")
+    if mountQuest and mountStage then
+        if mountStage.Id == "CaptureHorse" then
+            spawnQuestMountHorse(player)
+        elseif mountStage.Id == "EquipHorse" then
+            task.defer(function()
+                if player.Parent then
+                    QuestRemote:FireClient(player, "TutorialGuide", {Kind="Mount", MountId=mountState.TargetMountId})
+                end
+            end)
         end
     end
 
