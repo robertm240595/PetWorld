@@ -233,7 +233,7 @@ function Service:GetHealingSeconds(pet)
     )
 end
 
-function Service:StartHealing(player, petId)
+function Service:StartHealing(player, petId, overrideSeconds)
     local pet = self:Find(player, petId)
     if not pet then return false, "Pet not found." end
     if not pet.Dead then return false, "That pet is not dead." end
@@ -245,8 +245,17 @@ function Service:StartHealing(player, petId)
         return false, "That pet is already healing."
     end
 
-    local seconds = self:GetHealingSeconds(pet)
+    local seconds
+    if overrideSeconds ~= nil then
+        seconds = math.max(0, math.floor(tonumber(overrideSeconds) or 0))
+    else
+        seconds = self:GetHealingSeconds(pet)
+    end
+
     pet.HealReadyAt = nowUnix() + seconds
+    if seconds <= 0 then
+        return true, "Healing complete. Collect your pet from the Barn.", 0
+    end
     return true, "Healing started.", seconds
 end
 
