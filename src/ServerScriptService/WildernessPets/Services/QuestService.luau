@@ -28,7 +28,7 @@ local npcModels = {}
 local personal = {}
 local leatherTradeSessions = setmetatable({}, {__mode = "k"})
 
-local QUEST_VERSION = 5
+local QUEST_VERSION = 6
 
 local function getRoot(player)
     local character = player.Character
@@ -246,6 +246,130 @@ local function migrateQuestData(data)
         if type(id) == "string" and id ~= "" and QuestConfig.Chains[id] then
             migrated.ActiveQuestIds[id] = true
         end
+    end
+
+    if old.Version == 5 then
+        migrated.Completed = type(old.Completed) == "table" and old.Completed or {}
+        migrated.Quests = type(old.Quests) == "table" and old.Quests or {}
+        migrated.ActiveQuestIds = type(old.ActiveQuestIds) == "table" and old.ActiveQuestIds or {}
+
+        if type(old.ActiveQuestId) == "string" and old.ActiveQuestId ~= "" then
+            migrated.ActiveQuestIds[old.ActiveQuestId] = true
+        end
+
+        local function isActive(id)
+            return migrated.ActiveQuestIds[id] == true
+        end
+
+        local function clearActive(id)
+            migrated.ActiveQuestIds[id] = nil
+            migrated.Quests[id] = nil
+        end
+
+        local function activate(id, stageIndex, count)
+            if not QuestConfig.Chains[id] then return end
+            migrated.ActiveQuestIds[id] = true
+            migrated.Quests[id] = {
+                StageIndex = math.max(1, math.floor(tonumber(stageIndex) or 1)),
+                Count = math.max(0, math.floor(tonumber(count) or 0)),
+                TargetPetId = "",
+                TargetMountId = "",
+            }
+        end
+
+        -- Care for the Fallen was replaced by an entirely different Anya
+        -- challenge, so old completion does not suppress the new quest.
+        local oldBarnActive = isActive("BarnLesson")
+        migrated.Completed.BarnLesson = nil
+        migrated.Quests.BarnLesson = nil
+        migrated.ActiveQuestIds.BarnLesson = nil
+        if oldBarnActive then
+            activate("BarnLesson", 1, 0)
+        end
+
+        -- Lost Caravan used to contain both Boars and Raccoons.
+        if migrated.Completed.CaravanTrouble == true then
+            migrated.Completed.CaravanRecovery = true
+        elseif isActive("CaravanTrouble") then
+            local state = migrated.Quests.CaravanTrouble or {}
+            local index = math.max(1, math.floor(tonumber(state.StageIndex) or 1))
+            local count = math.max(0, math.floor(tonumber(state.Count) or 0))
+            if index >= 3 then
+                clearActive("CaravanTrouble")
+                migrated.Completed.CaravanTrouble = true
+                activate("CaravanRecovery", math.clamp(index - 2, 1, 3), count)
+            end
+        end
+
+        -- Moonlight Problems now hands the five Bats in before the Owl job.
+        if migrated.Completed.MoonlightProblems == true then
+            migrated.Completed.MoonlightOwls = true
+        elseif isActive("MoonlightProblems") then
+            local state = migrated.Quests.MoonlightProblems or {}
+            local index = math.max(1, math.floor(tonumber(state.StageIndex) or 1))
+            local count = math.max(0, math.floor(tonumber(state.Count) or 0))
+            if index >= 2 then
+                clearActive("MoonlightProblems")
+                migrated.Completed.MoonlightProblems = true
+                activate("MoonlightOwls", math.clamp(index - 1, 1, 3), count)
+            end
+        end
+
+        -- Orin's 50% and 70% imprint checks are now separate hand-ins.
+        if migrated.Completed.ImprintersSecret == true then
+            migrated.Completed.ImprintersMastery = true
+        elseif isActive("ImprintersSecret") then
+            local state = migrated.Quests.ImprintersSecret or {}
+            local index = math.max(1, math.floor(tonumber(state.StageIndex) or 1))
+            if index >= 2 then
+                clearActive("ImprintersSecret")
+                migrated.Completed.ImprintersSecret = true
+                activate("ImprintersMastery", 1, 0)
+            end
+        end
+
+        -- Captain Rook now has three discrete report-and-reward quests.
+        if migrated.Completed.ChampionWilds == true then
+            migrated.Completed.ChampionWildsUncommon = true
+            migrated.Completed.ChampionWildsRare = true
+        elseif isActive("ChampionWilds") then
+            local state = migrated.Quests.ChampionWilds or {}
+            local index = math.max(1, math.floor(tonumber(state.StageIndex) or 1))
+            local count = math.max(0, math.floor(tonumber(state.Count) or 0))
+            if index == 2 then
+                clearActive("ChampionWilds")
+                migrated.Completed.ChampionWilds = true
+                activate("ChampionWildsUncommon", 1, count)
+            elseif index == 3 then
+                clearActive("ChampionWilds")
+                migrated.Completed.ChampionWilds = true
+                migrated.Completed.ChampionWildsUncommon = true
+                activate("ChampionWildsRare", 1, count)
+            elseif index >= 4 then
+                clearActive("ChampionWilds")
+                migrated.Completed.ChampionWilds = true
+                migrated.Completed.ChampionWildsUncommon = true
+                activate("ChampionWildsRare", 2, 0)
+            end
+        end
+
+        -- Hollowfang evidence now returns to Rowan between Cobras and Weavers.
+        if migrated.Completed.HollowfangMystery == true then
+            migrated.Completed.HollowfangWeavers = true
+        elseif isActive("HollowfangMystery") then
+            local state = migrated.Quests.HollowfangMystery or {}
+            local index = math.max(1, math.floor(tonumber(state.StageIndex) or 1))
+            local count = math.max(0, math.floor(tonumber(state.Count) or 0))
+            if index >= 3 then
+                clearActive("HollowfangMystery")
+                migrated.Completed.HollowfangMystery = true
+                activate("HollowfangWeavers", math.clamp(index - 2, 1, 3), count)
+            end
+        end
+
+        migrated.ActiveQuestId = nil
+        data.QuestProgress = migrated
+        return migrated
     end
 
     if old.Version == 4 then
@@ -1758,7 +1882,7 @@ function Service:HandleAction(player, action)
         sendDialogue(
             player,
             "Leather Trader Corvin",
-            "Bring me 2 Wolf Hides, 2 Hare Pelts and 2 Coarse Boar Hides. Open the loot bags you want, take only the materials worth carrying, and come back when you've got the full bundle.",
+            "Bring me 3 Wolf Hides, 3 Hare Pelts and 3 Coarse Boar Hides. Open the loot bags you want, take only the materials worth carrying, and come back when you've got the full bundle.",
             {{Text="I'LL GET THEM",Action="Close"}}
         )
         return
