@@ -943,6 +943,15 @@ local function npcAvailability(player)
     for _, npcId in ipairs(QuestConfig.NPCOrder) do
         local visible = npcId == "Rowan"
 
+        if not visible then
+            for _, entry in ipairs(entries) do
+                if entry.Chain.NPC == npcId then
+                    visible = true
+                    break
+                end
+            end
+        end
+
         if not visible and tutorialComplete then
             for _, chain in pairs(QuestConfig.Chains) do
                 if chain.NPC == npcId then
