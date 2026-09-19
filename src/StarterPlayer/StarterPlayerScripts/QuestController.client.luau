@@ -297,7 +297,7 @@ local toast = makeLabel(
     gui,
     "QuestToast",
     "",
-    UDim2.new(.5, -260, 0, 78),
+    UDim2.new(.5, -260, 0, 184),
     UDim2.fromOffset(520, 38),
     13,
     palette.text
