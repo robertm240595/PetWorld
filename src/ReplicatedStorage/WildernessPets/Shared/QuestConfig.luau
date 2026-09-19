@@ -5,6 +5,7 @@ QuestConfig.ObjectiveTypes = {
     CaptureReturn = "CAPTURE & RETURN",
     Kill = "KILL",
     InspectPet = "SHOW PET",
+    Action = "GAMEPLAY TASK",
     ItemTurnIn = "ITEM TURN-IN",
 }
 
@@ -24,6 +25,7 @@ QuestConfig.World = {
     NPCs = {
         Rowan = {Name = "Warden Rowan", XZ = Vector2.new(8, -18), Shirt = Color3.fromRGB(82,94,72), Accent = Color3.fromRGB(137,119,76)},
         Bram = {Name = "Quartermaster Bram", XZ = Vector2.new(-18, -10), Shirt = Color3.fromRGB(87,77,65), Accent = Color3.fromRGB(146,119,78)},
+        Anya = {Name = "Beast Healer Anya", XZ = Vector2.new(-28, -4), Shirt = Color3.fromRGB(92,111,91), Accent = Color3.fromRGB(174,188,142)},
         Elara = {Name = "Astronomer Elara", XZ = Vector2.new(22, -7), Shirt = Color3.fromRGB(61,69,111), Accent = Color3.fromRGB(128,121,190)},
         Holt = {Name = "Trapper Holt", XZ = Vector2.new(-24, 10), Shirt = Color3.fromRGB(83,73,58), Accent = Color3.fromRGB(142,106,66)},
         Orin = {Name = "Sage Orin", XZ = Vector2.new(25, 12), Shirt = Color3.fromRGB(72,84,79), Accent = Color3.fromRGB(100,162,137)},
@@ -72,6 +74,40 @@ QuestConfig.Chains = {
             {Id="Boars", Type="Kill", Species="Boar", Required=5, Objective="Defeat 5 Boars threatening the caravan route.", Detail="Any wild Boar defeated by your companion counts."},
             {Id="Raccoons", Type="Kill", Species="Raccoon", Required=3, Objective="Defeat 3 Raccoons stealing the scattered supplies.", Detail="Raccoons appear at night."},
             {Id="Report", Type="Talk", Objective="Report back to Quartermaster Bram.", Detail="The road is clear. Return to the village."},
+        },
+    },
+
+    BarnLesson = {
+        Id = "BarnLesson",
+        Name = "Care for the Fallen",
+        NPC = "Anya",
+        RequiredStrength = 0,
+        Priority = 3,
+        Prerequisite = "StarterWolves",
+        Intro = "A good handler learns what to do when a companion falls. I don't want you discovering the Barn while panicking after a hard fight. When one of your pets is defeated, place it in your Pet Barn, let the healing finish, then collect it again.",
+        CompleteText = "That's how you keep a beast safe after a hard battle. A strong team is one you know how to bring home.",
+        Reward = {Coins = 2500, Gems = 0},
+        Stages = {
+            {Id="StartHealing", Type="Action", Action="StartHealing", Required=1, Objective="Place a defeated pet into your Pet Barn to begin healing.", Detail="A pet must be defeated before it can be placed in the Barn."},
+            {Id="CollectHealing", Type="Action", Action="CollectHealed", Required=1, Objective="Wait for the Barn timer, then collect the healed pet.", Detail="The timer continues in real time."},
+            {Id="Report", Type="Talk", Objective="Tell Beast Healer Anya the pet recovered safely."},
+        },
+    },
+
+    MarketLessons = {
+        Id = "MarketLessons",
+        Name = "Know the Price",
+        NPC = "Bram",
+        RequiredStrength = 0,
+        Priority = 4,
+        Prerequisite = "CaravanTrouble",
+        Intro = "Before you start funding expensive expeditions, learn how the animal market really works. Sell one non-favourite pet to the Beast Trader, then buy that same pet back. You'll see why a careless sale costs more to undo.",
+        CompleteText = "Now you know the rule: selling is easy, changing your mind is expensive. Favourite anything you never want leaving your backpack.",
+        Reward = {Coins = 3000, Gems = 0},
+        Stages = {
+            {Id="SellPet", Type="Action", Action="SellPet", Required=1, Objective="Sell 1 non-favourite pet to the Beast Trader.", Detail="Favourited pets are protected from selling."},
+            {Id="BuybackPet", Type="Action", Action="BuybackPet", Required=1, Objective="Buy a pet back from the Beast Trader.", Detail="Buyback costs more than the original sale value."},
+            {Id="Report", Type="Talk", Objective="Report back to Quartermaster Bram."},
         },
     },
 
@@ -231,6 +267,6 @@ QuestConfig.Chains = {
     },
 }
 
-QuestConfig.NPCOrder = {"Rowan","Bram","Elara","Holt","Orin","Rook","Vale"}
+QuestConfig.NPCOrder = {"Rowan","Bram","Anya","Elara","Holt","Orin","Rook","Vale"}
 
 return QuestConfig
