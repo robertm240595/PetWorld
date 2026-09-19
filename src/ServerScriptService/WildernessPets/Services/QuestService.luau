@@ -1759,10 +1759,14 @@ local function offerQuest(player, chain)
     if chain.RequiredLasso then
         requirement = "\n\nRequired equipment: " .. chain.RequiredLasso .. " or better."
     end
+
+    local reward = rewardText(chain.Reward)
+    local rewardLine = reward ~= "" and ("\n\nReward: " .. reward .. ".") or ""
+
     sendDialogue(
         player,
         npcName(chain.NPC),
-        chain.Intro .. requirement .. "\n\nReward: " .. rewardText(chain.Reward) .. ".",
+        chain.Intro .. requirement .. rewardLine,
         {
             {Text = "ACCEPT QUEST", Action = "Accept:" .. chain.Id},
             {Text = "NOT NOW", Action = "Close"},
