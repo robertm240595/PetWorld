@@ -1218,7 +1218,7 @@ local function attackTarget(player)
                                 end
 
                                 if reflected > 0 and validMonster(target) then
-                                    PetAbilityService:DamageEnemy(player, session.pet, target, reflected)
+                                    PetAbilityService:DamageEnemyFlat(player, target, reflected)
                                 end
                             end, .9)
 
