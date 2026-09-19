@@ -296,11 +296,15 @@ local function prerequisiteMet(root, chain)
     return root.Completed[chain.Prerequisite] == true
 end
 
+local function progressionLassoStrength(data)
+    local owned = strongestOwnedLasso(data)
+    return math.max(owned, tonumber(data and data.MaxLassoStrengthUnlocked) or 0)
+end
+
 local function chainUnlocked(root, data, chain)
     if root.Completed[chain.Id] then return false end
     if not prerequisiteMet(root, chain) then return false end
-    local strength = strongestOwnedLasso(data)
-    return strength >= math.max(0, tonumber(chain.RequiredStrength) or 0)
+    return progressionLassoStrength(data) >= math.max(0, tonumber(chain.RequiredStrength) or 0)
 end
 
 local function availableChainsForNPC(root, data, npcId)
@@ -704,7 +708,7 @@ local function npcAvailability(player)
     if not root or not data then return result end
 
     local starterComplete = root.Completed.StarterWolves == true
-    local strength = strongestOwnedLasso(data)
+    local strength = progressionLassoStrength(data)
 
     for _, npcId in ipairs(QuestConfig.NPCOrder) do
         local visible = npcId == "Rowan"
@@ -750,6 +754,7 @@ function Service:GetClientState(player)
         NPCs = npcAvailability(player),
         ActiveQuestId = root.ActiveQuestId,
         StrongestLassoStrength = strongestOwnedLasso(data),
+        ProgressionLassoStrength = progressionLassoStrength(data),
         MiraMarker = false,
     }
 
@@ -859,7 +864,7 @@ local function completeQuest(player, chain)
     if chain.Id == "StarterWolves" then
         local _, data = questData(player)
         local hollowfang = QuestConfig.Chains.HollowfangRescue
-        local strength = strongestOwnedLasso(data)
+        local strength = progressionLassoStrength(data)
         if strength >= (hollowfang.RequiredStrength or 45) then
             text ..= "\n\nBefore you go, I have another urgent report. " .. hollowfang.Intro
             options = {
@@ -1054,7 +1059,7 @@ function Service:TalkToNPC(player, npcId)
     if npcId == "Rowan" and root.Completed.StarterWolves then
         local hollowfang = QuestConfig.Chains.HollowfangRescue
         if not root.Completed.HollowfangRescue then
-            local strength = strongestOwnedLasso(data)
+            local strength = progressionLassoStrength(data)
             if strength < hollowfang.RequiredStrength then
                 sendDialogue(
                     player,
