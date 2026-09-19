@@ -1,3 +1,4 @@
+local RunService = game:GetService("RunService")
 local Config = require(game.ReplicatedStorage.WildernessPets.Shared.Config)
 
 local DataService = require(script.Parent.PlayerDataService)
@@ -18,6 +19,12 @@ local function applyWalkSpeed(player)
     local active = effects(data)
     local humanoid = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
     if not humanoid then return end
+
+    local testSpeed = player:GetAttribute("TestWalkSpeed")
+    if RunService:IsStudio() and type(testSpeed) == "number" then
+        humanoid.WalkSpeed = math.clamp(testSpeed, 0, 300)
+        return
+    end
 
     local mountMultiplier = math.max(1, tonumber(player:GetAttribute("MountSpeedMultiplier")) or 1)
 
