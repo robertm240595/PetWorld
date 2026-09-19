@@ -427,6 +427,13 @@ function CaptureService:Capture(player, monster)
 	if not isValidMonster(monster) then
 		return false, "Invalid target."
 	end
+	if monster:GetAttribute("QuestNoCapture") then
+		return false, "This quest creature must be defeated, not captured."
+	end
+	local questOwner = tonumber(monster:GetAttribute("QuestOwnerUserId"))
+	if questOwner and questOwner ~= player.UserId then
+		return false, "That quest creature belongs to another player's objective."
+	end
 
 	local playerRoot = getCharacterRoot(player)
 	local monsterPosition = getPosition(monster)
