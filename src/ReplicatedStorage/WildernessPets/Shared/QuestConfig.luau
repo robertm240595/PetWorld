@@ -164,21 +164,51 @@ QuestConfig.Chains = {
         },
     },
 
-    RarityArchive = {
-        Id = "RarityArchive",
-        Name = "A Creature Worthy of Legend",
+    RarityArchiveRare = {
+        Id = "RarityArchiveRare",
+        Name = "A Creature Worthy of Record",
         NPC = "Vale",
         RequiredStrength = 45,
         RequiredLasso = "Iron Lasso",
         Priority = 22,
         Prerequisite = "StarterWolves",
-        Intro = "My archive is full of sketches copied from hunters who exaggerate everything. I want records from a real handler. Show me living examples as your equipment improves; you keep every creature.",
-        CompleteText = "At last, records I can trust. The archive will carry your name beside these entries.",
-        Reward = {Coins = 35000, Gems = 40},
+        Intro = "My archive is full of sketches copied from hunters who exaggerate everything. Show me a living Rare creature and I'll begin a proper field record. You keep the animal; I only need to study it.",
+        CompleteText = "At last, a Rare specimen documented by a real handler. Come back when your lasso is strong enough for even greater creatures.",
+        Reward = {Coins = 8000, Gems = 10},
         Stages = {
-            {Id="Rare", Type="InspectPet", Rarity="Rare", Required=1, RequiredStrength=45, Objective="Show Historian Vale any Rare pet.", Detail="Iron Lasso or better is required to reach this stage."},
-            {Id="Epic", Type="InspectPet", Rarity="Epic", Required=1, RequiredStrength=65, Objective="Show Historian Vale any Epic pet.", Detail="This chapter unlocks when you own a Steel Lasso or better."},
-            {Id="Legendary", Type="InspectPet", Rarity="Legendary", Required=1, RequiredStrength=80, Objective="Show Historian Vale any Legendary pet.", Detail="This chapter unlocks when you own a Mystic Lasso or better."},
+            {Id="Rare", Type="InspectPet", Rarity="Rare", Required=1, Objective="Show Historian Vale any Rare pet.", Detail="You keep the pet; Vale only inspects it."},
+        },
+    },
+
+    RarityArchiveEpic = {
+        Id = "RarityArchiveEpic",
+        Name = "Beyond the Rare",
+        NPC = "Vale",
+        RequiredStrength = 65,
+        RequiredLasso = "Steel Lasso",
+        Priority = 31,
+        Prerequisite = "RarityArchiveRare",
+        Intro = "You've reached equipment I rarely see outside veteran expeditions. Bring me a living Epic creature and we'll add a new chapter to the archive.",
+        CompleteText = "An Epic specimen, properly recorded. The archive is becoming something hunters will actually be able to trust.",
+        Reward = {Coins = 18000, Gems = 25},
+        Stages = {
+            {Id="Epic", Type="InspectPet", Rarity="Epic", Required=1, Objective="Show Historian Vale any Epic pet.", Detail="Steel Lasso or better is required for Epic captures."},
+        },
+    },
+
+    RarityArchiveLegendary = {
+        Id = "RarityArchiveLegendary",
+        Name = "A Living Legend",
+        NPC = "Vale",
+        RequiredStrength = 80,
+        RequiredLasso = "Mystic Lasso",
+        Priority = 40,
+        Prerequisite = "RarityArchiveEpic",
+        Intro = "This is the page I never expected to fill. If you truly command a Mystic Lasso, show me a living Legendary creature.",
+        CompleteText = "A living legend, documented without rumour or exaggeration. Your name is going on the first page of this record.",
+        Reward = {Coins = 50000, Gems = 75},
+        Stages = {
+            {Id="Legendary", Type="InspectPet", Rarity="Legendary", Required=1, Objective="Show Historian Vale any Legendary pet.", Detail="Mystic Lasso or better is required for Legendary captures."},
         },
     },
 
