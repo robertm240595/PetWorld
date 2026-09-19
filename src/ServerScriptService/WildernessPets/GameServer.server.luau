@@ -595,12 +595,17 @@ local function monsterPart(monster)
     if monster:IsA("BasePart") then return monster end
     return monster.PrimaryPart or monster:FindFirstChild("HumanoidRootPart") or monster:FindFirstChildWhichIsA("BasePart", true)
 end
-local function validMonster(monster)
+local function validSelectableCreature(monster)
     local folder = monsterFolder()
     if not folder or typeof(monster) ~= "Instance" or monster.Parent ~= folder or not monster:IsA("Model") then return false end
-    if monster:GetAttribute("CreatureType") == "Mount" or monster:GetAttribute("QuestNoCombat") then return false end
     if monster:GetAttribute("Dead") or monster:GetAttribute("Captured") or monster:GetAttribute("BeingCaptured") then return false end
     return monsterPart(monster) ~= nil
+end
+
+local function validMonster(monster)
+    if not validSelectableCreature(monster) then return false end
+    if monster:GetAttribute("CreatureType") == "Mount" or monster:GetAttribute("QuestNoCombat") then return false end
+    return true
 end
 local function petModel(pet)
     local info = Config.Pets[pet.Species]
@@ -834,7 +839,7 @@ local function selectCombatTarget(player, target)
     end
     local root = playerRoot(player)
     local targetPart = monsterPart(target)
-    if not root or not validMonster(target) or not targetPart then
+    if not root or not validSelectableCreature(target) or not targetPart then
         combatTell(player, "Error", "That is not a living wild creature.")
         return false
     end
@@ -864,7 +869,7 @@ end
 local function lassoTarget(player)
     local session = combatSessions[player] or {}
     local target = session.target
-    if not validMonster(target) then combatTell(player, "Error", "Select a living wild creature first.") return false end
+    if not validSelectableCreature(target) then combatTell(player, "Error", "Select a living wild creature first.") return false end
     if session.attacking then combatTell(player, "Error", "Your companion is already fighting.") return false end
     local ok, success, message, alreadyNotified = pcall(function() return CaptureService:Capture(player, target) end)
     if not ok then combatTell(player, "Error", "The lasso could not complete the throw.") return false end
@@ -1026,6 +1031,10 @@ local function attackTarget(player)
     session.pet = pet
 
     local target = session.target
+    if target and target:GetAttribute("CreatureType") == "Mount" then
+        combatTell(player, "Error", "Rideable mounts cannot be fought. Use your lasso if you want to capture it.")
+        return false
+    end
     if not validMonster(target) then
         combatTell(player, "Error", "Select a living wild creature first.")
         return false
