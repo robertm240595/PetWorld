@@ -6,6 +6,7 @@ local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 local Root = ReplicatedStorage:WaitForChild("WildernessPets")
 local QuestRemote = Root.Remotes:WaitForChild("Quest")
+local world = workspace:WaitForChild("WildernessPets")
 
 local palette = {
     bg = Color3.fromRGB(22,27,31),
@@ -19,7 +20,8 @@ local palette = {
 local gui = Instance.new("ScreenGui")
 gui.Name = "QuestHUD"
 gui.ResetOnSpawn = false
-gui.DisplayOrder = 18
+gui.IgnoreGuiInset = true
+gui.DisplayOrder = 100
 gui.Parent = playerGui
 
 local function round(parent, radius)
@@ -51,24 +53,25 @@ local function makeLabel(parent, name, textValue, position, size, textSize, colo
 end
 
 local currentState
+local currentNpcState = {}
 local trackerHidden = false
 local dialogueFrame
 
 ------------------------------------------------------------
--- COMPASS
+-- COMPASS: absolute top-centre, above all quest/target UI
 ------------------------------------------------------------
 
 local compass = Instance.new("Frame")
 compass.Name = "QuestCompass"
 compass.AnchorPoint = Vector2.new(.5, 0)
-compass.Position = UDim2.new(.5, 0, 0, 8)
-compass.Size = UDim2.fromOffset(440, 38)
+compass.Position = UDim2.new(.5, 0, 0, 2)
+compass.Size = UDim2.fromOffset(440, 36)
 compass.BackgroundColor3 = palette.bg
-compass.BackgroundTransparency = .10
+compass.BackgroundTransparency = .08
 compass.BorderSizePixel = 0
 compass.ClipsDescendants = true
 compass.Parent = gui
-round(compass, 9)
+round(compass, 8)
 stroke(compass, .48)
 
 local compassStrip = Instance.new("Frame")
@@ -85,8 +88,8 @@ for name, bearing in pairs({N=0,E=90,S=180,W=270}) do
         compassStrip,
         name,
         name,
-        UDim2.fromOffset(0, 4),
-        UDim2.fromOffset(34, 20),
+        UDim2.fromOffset(0, 3),
+        UDim2.fromOffset(34, 19),
         13,
         name == "N" and palette.gold or palette.text
     )
@@ -100,7 +103,7 @@ local centerMark = Instance.new("Frame")
 centerMark.Name = "FacingMark"
 centerMark.AnchorPoint = Vector2.new(.5, 0)
 centerMark.Position = UDim2.new(.5, 0, 0, 2)
-centerMark.Size = UDim2.fromOffset(2, 28)
+centerMark.Size = UDim2.fromOffset(2, 27)
 centerMark.BackgroundColor3 = palette.gold
 centerMark.BackgroundTransparency = .4
 centerMark.BorderSizePixel = 0
@@ -110,8 +113,8 @@ local questMarker = makeLabel(
     compass,
     "QuestMarker",
     "◆",
-    UDim2.fromOffset(0, -2),
-    UDim2.fromOffset(26, 24),
+    UDim2.fromOffset(0, -3),
+    UDim2.fromOffset(26, 23),
     18,
     Color3.fromRGB(255, 207, 91)
 )
@@ -124,8 +127,8 @@ local questDistance = makeLabel(
     compass,
     "QuestDistance",
     "",
-    UDim2.fromOffset(0, 20),
-    UDim2.fromOffset(72, 14),
+    UDim2.fromOffset(0, 19),
+    UDim2.fromOffset(72, 13),
     9,
     palette.muted
 )
@@ -137,8 +140,8 @@ local compassTargetName = makeLabel(
     gui,
     "CompassTargetName",
     "",
-    UDim2.new(.5, -150, 0, 48),
-    UDim2.fromOffset(300, 18),
+    UDim2.new(.5, -150, 0, 39),
+    UDim2.fromOffset(300, 16),
     10,
     palette.muted
 )
@@ -158,17 +161,18 @@ local function cameraHeading()
 end
 
 ------------------------------------------------------------
--- QUEST TRACKER
+-- QUEST TRACKER: right side below stats/target areas
 ------------------------------------------------------------
 
 local tracker = Instance.new("Frame")
 tracker.Name = "QuestTracker"
 tracker.AnchorPoint = Vector2.new(1, 0)
-tracker.Position = UDim2.new(1, -18, 0, 47)
+tracker.Position = UDim2.new(1, -18, 0, 190)
 tracker.Size = UDim2.fromOffset(335, 160)
 tracker.BackgroundColor3 = palette.bg
 tracker.BackgroundTransparency = .05
 tracker.BorderSizePixel = 0
+tracker.Visible = false
 tracker.Parent = gui
 round(tracker, 10)
 stroke(tracker, .45)
@@ -205,77 +209,29 @@ trackerBody.Size = UDim2.new(1, -20, 1, -42)
 trackerBody.BackgroundTransparency = 1
 trackerBody.Parent = tracker
 
-local typeBadge = makeLabel(
-    trackerBody,
-    "Type",
-    "",
-    UDim2.fromOffset(0, 0),
-    UDim2.fromOffset(115, 20),
-    10,
-    palette.gold
-)
-typeBadge.BackgroundColor3 = Color3.fromRGB(49, 48, 41)
+local typeBadge = makeLabel(trackerBody,"Type","",UDim2.fromOffset(0,0),UDim2.fromOffset(115,20),10,palette.gold)
+typeBadge.BackgroundColor3 = Color3.fromRGB(49,48,41)
 typeBadge.BackgroundTransparency = .1
 typeBadge.TextXAlignment = Enum.TextXAlignment.Center
 round(typeBadge, 5)
 
-local questTitle = makeLabel(
-    trackerBody,
-    "Title",
-    "",
-    UDim2.fromOffset(125, -1),
-    UDim2.fromOffset(180, 22),
-    13,
-    palette.text
-)
+local questTitle = makeLabel(trackerBody,"Title","",UDim2.fromOffset(125,-1),UDim2.fromOffset(180,22),13,palette.text)
 questTitle.Font = Enum.Font.GothamBold
 questTitle.TextXAlignment = Enum.TextXAlignment.Left
 
-local objective = makeLabel(
-    trackerBody,
-    "Objective",
-    "",
-    UDim2.fromOffset(0, 28),
-    UDim2.fromOffset(310, 42),
-    12,
-    palette.text
-)
+local objective = makeLabel(trackerBody,"Objective","",UDim2.fromOffset(0,28),UDim2.fromOffset(310,42),12,palette.text)
 objective.TextWrapped = true
 objective.TextXAlignment = Enum.TextXAlignment.Left
 objective.TextYAlignment = Enum.TextYAlignment.Top
 
-local progress = makeLabel(
-    trackerBody,
-    "Progress",
-    "",
-    UDim2.fromOffset(0, 74),
-    UDim2.fromOffset(145, 20),
-    11,
-    palette.green
-)
+local progress = makeLabel(trackerBody,"Progress","",UDim2.fromOffset(0,74),UDim2.fromOffset(145,20),11,palette.green)
 progress.Font = Enum.Font.GothamBold
 progress.TextXAlignment = Enum.TextXAlignment.Left
 
-local reward = makeLabel(
-    trackerBody,
-    "Reward",
-    "",
-    UDim2.fromOffset(150, 74),
-    UDim2.fromOffset(160, 20),
-    10,
-    palette.gold
-)
+local reward = makeLabel(trackerBody,"Reward","",UDim2.fromOffset(150,74),UDim2.fromOffset(160,20),10,palette.gold)
 reward.TextXAlignment = Enum.TextXAlignment.Right
 
-local detail = makeLabel(
-    trackerBody,
-    "Detail",
-    "",
-    UDim2.fromOffset(0, 96),
-    UDim2.fromOffset(310, 34),
-    9,
-    palette.muted
-)
+local detail = makeLabel(trackerBody,"Detail","",UDim2.fromOffset(0,96),UDim2.fromOffset(310,34),9,palette.muted)
 detail.TextWrapped = true
 detail.TextXAlignment = Enum.TextXAlignment.Left
 detail.TextYAlignment = Enum.TextYAlignment.Top
@@ -316,9 +272,7 @@ local function showToast(message)
     toast.Text = tostring(message or "")
     toast.Visible = true
     task.delay(4.5, function()
-        if token == toastToken then
-            toast.Visible = false
-        end
+        if token == toastToken then toast.Visible = false end
     end)
 end
 
@@ -336,8 +290,8 @@ local function showDialogue(data)
     dialogueFrame = Instance.new("Frame")
     dialogueFrame.Name = "QuestDialogue"
     dialogueFrame.AnchorPoint = Vector2.new(.5, 1)
-    dialogueFrame.Position = UDim2.new(.5, 0, 1, -116)
-    dialogueFrame.Size = UDim2.fromOffset(650, 220)
+    dialogueFrame.Position = UDim2.new(.5, 0, 1, -110)
+    dialogueFrame.Size = UDim2.fromOffset(700, 250)
     dialogueFrame.BackgroundColor3 = palette.bg
     dialogueFrame.BackgroundTransparency = .02
     dialogueFrame.BorderSizePixel = 0
@@ -345,27 +299,16 @@ local function showDialogue(data)
     round(dialogueFrame, 12)
     stroke(dialogueFrame, .25)
 
-    local npc = makeLabel(
-        dialogueFrame,
-        "NPC",
-        tostring(data.NPC or "Quest"),
-        UDim2.fromOffset(20, 14),
-        UDim2.fromOffset(500, 28),
-        20,
-        palette.gold
-    )
+    local fit = Instance.new("UIScale")
+    local viewport = workspace.CurrentCamera and workspace.CurrentCamera.ViewportSize or Vector2.new(1280,720)
+    fit.Scale = math.min(1, (viewport.X-30)/700, (viewport.Y-80)/600)
+    fit.Parent = dialogueFrame
+
+    local npc = makeLabel(dialogueFrame,"NPC",tostring(data.NPC or "Quest"),UDim2.fromOffset(20,14),UDim2.fromOffset(590,28),20,palette.gold)
     npc.Font = Enum.Font.GothamBold
     npc.TextXAlignment = Enum.TextXAlignment.Left
 
-    local body = makeLabel(
-        dialogueFrame,
-        "Body",
-        tostring(data.Text or ""),
-        UDim2.fromOffset(20, 50),
-        UDim2.fromOffset(610, 105),
-        13,
-        palette.text
-    )
+    local body = makeLabel(dialogueFrame,"Body",tostring(data.Text or ""),UDim2.fromOffset(20,52),UDim2.fromOffset(660,118),13,palette.text)
     body.TextWrapped = true
     body.TextXAlignment = Enum.TextXAlignment.Left
     body.TextYAlignment = Enum.TextYAlignment.Top
@@ -384,26 +327,42 @@ local function showDialogue(data)
     round(close, 7)
     close.Activated:Connect(closeDialogue)
 
-    if type(data.Action) == "string" and data.Action ~= "" then
+    local options = type(data.Options) == "table" and data.Options or {}
+    local visibleOptions = {}
+    for _, option in ipairs(options) do
+        if type(option) == "table" and type(option.Text) == "string" then
+            table.insert(visibleOptions, option)
+        end
+    end
+
+    local totalWidth = math.min(660, #visibleOptions * 230 + math.max(0,#visibleOptions-1)*10)
+    local startX = (700-totalWidth)/2
+    for index, option in ipairs(visibleOptions) do
+        local width = #visibleOptions <= 2 and math.floor((totalWidth - math.max(0,#visibleOptions-1)*10)/math.max(1,#visibleOptions)) or 210
         local action = Instance.new("TextButton")
-        action.Name = "QuestAction"
-        action.AnchorPoint = Vector2.new(1, 1)
-        action.Position = UDim2.new(1, -20, 1, -16)
-        action.Size = UDim2.fromOffset(215, 42)
-        action.BackgroundColor3 = Color3.fromRGB(82, 72, 47)
+        action.Name = "QuestOption" .. tostring(index)
+        action.Position = UDim2.fromOffset(startX + (index-1)*(width+10), 188)
+        action.Size = UDim2.fromOffset(width, 44)
+        action.BackgroundColor3 = index == 1 and Color3.fromRGB(82,72,47) or palette.panel
         action.BorderSizePixel = 0
-        action.Text = tostring(data.ActionText or "CONTINUE")
+        action.Text = option.Text
         action.TextColor3 = palette.text
         action.Font = Enum.Font.GothamBold
-        action.TextSize = 12
+        action.TextSize = 11
+        action.TextWrapped = true
         action.Parent = dialogueFrame
         round(action, 8)
-        stroke(action, .28)
+        stroke(action, .35)
 
-        local actionName = data.Action
+        local actionName = option.Action
         action.Activated:Connect(function()
-            action.Active = false
-            action.AutoButtonColor = false
+            if actionName == "Close" or not actionName then
+                closeDialogue()
+                return
+            end
+            for _, sibling in ipairs(dialogueFrame and dialogueFrame:GetChildren() or {}) do
+                if sibling:IsA("GuiButton") then sibling.Active = false end
+            end
             QuestRemote:FireServer("Action", actionName)
             closeDialogue()
         end)
@@ -411,42 +370,125 @@ local function showDialogue(data)
 end
 
 ------------------------------------------------------------
+-- LOCAL NPC VISIBILITY + QUEST MARKERS
+------------------------------------------------------------
+
+local function ensureMarker(model, symbol)
+    local marker = model:FindFirstChild("LocalQuestMarker", true)
+    if marker and not marker:IsA("BillboardGui") then marker:Destroy() marker=nil end
+
+    if not marker then
+        local part = model:FindFirstChild("Head") or model:FindFirstChild("Torso") or model.PrimaryPart
+        if not part or not part:IsA("BasePart") then return end
+
+        marker = Instance.new("BillboardGui")
+        marker.Name = "LocalQuestMarker"
+        marker.Size = UDim2.fromOffset(46, 46)
+        marker.StudsOffsetWorldSpace = Vector3.new(0, 5.4, 0)
+        marker.AlwaysOnTop = true
+        marker.MaxDistance = 100
+        marker.Parent = part
+
+        local text = Instance.new("TextLabel")
+        text.Name = "Symbol"
+        text.BackgroundTransparency = 1
+        text.Size = UDim2.fromScale(1,1)
+        text.Font = Enum.Font.GothamBlack
+        text.TextSize = 34
+        text.TextStrokeTransparency = .15
+        text.TextColor3 = Color3.fromRGB(255,207,91)
+        text.Parent = marker
+    end
+
+    local text = marker:FindFirstChild("Symbol")
+    if text then
+        text.Text = symbol or ""
+        text.TextColor3 = symbol == "?" and Color3.fromRGB(143,215,255) or Color3.fromRGB(255,207,91)
+    end
+    marker.Enabled = symbol ~= nil and symbol ~= ""
+end
+
+local function setLocalModelVisible(model, visible)
+    for _, item in ipairs(model:GetDescendants()) do
+        if item:IsA("BasePart") then
+            if item.Name ~= "HumanoidRootPart" then
+                item.LocalTransparencyModifier = visible and 0 or 1
+            end
+        elseif item:IsA("BillboardGui") and item.Name == "QuestNPCLabel" then
+            item.Enabled = visible
+        elseif item:IsA("ProximityPrompt") then
+            item.Enabled = visible
+        end
+    end
+end
+
+local function applyNpcState(npcs, miraMarker)
+    currentNpcState = type(npcs) == "table" and npcs or {}
+    local questWorld = world:FindFirstChild("QuestWorld")
+    if not questWorld then return end
+
+    for _, model in ipairs(questWorld:GetChildren()) do
+        if model:IsA("Model") then
+            local npcId = model:GetAttribute("QuestNpcId")
+            if npcId then
+                local info = currentNpcState[npcId] or {}
+                local visible = info.Visible == true
+                setLocalModelVisible(model, visible)
+                ensureMarker(model, visible and info.Marker or nil)
+            elseif model:GetAttribute("QuestMira") then
+                local owner = tonumber(model:GetAttribute("QuestOwnerUserId"))
+                local visible = owner == player.UserId
+                setLocalModelVisible(model, visible)
+                ensureMarker(model, visible and miraMarker and "?" or nil)
+            end
+        end
+    end
+end
+
+------------------------------------------------------------
 -- STATE
 ------------------------------------------------------------
 
-local function applyState(state)
-    if type(state) ~= "table" then return end
+local function applyTracker(state)
     currentState = state
+    if type(state) ~= "table" then
+        tracker.Visible = false
+        questMarker.Visible = false
+        questDistance.Visible = false
+        compassTargetName.Text = ""
+        return
+    end
+
+    tracker.Visible = true
+    trackerBody.Visible = not trackerHidden
+    tracker.Size = trackerHidden and UDim2.fromOffset(150,34) or UDim2.fromOffset(335,160)
+    trackerHeader.Text = trackerHidden and "QUEST" or "QUEST TRACKER"
+    trackerHeader.Size = trackerHidden and UDim2.fromOffset(95,22) or UDim2.fromOffset(265,22)
+    hideButton.Text = trackerHidden and "+" or "–"
 
     questTitle.Text = tostring(state.Title or state.Chain or "Quest")
     objective.Text = tostring(state.Objective or "")
     progress.Text = tostring(state.Progress or "")
-    reward.Text = state.Reward and ("Reward: " .. tostring(state.Reward)) or ""
+    reward.Text = state.Reward and state.Reward ~= "" and ("Reward: " .. tostring(state.Reward)) or ""
     typeBadge.Text = tostring(state.ObjectiveTypeLabel or state.ObjectiveType or "QUEST")
     detail.Text = tostring(state.Detail or "")
-
-    if state.Completed then
-        typeBadge.Text = "COMPLETE"
-        typeBadge.TextColor3 = palette.green
-        progress.TextColor3 = palette.green
-    else
-        typeBadge.TextColor3 = palette.gold
-        progress.TextColor3 = palette.green
-    end
 end
 
 QuestRemote.OnClientEvent:Connect(function(action, value)
-    if action == "State" then
-        applyState(value)
+    if action == "State" and type(value) == "table" then
+        applyTracker(value.Tracker)
+        applyNpcState(value.NPCs, value.MiraMarker == true)
     elseif action == "Dialogue" then
         showDialogue(value)
     elseif action == "Toast" then
         showToast(value)
     elseif action == "Reward" and type(value) == "table" then
-        local message = "+" .. tostring(value.Coins or 0) .. " Coins"
-        if value.Balance ~= nil then
-            message ..= "  ·  Balance " .. tostring(value.Balance)
-        end
+        local parts = {}
+        if (tonumber(value.Coins) or 0) > 0 then table.insert(parts, "+" .. tostring(value.Coins) .. " Coins") end
+        if (tonumber(value.Gems) or 0) > 0 then table.insert(parts, "+" .. tostring(value.Gems) .. " Gems") end
+        local message = table.concat(parts, "  ·  ")
+        if value.CoinBalance ~= nil then message ..= "  ·  Coins " .. tostring(value.CoinBalance) end
+        if value.GemBalance ~= nil then message ..= "  ·  Gems " .. tostring(value.GemBalance) end
         showToast(message)
     end
 end)
@@ -469,7 +511,7 @@ RunService.RenderStepped:Connect(function()
         local diff = angleDelta(entry.Bearing, heading)
         entry.Label.Visible = math.abs(diff) <= 100
         if entry.Label.Visible then
-            entry.Label.Position = UDim2.fromOffset(center + diff * pixelsPerDegree, 5)
+            entry.Label.Position = UDim2.fromOffset(center + diff * pixelsPerDegree, 4)
         end
     end
 
@@ -488,15 +530,15 @@ RunService.RenderStepped:Connect(function()
             compassTargetName.Text = visible and tostring(currentState.TargetLabel or "Quest Objective") or ""
             if visible then
                 local x = 220 + diff * (195 / 78)
-                questMarker.Position = UDim2.fromOffset(x, -2)
-                questDistance.Position = UDim2.fromOffset(x, 20)
+                questMarker.Position = UDim2.fromOffset(x, -3)
+                questDistance.Position = UDim2.fromOffset(x, 19)
                 questDistance.Text = tostring(math.floor(horizontal.Magnitude + .5)) .. " studs"
             end
         else
             questMarker.Visible = true
             questDistance.Visible = true
-            questMarker.Position = UDim2.fromOffset(220, -2)
-            questDistance.Position = UDim2.fromOffset(220, 20)
+            questMarker.Position = UDim2.fromOffset(220, -3)
+            questDistance.Position = UDim2.fromOffset(220, 19)
             questDistance.Text = "HERE"
             compassTargetName.Text = tostring(currentState.TargetLabel or "Quest Objective")
         end
@@ -524,4 +566,11 @@ player:GetAttributeChangedSignal("VillageReady"):Connect(function()
     else
         closeDialogue()
     end
+end)
+
+local questWorld = world:WaitForChild("QuestWorld")
+questWorld.ChildAdded:Connect(function()
+    task.defer(function()
+        applyNpcState(currentNpcState, currentState and currentState.Stage == "FindMira")
+    end)
 end)
