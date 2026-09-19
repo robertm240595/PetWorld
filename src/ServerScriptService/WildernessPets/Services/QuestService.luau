@@ -1369,17 +1369,6 @@ local function completeQuest(player, chain)
     root.Completed[chain.Id] = true
     root.Quests[chain.Id] = nil
     root.ActiveQuestIds[chain.Id] = nil
-    if chain.Id == "SaddleUp" then
-        if nextStage.Id == "EquipHorse" then
-            QuestRemote:FireClient(player, "TutorialGuide", {
-                Kind = "Mount",
-                MountId = state.TargetMountId,
-            })
-        elseif nextStage.Id == "ReturnMounted" then
-            QuestRemote:FireClient(player, "TutorialGuide", {Kind = "Clear"})
-        end
-    end
-
     if chain.Id == "BeastHandlingTutorial" then
         player:SetAttribute("TutorialHomeGuide", false)
     end
@@ -1435,6 +1424,17 @@ local function advanceStage(player, chain, state)
     if chain.Special == "Hollowfang" and nextStage.Id == "FindMira" then
         moveMiraOutside(player)
         QuestRemote:FireClient(player, "Toast", "The last Hollowfang Bear falls. Scout Mira is coming out of the cave!")
+    end
+
+    if chain.Id == "SaddleUp" then
+        if nextStage.Id == "EquipHorse" then
+            QuestRemote:FireClient(player, "TutorialGuide", {
+                Kind = "Mount",
+                MountId = state.TargetMountId,
+            })
+        elseif nextStage.Id == "ReturnMounted" then
+            QuestRemote:FireClient(player, "TutorialGuide", {Kind = "Clear"})
+        end
     end
 
     if chain.Id == "BeastHandlingTutorial" then
