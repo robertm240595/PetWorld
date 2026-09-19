@@ -126,6 +126,8 @@ homeButton.Activated:Connect(function()
  remotes.Game:FireServer("ReturnToPlot")
 end)
 
+local captureGame
+
 local collectionButton=Instance.new("TextButton")
 collectionButton.Name="PetCollectionButton"
 collectionButton.AnchorPoint=Vector2.new(0,1)
@@ -617,7 +619,6 @@ local function setTarget(m)
  updateTarget()
 end
 
-local captureGame
 local function endCaptureGame(keepTarget)
  local state=captureGame
  if not state then return end
