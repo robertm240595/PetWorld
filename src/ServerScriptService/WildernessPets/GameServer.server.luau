@@ -29,11 +29,13 @@ local MonsterService = require(script.Parent.Services.MonsterService)
 local QuestService = require(script.Parent.Services.QuestService)
 local BossTravelService = require(script.Parent.Services.BossTravelService)
 local LootService = require(script.Parent.Services.LootService)
+local LootTraderService = require(script.Parent.Services.LootTraderService)
 local WorldBossRewardService = require(script.Parent.Services.WorldBossRewardService)
 local TestCommandService = require(script.Parent.Services.TestCommandService)
 MonsterService:Init()
 MountService:Init()
 LootService:Init()
+LootTraderService:Init()
 WorldBossRewardService:Init()
 QuestService:Init()
 BossTravelService:Init()
@@ -393,6 +395,17 @@ ShopRemote.OnServerEvent:Connect(function(player, action, ...)
             QuestService:OnPlayerAction(player, "BuybackPet")
         end
         ShopRemote:FireClient(player, "PetBuybackResult", success, message)
+
+    elseif action == "SellLootItem" then
+        local payload = type(value) == "table" and value or {}
+        local itemName = tostring(payload.Name or "")
+        local quantity = math.max(1, math.floor(tonumber(payload.Quantity) or 1))
+        local success, message, amount = LootTraderService:Sell(player, itemName, quantity)
+        ShopRemote:FireClient(player, "LootTradeResult", success, message, amount or 0)
+
+    elseif action == "SellAllLoot" then
+        local success, message, amount = LootTraderService:SellAll(player)
+        ShopRemote:FireClient(player, "LootTradeResult", success, message, amount or 0)
 
     elseif action == "BuyBackpack" then
         local allowed, gateMessage = QuestService:CanLeatherTrade(player)
