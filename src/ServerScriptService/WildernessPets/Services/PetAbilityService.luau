@@ -600,14 +600,15 @@ function Service:UseAbility(player, session, slot, allSessions)
             local part = targetPart(target)
 
             if info.DamageScale and part then
-                local raw = getBaseDamage(pet) * math.max(0, tonumber(info.DamageScale) or 0)
+                local damageScale = math.max(0, tonumber(info.DamageScale) or 0)
                 if info.ExecuteDamageScale then
                     local hp = math.max(0, tonumber(target:GetAttribute("Health")) or 0)
                     local maximum = math.max(1, tonumber(target:GetAttribute("MaxHealth")) or hp)
                     if hp / maximum <= math.max(0, tonumber(info.ExecuteHealthPercent) or 0.30) then
-                        raw = getBaseDamage(pet) * math.max(raw, tonumber(info.ExecuteDamageScale) or info.DamageScale)
+                        damageScale = math.max(damageScale, tonumber(info.ExecuteDamageScale) or damageScale)
                     end
                 end
+                local raw = getBaseDamage(pet) * damageScale
 
                 local dealt
                 local function strike()
