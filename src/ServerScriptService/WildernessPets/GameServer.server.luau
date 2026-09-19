@@ -14,6 +14,7 @@ local PetModelFactory = require(script.Parent.Systems.PetModelFactory)
 
 local DataService = require(script.Parent.Services.PlayerDataService)
 local PetService = require(script.Parent.Services.PetService)
+local MountService = require(script.Parent.Services.MountService)
 local PlotService = require(script.Parent.Services.PlotService)
 local ShopService = require(script.Parent.Services.ShopService)
 local ArenaService = require(script.Parent.Services.ArenaService)
@@ -28,6 +29,7 @@ local MonsterService = require(script.Parent.Services.MonsterService)
 local QuestService = require(script.Parent.Services.QuestService)
 local LootService = require(script.Parent.Services.LootService)
 MonsterService:Init()
+MountService:Init()
 LootService:Init()
 QuestService:Init()
 BeastTraderService:Init()
@@ -71,6 +73,7 @@ local function setupPlayer(player)
     player.CharacterAdded:Connect(function(character)
         teleportToPlot(player, character)
         task.defer(function()
+            MountService:Restore(player)
             PotionService:ApplyCharacterEffects(player)
         end)
     end)
@@ -78,6 +81,7 @@ local function setupPlayer(player)
     if player.Character then
         task.spawn(function()
             teleportToPlot(player, player.Character)
+            MountService:Restore(player)
             PotionService:ApplyCharacterEffects(player)
         end)
     end
@@ -90,6 +94,7 @@ end
 Players.PlayerAdded:Connect(setupPlayer)
 
 Players.PlayerRemoving:Connect(function(player)
+    MountService:PlayerRemoving(player)
     LootService:PlayerRemoving(player)
     QuestService:PlayerRemoving(player)
     PlotService:Release(player)
@@ -117,6 +122,9 @@ GetState.OnServerInvoke = function(player)
         InventoryCapacity = math.max(tonumber(Config.MaxInventory) or 25, tonumber(data.InventoryCapacity) or tonumber(Config.MaxInventory) or 25),
         BackpackName = data.BackpackName or "Starter Bag",
         Pets = PetService:GetPets(player),
+        Mounts = MountService:GetMounts(player),
+        MountCollection = data.MountCollection or {},
+        EquippedMountId = data.EquippedMountId or "",
         PetBuyback = data.PetBuyback or {},
         LassoBuyback = data.LassoBuyback or {},
         ActiveEffects = data.ActiveEffects or {},
@@ -191,6 +199,18 @@ PetsRemote.OnServerEvent:Connect(function(player, action, ...)
     elseif action == "Unequip" then
         unequipCompanion(player)
         PetsRemote:FireClient(player, "Updated", true)
+
+    elseif action == "EquipMount" then
+        local mountId = args[1]
+        local success, message = MountService:Equip(player, mountId)
+        if success then
+            QuestService:OnPlayerAction(player, "EquipMount", {MountId = mountId})
+        end
+        PetsRemote:FireClient(player, "MountUpdated", success, message)
+
+    elseif action == "UnequipMount" then
+        local success, message = MountService:Unequip(player)
+        PetsRemote:FireClient(player, "MountUpdated", success, message)
 
     elseif action == "ClaimCollectionReward" then
         local data = DataService:Get(player)
@@ -578,6 +598,7 @@ end
 local function validMonster(monster)
     local folder = monsterFolder()
     if not folder or typeof(monster) ~= "Instance" or monster.Parent ~= folder or not monster:IsA("Model") then return false end
+    if monster:GetAttribute("CreatureType") == "Mount" or monster:GetAttribute("QuestNoCombat") then return false end
     if monster:GetAttribute("Dead") or monster:GetAttribute("Captured") or monster:GetAttribute("BeingCaptured") then return false end
     return monsterPart(monster) ~= nil
 end
