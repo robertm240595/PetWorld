@@ -1304,6 +1304,8 @@ local function returnToPlot(player)
     root.AssemblyLinearVelocity = Vector3.zero
     root.AssemblyAngularVelocity = Vector3.zero
     character:PivotTo(spawn.CFrame + Vector3.new(0, 5, 0))
+    player:SetAttribute("BossArena", "")
+    QuestService:PushState(player)
     GameRemote:FireClient(player, "HomeTeleport", true, "Returned to your plot.", 0)
     return true
 end
