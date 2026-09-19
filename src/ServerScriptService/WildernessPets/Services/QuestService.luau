@@ -8,6 +8,7 @@ local Config = require(Root.Shared.Config)
 
 local DataService = require(script.Parent.PlayerDataService)
 local PetService = require(script.Parent.PetService)
+local LootService = require(script.Parent.LootService)
 local ModelFactory = require(script.Parent.Parent.Systems.PetModelFactory)
 local Animator = require(script.Parent.Parent.Systems.PetAnimator)
 
@@ -21,7 +22,7 @@ local caveInner
 local npcModels = {}
 local personal = {}
 
-local QUEST_VERSION = 2
+local QUEST_VERSION = 3
 
 local function getRoot(player)
     local character = player.Character
@@ -220,6 +221,34 @@ local function migrateQuestData(data)
         Completed = {},
         Quests = {},
     }
+
+    -- Version 2 used the same chains but did not yet contain material turn-in
+    -- stages. Preserve the player's logical stage when those new steps are
+    -- inserted rather than interpreting the old numeric index incorrectly.
+    if old.Version == 2 then
+        migrated.ActiveQuestId = type(old.ActiveQuestId) == "string" and old.ActiveQuestId or ""
+        migrated.Completed = type(old.Completed) == "table" and old.Completed or {}
+
+        local stageMaps = {
+            CaravanTrouble = {[1]=1, [2]=3, [3]=5},
+            MoonlightProblems = {[1]=1, [2]=2, [3]=4},
+            HollowfangMystery = {[1]=1, [2]=3, [3]=5},
+        }
+
+        for questId, oldState in pairs(type(old.Quests) == "table" and old.Quests or {}) do
+            if type(oldState) == "table" then
+                local oldIndex = math.max(1, math.floor(tonumber(oldState.StageIndex) or 1))
+                local map = stageMaps[questId]
+                migrated.Quests[questId] = {
+                    StageIndex = map and (map[oldIndex] or oldIndex) or oldIndex,
+                    Count = math.max(0, math.floor(tonumber(oldState.Count) or 0)),
+                }
+            end
+        end
+
+        data.QuestProgress = migrated
+        return migrated
+    end
 
     local legacy = old.HollowfangRescue
     if type(legacy) == "table" then
@@ -428,6 +457,8 @@ local function stageCount(player, state, stage)
         return #eligiblePets(player, stage)
     elseif stage.Type == "InspectPet" then
         return inspectCount(player, stage)
+    elseif stage.Type == "ItemTurnIn" then
+        return LootService:GetCount(player, stage.Item)
     elseif stage.Type == "Kill" then
         return state.Count
     elseif stage.Type == "Talk" then
@@ -671,7 +702,8 @@ local function nearestWildTarget(player, stage)
             and not model:GetAttribute("Dead")
             and not model:GetAttribute("Captured")
             and not model:GetAttribute("QuestOwnerUserId") then
-            local speciesMatches = not stage.Species or model:GetAttribute("Species") == stage.Species
+            local wantedSpecies = stage.Species or stage.SourceSpecies
+        local speciesMatches = not wantedSpecies or model:GetAttribute("Species") == wantedSpecies
             local rarityMatches = not stage.Rarity or model:GetAttribute("Rarity") == stage.Rarity
             local part = model.PrimaryPart or model:FindFirstChildWhichIsA("BasePart", true)
             if speciesMatches and rarityMatches and part then
@@ -729,7 +761,7 @@ local function stageReadyForNPC(player, chain, state, stage)
         return true
     elseif stage.Type == "CaptureReturn" then
         return stageCount(player, state, stage) >= math.max(1, tonumber(stage.Required) or 1)
-    elseif stage.Type == "InspectPet" then
+    elseif stage.Type == "InspectPet" or stage.Type == "ItemTurnIn" then
         return stageCount(player, state, stage) >= math.max(1, tonumber(stage.Required) or 1)
     end
     return false
@@ -832,10 +864,10 @@ function Service:GetClientState(player)
     elseif stage.Type == "Talk" then
         targetPosition = npcPosition(chain.NPC)
         targetLabel = npcName(chain.NPC)
-    elseif (stage.Type == "CaptureReturn" or stage.Type == "InspectPet") and count >= required then
+    elseif (stage.Type == "CaptureReturn" or stage.Type == "InspectPet" or stage.Type == "ItemTurnIn") and count >= required then
         targetPosition = npcPosition(chain.NPC)
         targetLabel = npcName(chain.NPC)
-    elseif stage.Type == "CaptureReturn" or stage.Type == "Kill" then
+    elseif stage.Type == "CaptureReturn" or stage.Type == "Kill" or stage.Type == "ItemTurnIn" then
         targetPosition, targetLabel = nearestWildTarget(player, stage)
     elseif stage.Type == "Action" then
         targetPosition, targetLabel = actionObjectiveTarget(player, stage)
@@ -1033,6 +1065,30 @@ function Service:TalkToNPC(player, npcId)
             return
         end
 
+        if stage.Type == "ItemTurnIn" then
+            local count = stageCount(player, state, stage)
+            local required = math.max(1, tonumber(stage.Required) or 1)
+            if count >= required then
+                sendDialogue(
+                    player,
+                    npcName(npcId),
+                    "You have the materials I need. Hand them over and I'll add them to the evidence for this job.",
+                    {
+                        {Text = "HAND OVER " .. tostring(required) .. " " .. tostring(stage.Item), Action = "TurnInItems:" .. chain.Id},
+                        {Text = "KEEP THEM FOR NOW", Action = "Close"},
+                    }
+                )
+            else
+                sendDialogue(
+                    player,
+                    npcName(npcId),
+                    "You currently have " .. tostring(count) .. " of " .. tostring(required) .. " " .. tostring(stage.Item) .. ". Collect the matching creature's loot bags and come back when you have enough.",
+                    {{Text="CLOSE",Action="Close"}}
+                )
+            end
+            return
+        end
+
         if stage.Type == "InspectPet" then
             local count = stageCount(player, state, stage)
             if count >= math.max(1, tonumber(stage.Required) or 1) then
@@ -1155,6 +1211,24 @@ function Service:HandleAction(player, action)
             Service:PushState(player)
             return
         end
+        advanceStage(player, chain, state)
+        return
+    end
+
+    local itemTurnInId = action:match("^TurnInItems:(.+)$")
+    if itemTurnInId then
+        if itemTurnInId ~= chain.Id or stage.Type ~= "ItemTurnIn" then return end
+        local model = npcModels[chain.NPC]
+        if model and not near(player, model:GetPivot().Position, 16) then return end
+
+        local required = math.max(1, math.floor(tonumber(stage.Required) or 1))
+        if LootService:GetCount(player, stage.Item) < required
+            or not LootService:ConsumeItem(player, stage.Item, required) then
+            sendDialogue(player, npcName(chain.NPC), "You don't have enough of the requested material yet.", {{Text="CLOSE",Action="Close"}})
+            Service:PushState(player)
+            return
+        end
+
         advanceStage(player, chain, state)
         return
     end
