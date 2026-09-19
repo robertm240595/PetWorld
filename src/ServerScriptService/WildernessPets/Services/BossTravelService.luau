@@ -210,7 +210,9 @@ local function transition(player, destination, arenaName, title, subtitle, quest
         QuestService:PushState(player)
     end)
 
-    task.wait(.16)
+    -- Leave the screen covered briefly after a long same-place move so
+    -- StreamingEnabled clients have time to receive the remote cavern geometry.
+    task.wait(.45)
     BossTravelRemote:FireClient(player, "FadeIn", title, subtitle)
     return true
 end
