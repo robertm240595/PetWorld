@@ -12,6 +12,7 @@ local PetsRemote = Remotes:WaitForChild("Pets")
 local ShopRemote = Remotes:WaitForChild("Shop")
 local ArenaRemote = Remotes:WaitForChild("Arena")
 local QuestRemote = Remotes:WaitForChild("Quest")
+local LootRemote = Remotes:WaitForChild("Loot")
 local GetState = Remotes:WaitForChild("GetState")
 local Config = require(Root:WaitForChild("Shared"):WaitForChild("Config"))
 
@@ -1681,6 +1682,12 @@ end)
 
 QuestRemote.OnClientEvent:Connect(function(action)
     if action == "Reward" then
+        showHUD()
+    end
+end)
+
+LootRemote.OnClientEvent:Connect(function(action, success)
+    if action == "CollectResult" and success == true then
         showHUD()
     end
 end)
