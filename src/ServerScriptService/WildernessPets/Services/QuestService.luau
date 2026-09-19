@@ -1248,6 +1248,9 @@ local function completeQuest(player, chain)
     root.Completed[chain.Id] = true
     root.Quests[chain.Id] = nil
     root.ActiveQuestIds[chain.Id] = nil
+    if chain.Id == "BeastHandlingTutorial" then
+        player:SetAttribute("TutorialHomeGuide", false)
+    end
 
     local current = personal[player]
     if chain.Id == "HollowfangRescue" and current and current.Mira and current.Mira.Parent then
@@ -1299,6 +1302,7 @@ local function advanceStage(player, chain, state)
     end
 
     if chain.Id == "BeastHandlingTutorial" then
+        player:SetAttribute("TutorialHomeGuide", nextStage.Id == "StartHealing")
         if nextStage.Id == "RenameCompanion" then
             QuestRemote:FireClient(player, "TutorialGuide", {
                 Kind = "Rename",
@@ -1873,6 +1877,10 @@ function Service:PlayerReady(player)
     end
 
     local _, _, tutorial, tutorialState, tutorialStage = chainStage(player, "BeastHandlingTutorial")
+    player:SetAttribute(
+        "TutorialHomeGuide",
+        tutorial ~= nil and tutorialStage ~= nil and tutorialStage.Id == "StartHealing"
+    )
     if tutorial and tutorialStage then
         if tutorialStage.Id == "RowanChallenge" then
             spawnTutorialSpar(player)
