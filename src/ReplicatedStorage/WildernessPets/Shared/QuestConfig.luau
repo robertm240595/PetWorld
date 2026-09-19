@@ -248,6 +248,22 @@ QuestConfig.Chains = {
         },
     },
 
+    RarityArchiveMythic = {
+        Id = "RarityArchiveMythic",
+        Name = "Beyond Legend",
+        NPC = "Vale",
+        RequiredStrength = 95,
+        RequiredLasso = "Mystic Lasso",
+        Priority = 41,
+        Prerequisite = "RarityArchiveLegendary",
+        Intro = "There is one final wilderness record I want before we start talking about creatures that belong to world-boss stories. Show me a living Mythic pet.",
+        CompleteText = "A Mythic creature, alive and documented. Anything beyond this belongs to legends of world bosses and events — and we're not ready to write that chapter yet.",
+        Reward = {Coins = 100000, Gems = 150},
+        Stages = {
+            {Id="Mythic", Type="InspectPet", Rarity="Mythic", Required=1, Objective="Show Historian Vale any Mythic pet.", Detail="Mystic Lasso is strong enough for Mythic captures."},
+        },
+    },
+
     HollowfangMystery = {
         Id = "HollowfangMystery",
         Name = "Beneath Hollowfang",
