@@ -11,6 +11,7 @@ local CaptureRemote = Remotes:WaitForChild("Capture")
 local Services = script.Parent
 local DataService = require(Services:WaitForChild("PlayerDataService"))
 local PetService = require(Services:WaitForChild("PetService"))
+local MountService = require(Services:WaitForChild("MountService"))
 local ActionLockService = require(Services:WaitForChild("ActionLockService"))
 local QuestService = require(Services:WaitForChild("QuestService"))
 local Config = require(Root:WaitForChild("Shared"):WaitForChild("Config"))
@@ -164,6 +165,13 @@ end
 local function createCapturedPet(player, species, imprint)
 	if PetService.Create then
 		return PetService:Create(player, species, {Imprint = imprint})
+	end
+	return nil
+end
+
+local function createCapturedMount(player, species, questMount)
+	if MountService.Create then
+		return MountService:Create(player, species, {QuestMount = questMount == true})
 	end
 	return nil
 end
@@ -362,22 +370,46 @@ function CaptureService:Resolve(player, challengeId, clickTime, timedOut, roundT
 
 	local data = getPlayerData(player)
 	local activeEffects = data and data.ActiveEffects or {}
-	local lucky = activeEffects and activeEffects.NextCaptureLuck == true
-	local imprint = PetService:RollImprint(lucky)
-	local pet = createCapturedPet(player, challenge.species, imprint)
-	if not pet then
-		monster:SetAttribute("Captured", false)
-		PetAnimator:PlayIdle(monster)
-		ActionLockService:End(player, "Capture")
-		CaptureRemote:FireClient(player, "Error", "Your pet could not be saved. Try again.")
-		return false, "Pet could not be saved.", true
+	local creatureType = challenge.creatureType or tostring(monster:GetAttribute("CreatureType") or "Pet")
+	local imprint
+	local capturedId
+
+	if creatureType == "Mount" then
+		local mount = createCapturedMount(
+			player,
+			challenge.species,
+			monster:GetAttribute("QuestMountTutorial") == true
+		)
+		if not mount then
+			monster:SetAttribute("Captured", false)
+			PetAnimator:PlayIdle(monster)
+			ActionLockService:End(player, "Capture")
+			CaptureRemote:FireClient(player, "Error", "Your mount collection is full or the mount could not be saved.")
+			return false, "Mount could not be saved.", true
+		end
+		capturedId = mount.Id
+		QuestService:OnPlayerAction(player, "CaptureMount", {
+			MountId = mount.Id,
+			Species = mount.Species,
+		})
+	else
+		local lucky = activeEffects and activeEffects.NextCaptureLuck == true
+		imprint = PetService:RollImprint(lucky)
+		local pet = createCapturedPet(player, challenge.species, imprint)
+		if not pet then
+			monster:SetAttribute("Captured", false)
+			PetAnimator:PlayIdle(monster)
+			ActionLockService:End(player, "Capture")
+			CaptureRemote:FireClient(player, "Error", "Your pet could not be saved. Try again.")
+			return false, "Pet could not be saved.", true
+		end
+		capturedId = pet.Id
+		if lucky and activeEffects then
+			activeEffects.NextCaptureLuck = false
+		end
+		QuestService:OnPlayerAction(player, "CapturePet", {PetId = pet.Id})
 	end
 
-	if lucky and activeEffects then
-		activeEffects.NextCaptureLuck = false
-	end
-
-	QuestService:OnPlayerAction(player, "CapturePet", {PetId = pet.Id})
 	player:SetAttribute("CombatTarget", "")
 
 	CaptureRemote:FireClient(
@@ -386,7 +418,9 @@ function CaptureService:Resolve(player, challengeId, clickTime, timedOut, roundT
 		challenge.species,
 		challenge.rarity,
 		challenge.lassoName,
-		imprint
+		imprint,
+		creatureType,
+		capturedId
 	)
 
 	monster:Destroy()
@@ -396,7 +430,7 @@ function CaptureService:Resolve(player, challengeId, clickTime, timedOut, roundT
 		refreshEvent:Fire(player)
 	end
 
-	-- Capturing grants no pet XP. Pet XP is awarded only by combat kills.
+	-- Capturing grants no pet XP. Mounts are a separate non-combat collection.
 	ActionLockService:End(player, "Capture")
 	return true, "Captured " .. challenge.species .. "!", true
 end
@@ -410,11 +444,8 @@ function CaptureService:Capture(player, monster)
 	end
 
 	local data = getPlayerData(player)
-	if not data or type(data.Pets) ~= "table" then
-		return false, "Pet backpack unavailable."
-	end
-	if #data.Pets >= (Config.MaxPets or 60) then
-		return false, "Your pet backpack is full (" .. tostring(Config.MaxPets or 60) .. "/" .. tostring(Config.MaxPets or 60) .. ")."
+	if not data then
+		return false, "Player collection unavailable."
 	end
 
 	local attemptTime = os.clock()
@@ -447,15 +478,33 @@ function CaptureService:Capture(player, monster)
 	end
 
 	local species, rarity, difficulty = getMonsterInfo(monster)
+	local creatureType = tostring(monster:GetAttribute("CreatureType") or "Pet")
+
+	if creatureType == "Mount" then
+		data.Mounts = type(data.Mounts) == "table" and data.Mounts or {}
+		if #data.Mounts >= math.max(1, tonumber(Config.MaxMounts) or 40) then
+			return false, "Your mount collection is full (" .. tostring(#data.Mounts) .. "/" .. tostring(Config.MaxMounts or 40) .. ")."
+		end
+	else
+		data.Pets = type(data.Pets) == "table" and data.Pets or {}
+		if #data.Pets >= (Config.MaxPets or 60) then
+			return false, "Your pet backpack is full (" .. tostring(Config.MaxPets or 60) .. "/" .. tostring(Config.MaxPets or 60) .. ")."
+		end
+	end
+
 	local lassoName, lassoStrength = getLassoStats(player)
 	local minimumStrength = tonumber((Config.RarityMinLassoStrength or {})[rarity]) or 0
+	if creatureType == "Mount" then
+		minimumStrength = math.max(minimumStrength, tonumber(Config.MountMinLassoStrength) or 25)
+	end
 
 	if lassoStrength < minimumStrength then
 		return false,
 			tostring(lassoName)
 			.. " is too weak to capture "
 			.. tostring(rarity)
-			.. " pets. Use a lasso with at least "
+			.. (creatureType == "Mount" and " mounts" or " pets")
+			.. ". Use a lasso with at least "
 			.. tostring(minimumStrength)
 			.. " Strength."
 	end
@@ -479,6 +528,7 @@ function CaptureService:Capture(player, monster)
 		monster = monster,
 		species = species,
 		rarity = rarity,
+		creatureType = creatureType,
 		lassoName = lassoName,
 		zoneStart = zoneStart,
 		zoneWidth = zoneWidth,
