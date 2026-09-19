@@ -655,6 +655,37 @@ local function spawnBearObjective(player)
     end
 end
 
+local function nearestWildTarget(player, stage)
+    local root = getRoot(player)
+    local folder = world and world:FindFirstChild("WildMonsters")
+    if not root or not folder then return nil, nil end
+
+    local bestModel
+    local bestDistance = math.huge
+    for _, model in ipairs(folder:GetChildren()) do
+        if model:IsA("Model")
+            and not model:GetAttribute("Dead")
+            and not model:GetAttribute("Captured")
+            and not model:GetAttribute("QuestOwnerUserId") then
+            local speciesMatches = not stage.Species or model:GetAttribute("Species") == stage.Species
+            local rarityMatches = not stage.Rarity or model:GetAttribute("Rarity") == stage.Rarity
+            local part = model.PrimaryPart or model:FindFirstChildWhichIsA("BasePart", true)
+            if speciesMatches and rarityMatches and part then
+                local distance = (root.Position - part.Position).Magnitude
+                if distance < bestDistance then
+                    bestDistance = distance
+                    bestModel = model
+                end
+            end
+        end
+    end
+
+    if not bestModel then return nil, nil end
+    local part = bestModel.PrimaryPart or bestModel:FindFirstChildWhichIsA("BasePart", true)
+    if not part then return nil, nil end
+    return part.Position, tostring(bestModel:GetAttribute("Species") or stage.Species or stage.Rarity or "Quest target")
+end
+
 local function stageReadyForNPC(player, chain, state, stage)
     if not stage then return false end
     if stage.Type == "Talk" then
@@ -766,6 +797,8 @@ function Service:GetClientState(player)
     elseif (stage.Type == "CaptureReturn" or stage.Type == "InspectPet") and count >= required then
         targetPosition = npcPosition(chain.NPC)
         targetLabel = npcName(chain.NPC)
+    elseif stage.Type == "CaptureReturn" or stage.Type == "Kill" then
+        targetPosition, targetLabel = nearestWildTarget(player, stage)
     end
 
     local progressText
