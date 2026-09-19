@@ -605,12 +605,17 @@ local function applyNpcState(npcs, miraMarker)
 end
 
 local function configureOwnedQuestMonster(model)
-    if not model:IsA("Model") or model:GetAttribute("QuestTutorialSpar") ~= true then return end
-    local visible = tonumber(model:GetAttribute("QuestOwnerUserId")) == player.UserId
+    if not model:IsA("Model") then return end
+    local owner = tonumber(model:GetAttribute("QuestOwnerUserId"))
+    if not owner then return end
+
+    local visible = owner == player.UserId
     for _, item in ipairs(model:GetDescendants()) do
         if item:IsA("BasePart") then
             item.LocalTransparencyModifier = visible and 0 or 1
         elseif item:IsA("BillboardGui") then
+            item.Enabled = visible
+        elseif item:IsA("PointLight") then
             item.Enabled = visible
         end
     end
