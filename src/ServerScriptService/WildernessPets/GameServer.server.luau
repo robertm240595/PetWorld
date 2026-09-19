@@ -10,6 +10,7 @@ local ArenaRemote = Remotes:WaitForChild("Arena")
 local GetState = Remotes:WaitForChild("GetState")
 local GameRemote = Remotes:WaitForChild("Game")
 local Config = require(Root.Shared.Config)
+local PetModelFactory = require(script.Parent.Systems.PetModelFactory)
 
 local DataService = require(script.Parent.Services.PlayerDataService)
 local PetService = require(script.Parent.Services.PetService)
@@ -450,12 +451,9 @@ local function validMonster(monster)
     if monster:GetAttribute("Dead") or monster:GetAttribute("Captured") or monster:GetAttribute("BeingCaptured") then return false end
     return monsterPart(monster) ~= nil
 end
-local function petTemplate(pet)
-    local templates = game.ServerStorage.WildernessPets.Monsters
-    local template = templates:FindFirstChild(pet.Species)
+local function petModel(pet)
     local info = Config.Pets[pet.Species]
-    if not template and info and info.AnimationSpecies then template = templates:FindFirstChild(info.AnimationSpecies) end
-    return template, info
+    return PetModelFactory:Create(pet.Species), info
 end
 local function destroyCompanion(session)
     if session and session.companion and session.companion.Parent then session.companion:Destroy() end
@@ -534,11 +532,13 @@ syncCompanionLabel = function(model, pet)
 end
 
 local function createCompanion(player, pet)
-    local template, info = petTemplate(pet)
-    if not template then return nil, "No creature mesh exists for "..tostring(pet.Species) end
+    local model, info = petModel(pet)
+    if not model then return nil, "No creature model exists for "..tostring(pet.Species) end
     local root = playerRoot(player)
-    if not root then return nil, "Character is not ready." end
-    local model = template:Clone()
+    if not root then
+        model:Destroy()
+        return nil, "Character is not ready."
+    end
     model.Name = "Companion_"..tostring(player.UserId)
     for _, item in ipairs(model:GetDescendants()) do
         if item:IsA("BillboardGui") then item:Destroy()

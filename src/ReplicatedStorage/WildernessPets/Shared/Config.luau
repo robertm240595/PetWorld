@@ -249,79 +249,95 @@ Config.Potions = {
     }
 }
 
-Config.Pets = {
-    Wolf = {
-        Rarity = "Common",
-        Health = 100,
-        Power = 20,
-        Defence = 12,
-        SellValue = 35
-    },
+Config.Pets = {}
 
-    Boar = {
-        Rarity = "Common",
-        Health = 125,
-        Power = 17,
-        Defence = 20,
-        SellValue = 40
-    },
-
-    Fox = {
-        Rarity = "Uncommon",
-        Health = 110,
-        Power = 28,
-        Defence = 15,
-        SellValue = 60
-    },
-
-    Bear = {
-        Rarity = "Rare",
-        Health = 220,
-        Power = 45,
-        Defence = 32,
-        SellValue = 100
-    },
-
-    Griffin = {
-        Rarity = "Epic",
-        Health = 300,
-        Power = 65,
-        Defence = 45,
-        SellValue = 175
-    },
-
-    Dragon = {
-        Rarity = "Legendary",
-        Health = 500,
-        Power = 100,
-        Defence = 70,
-        SellValue = 300
-    },
-
-    Leviathan = {
-        Rarity = "Mythic",
-        Health = 800,
-        Power = 145,
-        Defence = 100,
-        SellValue = 500
-    },
-
-    Starling = {
-        Rarity = "Limited",
-        Health = 650,
-        Power = 160,
-        Defence = 80,
-        SellValue = 650
-    },
-
-    AncientTitan = {
-        Rarity = "Ancient",
-        Health = 1200,
-        Power = 210,
-        Defence = 150,
-        SellValue = 1000
+local function addPet(name, rarity, health, power, defence, sellValue, options)
+    options = options or {}
+    Config.Pets[name] = {
+        Rarity = rarity,
+        Health = health,
+        Power = power,
+        Defence = defence,
+        SellValue = sellValue,
+        SpawnMode = options.SpawnMode or "Wild",
+        TimeOfDay = options.TimeOfDay,
+        AnimationSpecies = options.AnimationSpecies or name,
+        TemplateSpecies = options.TemplateSpecies,
+        Legacy = options.Legacy == true,
+        Event = options.Event,
+        WorldBoss = options.WorldBoss,
+        Visual = options.Visual
     }
-}
+end
+
+addPet("Wolf", "Common", 100, 20, 12, 35, {SpawnMode = "Wild", TimeOfDay = "Day", AnimationSpecies = "Wolf", Visual = {Archetype = "Quadruped", Color = Color3.fromRGB(120, 126, 132), Accent = Color3.fromRGB(220, 220, 220), Scale = 1.00, Feature = "mane"}})
+addPet("Boar", "Common", 125, 17, 20, 40, {SpawnMode = "Wild", TimeOfDay = "Day", AnimationSpecies = "Boar", Visual = {Archetype = "Quadruped", Color = Color3.fromRGB(102, 72, 52), Accent = Color3.fromRGB(168, 126, 84), Scale = 1.05, Feature = "tusks"}})
+addPet("Fox", "Common", 95, 24, 11, 38, {SpawnMode = "Wild", TimeOfDay = "Day", AnimationSpecies = "Fox", Visual = {Archetype = "Quadruped", Color = Color3.fromRGB(201, 104, 48), Accent = Color3.fromRGB(245, 215, 170), Scale = 0.90, Feature = "tail"}})
+addPet("Hare", "Common", 82, 22, 9, 34, {SpawnMode = "Wild", TimeOfDay = "Day", AnimationSpecies = "Fox", Visual = {Archetype = "Quadruped", Color = Color3.fromRGB(176, 157, 132), Accent = Color3.fromRGB(235, 224, 205), Scale = 0.75, Feature = "ears"}})
+addPet("Hedgehog", "Common", 110, 18, 18, 39, {SpawnMode = "Wild", TimeOfDay = "Day", AnimationSpecies = "Boar", Visual = {Archetype = "Quadruped", Color = Color3.fromRGB(105, 82, 65), Accent = Color3.fromRGB(188, 163, 123), Scale = 0.70, Feature = "spikes"}})
+addPet("Moon Bat", "Common", 85, 23, 9, 40, {SpawnMode = "Wild", TimeOfDay = "Night", AnimationSpecies = "MoonBat", TemplateSpecies = "MoonBat", Visual = {Archetype = "Bat", Color = Color3.fromRGB(70, 78, 112), Accent = Color3.fromRGB(151, 164, 235), Scale = 0.80, Feature = "ears"}})
+addPet("Raccoon", "Common", 105, 21, 14, 38, {SpawnMode = "Wild", TimeOfDay = "Night", AnimationSpecies = "Fox", Visual = {Archetype = "Quadruped", Color = Color3.fromRGB(93, 97, 102), Accent = Color3.fromRGB(210, 214, 220), Scale = 0.85, Feature = "mask"}})
+addPet("Badger", "Common", 120, 19, 19, 41, {SpawnMode = "Wild", TimeOfDay = "Night", AnimationSpecies = "Boar", Visual = {Archetype = "Quadruped", Color = Color3.fromRGB(72, 75, 79), Accent = Color3.fromRGB(228, 228, 220), Scale = 0.90, Feature = "stripe"}})
+addPet("Opossum", "Common", 92, 20, 10, 35, {SpawnMode = "Wild", TimeOfDay = "Night", AnimationSpecies = "Fox", Visual = {Archetype = "Quadruped", Color = Color3.fromRGB(146, 138, 132), Accent = Color3.fromRGB(226, 202, 196), Scale = 0.80, Feature = "tail"}})
+addPet("Field Mouse", "Common", 78, 18, 8, 32, {SpawnMode = "Wild", TimeOfDay = "Night", AnimationSpecies = "Fox", Visual = {Archetype = "Quadruped", Color = Color3.fromRGB(134, 112, 91), Accent = Color3.fromRGB(219, 184, 165), Scale = 0.62, Feature = "ears"}})
+addPet("River Otter", "Uncommon", 130, 29, 18, 58, {SpawnMode = "Wild", TimeOfDay = "Day", AnimationSpecies = "Fox", Visual = {Archetype = "Quadruped", Color = Color3.fromRGB(91, 74, 58), Accent = Color3.fromRGB(167, 131, 96), Scale = 0.90, Feature = "tail"}})
+addPet("Red Panda", "Uncommon", 118, 31, 16, 60, {SpawnMode = "Wild", TimeOfDay = "Day", AnimationSpecies = "Fox", Visual = {Archetype = "Quadruped", Color = Color3.fromRGB(181, 78, 51), Accent = Color3.fromRGB(242, 220, 198), Scale = 0.88, Feature = "mask"}})
+addPet("Mountain Goat", "Uncommon", 150, 28, 26, 64, {SpawnMode = "Wild", TimeOfDay = "Day", AnimationSpecies = "Boar", Visual = {Archetype = "Quadruped", Color = Color3.fromRGB(190, 185, 169), Accent = Color3.fromRGB(99, 83, 69), Scale = 1.00, Feature = "horns"}})
+addPet("Lynx", "Uncommon", 128, 34, 17, 62, {SpawnMode = "Wild", TimeOfDay = "Day", AnimationSpecies = "Wolf", Visual = {Archetype = "Quadruped", Color = Color3.fromRGB(166, 140, 110), Accent = Color3.fromRGB(72, 64, 58), Scale = 0.95, Feature = "ears"}})
+addPet("Peacock", "Uncommon", 112, 33, 14, 61, {SpawnMode = "Wild", TimeOfDay = "Day", AnimationSpecies = "Starling", Visual = {Archetype = "Bird", Color = Color3.fromRGB(54, 121, 105), Accent = Color3.fromRGB(83, 171, 231), Scale = 0.95, Feature = "fan"}})
+addPet("Barn Owl", "Uncommon", 105, 32, 13, 60, {SpawnMode = "Wild", TimeOfDay = "Night", AnimationSpecies = "Starling", Visual = {Archetype = "Bird", Color = Color3.fromRGB(168, 140, 103), Accent = Color3.fromRGB(234, 223, 194), Scale = 0.90, Feature = "crest"}})
+addPet("Porcupine", "Uncommon", 145, 27, 28, 65, {SpawnMode = "Wild", TimeOfDay = "Night", AnimationSpecies = "Boar", Visual = {Archetype = "Quadruped", Color = Color3.fromRGB(96, 80, 64), Accent = Color3.fromRGB(224, 214, 193), Scale = 0.85, Feature = "spikes"}})
+addPet("Pangolin", "Uncommon", 155, 25, 30, 66, {SpawnMode = "Wild", TimeOfDay = "Night", AnimationSpecies = "Boar", Visual = {Archetype = "Lizard", Color = Color3.fromRGB(133, 100, 69), Accent = Color3.fromRGB(207, 170, 117), Scale = 0.90, Feature = "plates"}})
+addPet("Lantern Gecko", "Uncommon", 108, 35, 12, 63, {SpawnMode = "Wild", TimeOfDay = "Night", AnimationSpecies = "Fox", Visual = {Archetype = "Lizard", Color = Color3.fromRGB(54, 123, 87), Accent = Color3.fromRGB(119, 255, 180), Scale = 0.75, Feature = "glow"}})
+addPet("Glow Beetle", "Uncommon", 100, 30, 24, 62, {SpawnMode = "Wild", TimeOfDay = "Night", AnimationSpecies = "MoonBat", Visual = {Archetype = "Beetle", Color = Color3.fromRGB(41, 61, 70), Accent = Color3.fromRGB(114, 255, 199), Scale = 0.68, Feature = "glow"}})
+addPet("Bear", "Rare", 220, 45, 32, 100, {SpawnMode = "Wild", TimeOfDay = "Day", AnimationSpecies = "Bear", Visual = {Archetype = "Quadruped", Color = Color3.fromRGB(105, 78, 56), Accent = Color3.fromRGB(174, 137, 99), Scale = 1.20, Feature = "mane"}})
+addPet("Thunder Ram", "Rare", 205, 52, 37, 112, {SpawnMode = "Wild", TimeOfDay = "Day", AnimationSpecies = "Boar", Visual = {Archetype = "Quadruped", Color = Color3.fromRGB(112, 118, 129), Accent = Color3.fromRGB(108, 190, 255), Scale = 1.05, Feature = "horns"}})
+addPet("Jade Tortoise", "Rare", 245, 39, 44, 108, {SpawnMode = "Wild", TimeOfDay = "Day", AnimationSpecies = "Boar", Visual = {Archetype = "Turtle", Color = Color3.fromRGB(58, 115, 82), Accent = Color3.fromRGB(104, 201, 141), Scale = 1.00, Feature = "shell"}})
+addPet("Sunscale Raptor", "Rare", 180, 55, 28, 115, {SpawnMode = "Wild", TimeOfDay = "Day", AnimationSpecies = "Dragon", Visual = {Archetype = "Raptor", Color = Color3.fromRGB(183, 105, 46), Accent = Color3.fromRGB(255, 204, 84), Scale = 1.00, Feature = "crest"}})
+addPet("Shadow Stag", "Rare", 200, 49, 29, 120, {SpawnMode = "Wild", TimeOfDay = "Night", AnimationSpecies = "ShadowStag", TemplateSpecies = "ShadowStag", Visual = {Archetype = "Quadruped", Color = Color3.fromRGB(53, 57, 74), Accent = Color3.fromRGB(123, 98, 180), Scale = 1.08, Feature = "antlers"}})
+addPet("Crystal Scorpion", "Rare", 175, 54, 36, 118, {SpawnMode = "Wild", TimeOfDay = "Night", AnimationSpecies = "Boar", Visual = {Archetype = "Scorpion", Color = Color3.fromRGB(74, 105, 138), Accent = Color3.fromRGB(139, 221, 255), Scale = 0.95, Feature = "crystal"}})
+addPet("Moon Moth", "Rare", 165, 51, 24, 110, {SpawnMode = "Wild", TimeOfDay = "Night", AnimationSpecies = "MoonBat", Visual = {Archetype = "Bird", Color = Color3.fromRGB(88, 76, 116), Accent = Color3.fromRGB(190, 173, 255), Scale = 0.88, Feature = "glow"}})
+addPet("Dusk Cobra", "Rare", 190, 53, 30, 116, {SpawnMode = "Wild", TimeOfDay = "Night", AnimationSpecies = "Leviathan", Visual = {Archetype = "Serpent", Color = Color3.fromRGB(65, 58, 78), Accent = Color3.fromRGB(183, 91, 207), Scale = 1.00, Feature = "hood"}})
+addPet("Griffin", "Epic", 300, 65, 45, 175, {SpawnMode = "Wild", TimeOfDay = "Day", AnimationSpecies = "Griffin", Visual = {Archetype = "Quadruped", Color = Color3.fromRGB(179, 133, 70), Accent = Color3.fromRGB(245, 221, 151), Scale = 1.18, Feature = "wings"}})
+addPet("Kirin", "Epic", 285, 72, 47, 185, {SpawnMode = "Wild", TimeOfDay = "Day", AnimationSpecies = "ShadowStag", Visual = {Archetype = "Quadruped", Color = Color3.fromRGB(224, 211, 176), Accent = Color3.fromRGB(94, 224, 204), Scale = 1.10, Feature = "horns"}})
+addPet("Ember Salamander", "Epic", 260, 76, 40, 180, {SpawnMode = "Wild", TimeOfDay = "Day", AnimationSpecies = "Dragon", Visual = {Archetype = "Lizard", Color = Color3.fromRGB(156, 61, 39), Accent = Color3.fromRGB(255, 139, 65), Scale = 1.00, Feature = "glow"}})
+addPet("Storm Roc", "Epic", 280, 74, 42, 188, {SpawnMode = "Wild", TimeOfDay = "Day", AnimationSpecies = "Griffin", Visual = {Archetype = "Bird", Color = Color3.fromRGB(83, 101, 121), Accent = Color3.fromRGB(141, 206, 255), Scale = 1.25, Feature = "crest"}})
+addPet("Manticore", "Epic", 320, 70, 48, 190, {SpawnMode = "Wild", TimeOfDay = "Night", AnimationSpecies = "Griffin", Visual = {Archetype = "Quadruped", Color = Color3.fromRGB(104, 64, 74), Accent = Color3.fromRGB(222, 111, 125), Scale = 1.15, Feature = "wings"}})
+addPet("Basilisk", "Epic", 305, 75, 46, 192, {SpawnMode = "Wild", TimeOfDay = "Night", AnimationSpecies = "Dragon", Visual = {Archetype = "Serpent", Color = Color3.fromRGB(61, 100, 72), Accent = Color3.fromRGB(149, 226, 113), Scale = 1.12, Feature = "crest"}})
+addPet("Nightmare Steed", "Epic", 295, 73, 44, 186, {SpawnMode = "Wild", TimeOfDay = "Night", AnimationSpecies = "ShadowStag", Visual = {Archetype = "Quadruped", Color = Color3.fromRGB(45, 45, 55), Accent = Color3.fromRGB(177, 74, 215), Scale = 1.18, Feature = "mane"}})
+addPet("Void Weaver", "Epic", 250, 78, 38, 184, {SpawnMode = "Wild", TimeOfDay = "Night", AnimationSpecies = "MoonBat", Visual = {Archetype = "Arachnid", Color = Color3.fromRGB(48, 41, 65), Accent = Color3.fromRGB(140, 91, 221), Scale = 1.00, Feature = "glow"}})
+addPet("Phoenix", "Legendary", 430, 108, 58, 300, {SpawnMode = "Wild", TimeOfDay = "Day", AnimationSpecies = "Griffin", Visual = {Archetype = "Bird", Color = Color3.fromRGB(212, 75, 36), Accent = Color3.fromRGB(255, 214, 74), Scale = 1.25, Feature = "flame"}})
+addPet("Unicorn", "Legendary", 410, 96, 70, 290, {SpawnMode = "Wild", TimeOfDay = "Day", AnimationSpecies = "ShadowStag", Visual = {Archetype = "Quadruped", Color = Color3.fromRGB(228, 226, 223), Accent = Color3.fromRGB(168, 121, 255), Scale = 1.15, Feature = "horns"}})
+addPet("Celestial Lion", "Legendary", 500, 102, 74, 315, {SpawnMode = "Wild", TimeOfDay = "Day", AnimationSpecies = "Bear", Visual = {Archetype = "Quadruped", Color = Color3.fromRGB(192, 151, 66), Accent = Color3.fromRGB(255, 235, 150), Scale = 1.25, Feature = "mane"}})
+addPet("Cerberus", "Legendary", 520, 110, 72, 325, {SpawnMode = "Wild", TimeOfDay = "Night", AnimationSpecies = "Wolf", Visual = {Archetype = "Hydra", Color = Color3.fromRGB(58, 49, 60), Accent = Color3.fromRGB(221, 87, 95), Scale = 1.25, Feature = "heads"}})
+addPet("Chimera", "Legendary", 470, 114, 68, 320, {SpawnMode = "Wild", TimeOfDay = "Night", AnimationSpecies = "Griffin", Visual = {Archetype = "Quadruped", Color = Color3.fromRGB(89, 67, 62), Accent = Color3.fromRGB(191, 94, 156), Scale = 1.28, Feature = "wings"}})
+addPet("Abyss Hydra", "Legendary", 540, 112, 78, 335, {SpawnMode = "Wild", TimeOfDay = "Night", AnimationSpecies = "Dragon", Visual = {Archetype = "Hydra", Color = Color3.fromRGB(42, 72, 82), Accent = Color3.fromRGB(75, 212, 222), Scale = 1.30, Feature = "heads"}})
+addPet("Solar Dragon", "Mythic", 820, 155, 105, 520, {SpawnMode = "Wild", TimeOfDay = "Day", AnimationSpecies = "Dragon", Visual = {Archetype = "Quadruped", Color = Color3.fromRGB(191, 77, 41), Accent = Color3.fromRGB(255, 220, 91), Scale = 1.45, Feature = "wings"}})
+addPet("Worldroot Colossus", "Mythic", 900, 138, 120, 540, {SpawnMode = "Wild", TimeOfDay = "Day", AnimationSpecies = "AncientTitan", Visual = {Archetype = "Titan", Color = Color3.fromRGB(90, 102, 70), Accent = Color3.fromRGB(133, 214, 107), Scale = 1.55, Feature = "crown"}})
+addPet("Leviathan", "Mythic", 800, 145, 100, 500, {SpawnMode = "Wild", TimeOfDay = "Night", AnimationSpecies = "Leviathan", Visual = {Archetype = "Serpent", Color = Color3.fromRGB(41, 91, 115), Accent = Color3.fromRGB(89, 205, 224), Scale = 1.50, Feature = "crest"}})
+addPet("Astral Serpent", "Mythic", 760, 165, 92, 530, {SpawnMode = "Wild", TimeOfDay = "Night", AnimationSpecies = "Leviathan", Visual = {Archetype = "Serpent", Color = Color3.fromRGB(67, 55, 110), Accent = Color3.fromRGB(186, 155, 255), Scale = 1.42, Feature = "glow"}})
+addPet("Frostbell Reindeer", "Limited", 680, 150, 92, 650, {SpawnMode = "Event", AnimationSpecies = "ShadowStag", Event = "Winter", Visual = {Archetype = "Quadruped", Color = Color3.fromRGB(211, 223, 230), Accent = Color3.fromRGB(112, 209, 255), Scale = 1.20, Feature = "antlers"}})
+addPet("Pumpkin Imp", "Limited", 620, 170, 82, 640, {SpawnMode = "Event", AnimationSpecies = "Fox", Event = "Halloween", Visual = {Archetype = "Imp", Color = Color3.fromRGB(116, 59, 38), Accent = Color3.fromRGB(255, 137, 48), Scale = 1.00, Feature = "horns"}})
+addPet("Bloom Jackalope", "Limited", 650, 155, 88, 645, {SpawnMode = "Event", AnimationSpecies = "Fox", Event = "Spring", Visual = {Archetype = "Quadruped", Color = Color3.fromRGB(187, 154, 139), Accent = Color3.fromRGB(244, 145, 186), Scale = 0.95, Feature = "antlers"}})
+addPet("Starfall Starling", "Limited", 640, 165, 80, 650, {SpawnMode = "Event", AnimationSpecies = "Starling", Event = "Starfall", Visual = {Archetype = "Bird", Color = Color3.fromRGB(76, 87, 143), Accent = Color3.fromRGB(198, 180, 255), Scale = 1.05, Feature = "glow"}})
+addPet("Kraken", "Ancient", 1350, 225, 160, 1000, {SpawnMode = "WorldBoss", AnimationSpecies = "Leviathan", WorldBoss = "Kraken", Visual = {Archetype = "Kraken", Color = Color3.fromRGB(46, 78, 98), Accent = Color3.fromRGB(89, 204, 226), Scale = 1.60, Feature = "crown"}})
+addPet("Jörmungandr", "Ancient", 1450, 235, 170, 1050, {SpawnMode = "WorldBoss", AnimationSpecies = "Leviathan", WorldBoss = "Jörmungandr", Visual = {Archetype = "Serpent", Color = Color3.fromRGB(55, 84, 68), Accent = Color3.fromRGB(172, 216, 115), Scale = 1.70, Feature = "crown"}})
+addPet("Fenrir", "Ancient", 1300, 240, 150, 1025, {SpawnMode = "WorldBoss", AnimationSpecies = "Wolf", WorldBoss = "Fenrir", Visual = {Archetype = "Quadruped", Color = Color3.fromRGB(75, 82, 95), Accent = Color3.fromRGB(175, 204, 255), Scale = 1.55, Feature = "mane"}})
+addPet("Gaia Titan", "Ancient", 1500, 210, 180, 1100, {SpawnMode = "WorldBoss", AnimationSpecies = "AncientTitan", WorldBoss = "Gaia Titan", Visual = {Archetype = "Titan", Color = Color3.fromRGB(91, 78, 58), Accent = Color3.fromRGB(137, 203, 112), Scale = 1.75, Feature = "crown"}})
+
+-- Preserve already-owned retired species without allowing them back into normal wild spawning.
+addPet("Dragon", "Legendary", 500, 100, 70, 300, {SpawnMode = "Legacy", AnimationSpecies = "Dragon", TemplateSpecies = "Dragon", Legacy = true})
+addPet("Starling", "Limited", 650, 160, 80, 650, {SpawnMode = "Legacy", AnimationSpecies = "Starling", TemplateSpecies = "Starling", Legacy = true})
+addPet("AncientTitan", "Ancient", 1200, 210, 150, 1000, {SpawnMode = "Legacy", AnimationSpecies = "AncientTitan", TemplateSpecies = "AncientTitan", Legacy = true})
+addPet("MoonBat", "Common", 85, 23, 9, 40, {SpawnMode = "Legacy", AnimationSpecies = "MoonBat", TemplateSpecies = "MoonBat", Legacy = true})
+addPet("ShadowStag", "Rare", 200, 49, 29, 120, {SpawnMode = "Legacy", AnimationSpecies = "ShadowStag", TemplateSpecies = "ShadowStag", Legacy = true})
+addPet("Nightfang", "Common", 110, 22, 12, 39, {SpawnMode = "Legacy", AnimationSpecies = "Wolf", TemplateSpecies = "Nightfang", Legacy = true})
+addPet("Dusktail", "Uncommon", 121, 30, 15, 66, {SpawnMode = "Legacy", AnimationSpecies = "Fox", TemplateSpecies = "Dusktail", Legacy = true})
+addPet("EclipseGriffin", "Epic", 330, 70, 45, 192, {SpawnMode = "Legacy", AnimationSpecies = "Griffin", TemplateSpecies = "EclipseGriffin", Legacy = true})
+addPet("VoidDragon", "Legendary", 550, 108, 70, 330, {SpawnMode = "Legacy", AnimationSpecies = "Dragon", TemplateSpecies = "VoidDragon", Legacy = true})
+addPet("AbyssLeviathan", "Mythic", 880, 156, 100, 550, {SpawnMode = "Legacy", AnimationSpecies = "Leviathan", TemplateSpecies = "AbyssLeviathan", Legacy = true})
+addPet("AstralStarling", "Limited", 715, 173, 80, 715, {SpawnMode = "Legacy", AnimationSpecies = "Starling", TemplateSpecies = "AstralStarling", Legacy = true})
+addPet("ObsidianTitan", "Ancient", 1320, 226, 150, 1100, {SpawnMode = "Legacy", AnimationSpecies = "AncientTitan", TemplateSpecies = "ObsidianTitan", Legacy = true})
 
 Config.RobuxPets = {
     ["Celestial Wolf"] = {
@@ -344,21 +360,15 @@ Config.WeeklyReward = {
 -- World cycle and population tuning.
 Config.WorldCycle = {DurationSeconds=720, StartHour=9, NightStart=18, NightEnd=6}
 Config.Respawn = {MinSeconds=10, MaxSeconds=20, SafePlayerRadius=45, TransitionInterval=4}
-Config.NightVariants = {
- Nightfang={Base="Wolf",Rarity="Common",Color=Color3.fromRGB(91,104,158)},
- Dusktail={Base="Fox",Rarity="Uncommon",Color=Color3.fromRGB(146,107,185)},
- EclipseGriffin={Base="Griffin",Rarity="Epic",Color=Color3.fromRGB(135,131,188)},
- VoidDragon={Base="Dragon",Rarity="Legendary",Color=Color3.fromRGB(123,92,175)},
- AbyssLeviathan={Base="Leviathan",Rarity="Mythic",Color=Color3.fromRGB(65,146,171)},
- AstralStarling={Base="Starling",Rarity="Limited",Color=Color3.fromRGB(162,144,235)},
- ObsidianTitan={Base="AncientTitan",Rarity="Ancient",Color=Color3.fromRGB(101,110,144)},
+Config.PetRosterCounts = {
+    Common = {Total = 10, Day = 5, Night = 5},
+    Uncommon = {Total = 10, Day = 5, Night = 5},
+    Rare = {Total = 8, Day = 4, Night = 4},
+    Epic = {Total = 8, Day = 4, Night = 4},
+    Legendary = {Total = 6, Day = 3, Night = 3},
+    Mythic = {Total = 4, Day = 2, Night = 2},
+    Limited = {Total = 4, SpawnMode = "Event"},
+    Ancient = {Total = 4, SpawnMode = "WorldBoss"}
 }
-for name,v in pairs(Config.NightVariants) do
- local original=Config.Pets[v.Base]
- Config.Pets[name]={Rarity=v.Rarity,Health=math.floor(original.Health*1.1),Power=math.floor(original.Power*1.08),Defence=original.Defence,SellValue=math.floor(original.SellValue*1.1),TimeOfDay="Night",AnimationSpecies=v.Base}
-end
-Config.Pets.MoonBat={Rarity="Common",Health=85,Power=23,Defence=9,SellValue=40,TimeOfDay="Night",AnimationSpecies="MoonBat"}
-Config.Pets.ShadowStag={Rarity="Rare",Health=200,Power=49,Defence=29,SellValue=120,TimeOfDay="Night",AnimationSpecies="ShadowStag"}
-for _,info in pairs(Config.Pets) do info.TimeOfDay=info.TimeOfDay or "Day" end
 
 return Config

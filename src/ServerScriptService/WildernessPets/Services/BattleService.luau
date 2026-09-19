@@ -1,4 +1,5 @@
 local Animator = require(script.Parent.Parent.Systems.PetAnimator)
+local ModelFactory = require(script.Parent.Parent.Systems.PetModelFactory)
 local PetService = require(script.Parent.PetService)
 local Service = {}
 local displaying = false
@@ -16,12 +17,12 @@ local function replay(petA,petB,hits,winner)
   local ok,err=pcall(function()
    local world=workspace:FindFirstChild("WildernessPets")
    local arena=world and world:FindFirstChild("Arena")
-   local templates=game.ServerStorage.WildernessPets.Monsters
-   if not arena or not templates:FindFirstChild(petA.Species) or not templates:FindFirstChild(petB.Species) then return end
+   if not arena or not ModelFactory:CanCreate(petA.Species) or not ModelFactory:CanCreate(petB.Species) then return end
    folder=Instance.new("Folder") folder.Name="ArenaAnimation" folder.Parent=world
    local models={}
    for index,pet in {petA,petB} do
-    local m=templates[pet.Species]:Clone()
+    local m=ModelFactory:Create(pet.Species)
+    if not m then return end
     m.Name=index==1 and "Attacker" or "Defender"
     m:SetAttribute("Species",pet.Species)
     m.Parent=folder

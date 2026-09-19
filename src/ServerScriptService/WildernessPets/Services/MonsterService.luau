@@ -1,5 +1,6 @@
 local Config=require(game.ReplicatedStorage.WildernessPets.Shared.Config)
 local Animator=require(script.Parent.Parent.Systems.PetAnimator)
+local ModelFactory=require(script.Parent.Parent.Systems.PetModelFactory)
 local Players=game:GetService("Players")
 local Service={}
 local rng=Random.new()
@@ -17,9 +18,10 @@ function Service:IsNight(at)
 end
 function Service:GetPool(night)
  local pool={}
- local templates=game.ServerStorage.WildernessPets.Monsters
  for name,info in pairs(Config.Pets) do
-  if templates:FindFirstChild(name) and info.TimeOfDay==(night and "Night" or "Day") then
+  if info.SpawnMode=="Wild"
+   and info.TimeOfDay==(night and "Night" or "Day")
+   and ModelFactory:CanCreate(name) then
    pool[info.Rarity]=pool[info.Rarity] or {}
    table.insert(pool[info.Rarity],name)
   end
@@ -170,8 +172,9 @@ function Service:SpawnSlot(index)
  if not name then return false end
  local pos=spawnPosition()
  if not pos then slot.readyAt=now()+3 return false end
- local model=game.ServerStorage.WildernessPets.Monsters[name]:Clone()
+ local model=ModelFactory:Create(name)
  local info=Config.Pets[name]
+ if not model or not info then slot.readyAt=now()+5 return false end
  model.Name=name.."_"..index
  for _,p in model:GetDescendants() do if p:IsA("BasePart") then p.Anchored=true p.CanCollide=false p.CanQuery=true end end
  model:SetAttribute("Species",name)

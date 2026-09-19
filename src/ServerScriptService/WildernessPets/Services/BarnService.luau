@@ -4,6 +4,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local DataService = require(script.Parent.PlayerDataService)
 local PetService = require(script.Parent.PetService)
 local Animator = require(script.Parent.Parent.Systems.PetAnimator)
+local ModelFactory = require(script.Parent.Parent.Systems.PetModelFactory)
 local Config = require(game.ReplicatedStorage.WildernessPets.Shared.Config)
 
 local Root = ReplicatedStorage:WaitForChild("WildernessPets")
@@ -178,23 +179,15 @@ function Service:RefreshVisuals(player)
     local floor = barn:FindFirstChild("Floor")
     if not floor or not floor:IsA("BasePart") then return end
 
-    local templates = game.ServerStorage:FindFirstChild("WildernessPets")
-    templates = templates and templates:FindFirstChild("Monsters")
-    if not templates then return end
-
     local slot = 0
     for _, pet in ipairs(PetService:GetPets(player)) do
         if pet.Dead and (tonumber(pet.HealReadyAt) or 0) > 0 then
             slot += 1
             if slot > 3 then break end
 
-            local template = templates:FindFirstChild(pet.Species)
             local petInfo = Config.Pets[pet.Species]
-            if not template and petInfo and petInfo.AnimationSpecies then
-                template = templates:FindFirstChild(petInfo.AnimationSpecies)
-            end
-            if template then
-                local model = template:Clone()
+            local model = ModelFactory:Create(pet.Species)
+            if model then
                 model.Name = "Healing_" .. tostring(pet.Id)
                 for _, item in ipairs(model:GetDescendants()) do
                     if item:IsA("BillboardGui") or item:IsA("LuaSourceContainer") then
