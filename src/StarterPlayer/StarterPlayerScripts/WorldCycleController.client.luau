@@ -17,13 +17,26 @@ text.TextColor3=Color3.fromRGB(240,239,222) text.Font=Enum.Font.GothamMedium tex
 text.Parent=gui
 local corner=Instance.new("UICorner") corner.CornerRadius=UDim.new(0,10) corner.Parent=text
 local elapsed=0
+local function visualClockHour(hour)
+ -- Gameplay/world time continues at the normal rate. Only the rendered sun is
+ -- eased behind the clock around dawn, then smoothly catches up by late morning.
+ local dawnStart=4.5
+ local dawnEnd=11.5
+ if hour>=dawnStart and hour<=dawnEnd then
+  local u=math.clamp((hour-dawnStart)/(dawnEnd-dawnStart),0,1)
+  local lag=1.25*(math.sin(u*math.pi)^2)
+  return (hour-lag)%24
+ end
+ return hour
+end
 RunService.RenderStepped:Connect(function(dt)
  local epoch=world:GetAttribute("CycleEpoch")
  if not epoch then return end
  local duration=world:GetAttribute("CycleDuration") or 720
  local hour=((world:GetAttribute("CycleStartHour") or 9)+(workspace:GetServerTimeNow()-epoch)*24/duration)%24
- Lighting.ClockTime=hour
- local sun=math.sin((hour-6)/24*math.pi*2)
+ local visualHour=visualClockHour(hour)
+ Lighting.ClockTime=visualHour
+ local sun=math.sin((visualHour-6)/24*math.pi*2)
  local daylight=math.clamp((sun+.12)/.38,0,1)
  daylight=daylight*daylight*(3-2*daylight)
  local dusk=math.exp(-(sun/.20)^2)
@@ -48,6 +61,7 @@ local RS=game:GetService("ReplicatedStorage")
 local player=Players.LocalPlayer
 local remotes=RS.WildernessPets.Remotes
 local config=require(RS.WildernessPets.Shared.Config)
+local petAbilities=require(RS.WildernessPets.Shared.PetAbilities)
 local playerGui=player:WaitForChild("PlayerGui")
 local backpack=player:WaitForChild("Backpack")
 local wild=world:WaitForChild("WildMonsters")
@@ -465,28 +479,39 @@ local handle=Instance.new("Frame") handle.Size=UDim2.fromOffset(11,8) handle.Pos
 local pocket=Instance.new("Frame") pocket.Size=UDim2.fromOffset(15,8) pocket.Position=UDim2.fromOffset(4,12) pocket.BackgroundColor3=palette.slot pocket.BorderSizePixel=0 pocket.Parent=bagBody round(pocket,2)
 button("Lasso","1","◎","Lasso",1,function() command("Lasso") end,"Throw your lasso at the selected creature. Your companion stays passive.")
 local attackButton=button("Attack","2","⚔","Attack",2,function() command("Attack") end,"Command your companion to approach and automatically attack your selected target.")
--- Species skill names are previews; their separate gameplay implementations are pending.
-local skillNames={
- Wolf={"Lick Wounds","Pack Howl","Rending Bite"},Boar={"Charge","Iron Hide","Tusk Sweep"},
- Bear={"Bear Swipe","Thick Hide","Ground Slam"},Fox={"Quick Pounce","Cunning Feint","Foxfire"},
- Griffin={"Dive Bomb","Wing Buffet","Sky Cry"},Dragon={"Flame Breath","Wing Storm","Dragon Roar"},
- Leviathan={"Tidal Surge","Undertow","Deep Guard"},Starling={"Star Volley","Healing Song","Radiant Flight"},
- AncientTitan={"Titan Stomp","Stone Guard","Earth Shatter"},MoonBat={"Sonic Burst","Night Veil","Leech Bite"},
- ShadowStag={"Antler Rush","Moon Ward","Forest Call"}
-}
+-- Ability kits are fully named/designed in Shared.PetAbilities. Their combat
+-- execution remains a later gameplay stage; the HUD exposes the correct kit now.
 local abilityButtons={}
+local equippedAbilitySpecs={}
+local function abilityIcon(name)
+ local first=tostring(name):match("^%s*(%a)") or "?"
+ local second=tostring(name):match("%s+(%a)")
+ return first..(second or "")
+end
+local function abilityMessage(abilityInfo)
+ local name=abilityInfo and abilityInfo.Name or "Ability"
+ local description=petAbilities:GetDescription(abilityInfo)
+ if description~="" then
+  return name.." — "..description.."  ·  Coming soon"
+ end
+ return name.." · Coming soon"
+end
 local function rebuildAbilities()
- for _,b in ipairs(abilityButtons) do b:Destroy() end abilityButtons={}
+ for _,b in ipairs(abilityButtons) do b:Destroy() end
+ abilityButtons={}
+ equippedAbilitySpecs={}
  equippedSpecies=player:GetAttribute("EquippedPetSpecies") or ""
  attackButton.Visible=equippedSpecies~=""
  if equippedSpecies~="" then
-  local info=config.Pets[equippedSpecies]
-  local base=info and info.AnimationSpecies or equippedSpecies
-  local names=skillNames[base] or {"Creature Strike","Creature Guard","Creature Spirit"}
-  for i,name in ipairs(names) do
-   local b=button("Ability"..i,tostring(i+2),name:sub(1,1)..(name:match("%s(%a)") or ""),name,i+2,function()
-    message(name.." is not unlocked yet — abilities are coming next.")
-   end,name.." · "..equippedSpecies.." skill · Coming soon")
+  local specs=petAbilities:Get(equippedSpecies) or {}
+  equippedAbilitySpecs=specs
+  for i,abilityInfo in ipairs(specs) do
+   local name=abilityInfo.Name or ("Ability "..tostring(i))
+   local description=petAbilities:GetDescription(abilityInfo)
+   local tip=name.." · "..description.." · Coming soon"
+   local b=button("Ability"..i,tostring(i+2),abilityIcon(name),name,i+2,function()
+    message(abilityMessage(abilityInfo))
+   end,tip)
    b.BackgroundColor3=Color3.fromRGB(31,34,38)
    b.Icon.TextColor3=palette.muted
    label(b,"Pending","SOON",UDim2.fromOffset(29,1),UDim2.fromOffset(37,13),8,palette.muted)
@@ -855,7 +880,11 @@ UIS.InputBegan:Connect(function(input,processed)
  elseif key==Enum.KeyCode.One then command("Lasso")
  elseif key==Enum.KeyCode.Two then command("Attack")
  elseif key==Enum.KeyCode.Three or key==Enum.KeyCode.Four or key==Enum.KeyCode.Five then
-  if equippedSpecies~="" then message("Your companion's unique abilities are coming next.") end
+  if equippedSpecies~="" then
+   local abilityIndex=key==Enum.KeyCode.Three and 1 or key==Enum.KeyCode.Four and 2 or 3
+   local abilityInfo=equippedAbilitySpecs[abilityIndex]
+   if abilityInfo then message(abilityMessage(abilityInfo)) end
+  end
  else
   local map={[Enum.KeyCode.Six]=1,[Enum.KeyCode.Seven]=2,[Enum.KeyCode.Eight]=3,[Enum.KeyCode.Nine]=4}
   local index=map[key]
