@@ -279,6 +279,7 @@ ShopRemote.OnServerEvent:Connect(function(player, action, ...)
             return
         end
         local success, message = ShopService:BuyLasso(player, value)
+        if success then QuestService:PushState(player) end
         ShopRemote:FireClient(player, "LassoShopResult", success, message)
 
     elseif action == "SellLasso" then
@@ -329,6 +330,7 @@ ShopRemote.OnServerEvent:Connect(function(player, action, ...)
             end
             local refresh = script.Parent.Systems:FindFirstChild("PetDisplayRefresh")
             if refresh then refresh:Fire(player) end
+            QuestService:OnPlayerAction(player, "SellPet")
         end
 
         ShopRemote:FireClient(player, "Sold", success, success and amount or 0, message)
@@ -342,7 +344,10 @@ ShopRemote.OnServerEvent:Connect(function(player, action, ...)
 
         local success, message = ShopService:BuybackPet(player, value)
         local refresh = script.Parent.Systems:FindFirstChild("PetDisplayRefresh")
-        if success and refresh then refresh:Fire(player) end
+        if success then
+            if refresh then refresh:Fire(player) end
+            QuestService:OnPlayerAction(player, "BuybackPet")
+        end
         ShopRemote:FireClient(player, "PetBuybackResult", success, message)
 
     elseif action == "BuyPotion" then
@@ -415,6 +420,7 @@ ShopRemote.OnServerEvent:Connect(function(player, action, ...)
         local success, message, seconds = PetService:StartHealing(player, value)
         if success then
             BarnService:RefreshVisuals(player)
+            QuestService:OnPlayerAction(player, "StartHealing")
             task.delay(math.max(1, tonumber(seconds) or 1), function()
                 if player and player.Parent then
                     BarnService:RefreshVisuals(player)
@@ -435,6 +441,7 @@ ShopRemote.OnServerEvent:Connect(function(player, action, ...)
             BarnService:RefreshVisuals(player)
             local refresh = script.Parent.Systems:FindFirstChild("PetDisplayRefresh")
             if refresh then refresh:Fire(player) end
+            QuestService:OnPlayerAction(player, "CollectHealed")
         end
         ShopRemote:FireClient(player, "BarnResult", success, message, 0)
     end
