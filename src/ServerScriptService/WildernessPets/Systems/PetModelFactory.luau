@@ -308,8 +308,16 @@ local function buildPlaceholder(species, info)
     return model
 end
 
+local function creatureInfo(species)
+    local mount = Config.Mounts and Config.Mounts[species]
+    if mount then return mount, "Mount" end
+    local pet = Config.Pets and Config.Pets[species]
+    if pet then return pet, "Pet" end
+    return nil, nil
+end
+
 function Factory:CanCreate(species)
-    local info = Config.Pets[species]
+    local info = creatureInfo(species)
     if not info then return false end
 
     local templates = monsterTemplates()
@@ -322,7 +330,7 @@ function Factory:CanCreate(species)
 end
 
 function Factory:Create(species)
-    local info = Config.Pets[species]
+    local info, creatureType = creatureInfo(species)
     if not info then return nil end
 
     local templates = monsterTemplates()
@@ -342,6 +350,8 @@ function Factory:Create(species)
         model:SetAttribute("Rarity", info.Rarity)
         model:SetAttribute("AnimationSpecies", info.AnimationSpecies or species)
         model:SetAttribute("SpawnMode", info.SpawnMode)
+        model:SetAttribute("CreatureType", creatureType)
+        model:SetAttribute("Rideable", creatureType == "Mount")
     end
 
     return model
