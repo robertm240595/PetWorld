@@ -1528,6 +1528,23 @@ local function completeQuest(player, chain)
         player:SetAttribute("TutorialHomeGuide", false)
     end
 
+    -- Handing the Wyrm report to Rowan immediately starts the northeast
+    -- investigation so the new objective/compass points straight to the falls.
+    if chain.Id == "HollowfangWyrm" then
+        local followUp = QuestConfig.Chains.WorldBossTrail
+        if followUp
+            and root.Completed.WorldBossTrail ~= true
+            and root.ActiveQuestIds.WorldBossTrail ~= true then
+            root.ActiveQuestIds.WorldBossTrail = true
+            root.Quests.WorldBossTrail = {
+                StageIndex = 1,
+                Count = 0,
+                TargetPetId = "",
+                TargetMountId = "",
+            }
+        end
+    end
+
     local current = personal[player]
     if chain.Id == "HollowfangRescue" and current and current.Mira and current.Mira.Parent then
         current.Mira:Destroy()
