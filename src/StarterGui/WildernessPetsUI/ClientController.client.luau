@@ -1085,11 +1085,18 @@ showLeatherTrader = function()
             nameLabel.TextSize=14
             nameLabel.TextXAlignment=Enum.TextXAlignment.Left
 
+            local descText
+            if premium then
+                descText="Largest backpack available  ·  Premium Gem upgrade"
+            elseif capacity<=currentCapacity then
+                descText="Already owned or smaller than your current backpack"
+            else
+                descText="+"..tostring(capacity-currentCapacity).." slots over your current bag"
+            end
+
             local desc=text(
                 row,
-                premium
-                    and "Largest backpack available  ·  Premium Gem upgrade"
-                    or ("+"..tostring(math.max(0,capacity-currentCapacity)).." slots over your current bag"),
+                descText,
                 UDim2.fromOffset(14,37),
                 UDim2.fromOffset(390,24)
             )
