@@ -14,7 +14,9 @@ local ArenaRemote = Remotes:WaitForChild("Arena")
 local QuestRemote = Remotes:WaitForChild("Quest")
 local LootRemote = Remotes:WaitForChild("Loot")
 local GetState = Remotes:WaitForChild("GetState")
-local Config = require(Root:WaitForChild("Shared"):WaitForChild("Config"))
+local Shared = Root:WaitForChild("Shared")
+local Config = require(Shared:WaitForChild("Config"))
+local LootConfig = require(Shared:WaitForChild("LootConfig"))
 
 local state
 local petsOpen=false
@@ -27,6 +29,7 @@ local showPets
 local showBeastTrader
 local showLassoKeeper
 local showPetMerchant
+local showLootTrader
 local showBarn
 local showLeatherTrader
 local backpackTab = "Pets"
@@ -1344,6 +1347,197 @@ local function showArena()
 end
 
 --------------------------------------------------------------
+-- MATERIAL / LOOT TRADER
+--------------------------------------------------------------
+
+showLootTrader = function()
+    clear()
+    gui:SetAttribute("InventoryOpen",true)
+
+    state=GetState:InvokeServer()
+    if not state then return end
+
+    local panel=frame(UDim2.fromOffset(760,590),UDim2.new(.5,-380,.5,-295))
+    panel.Name="LootTrader"
+    panel.AnchorPoint=Vector2.new(.5,.5)
+    panel.Position=UDim2.new(.5,0,.5,0)
+
+    local viewport=workspace.CurrentCamera and workspace.CurrentCamera.ViewportSize or Vector2.new(1280,720)
+    local fit=Instance.new("UIScale")
+    fit.Scale=math.min(1,(viewport.X-30)/760,(viewport.Y-40)/590)
+    fit.Parent=panel
+
+    local title=text(panel,"MATERIAL TRADER",UDim2.fromOffset(20,12),UDim2.fromOffset(500,30))
+    title.TextScaled=false
+    title.TextSize=22
+    title.TextXAlignment=Enum.TextXAlignment.Left
+
+    local subtitle=text(
+        panel,
+        "Sell hides, fur, fangs, feathers, scales and other materials collected from wild-creature loot bags.",
+        UDim2.fromOffset(20,50),
+        UDim2.fromOffset(650,42)
+    )
+    subtitle.TextScaled=false
+    subtitle.TextSize=12
+    subtitle.TextWrapped=true
+    subtitle.TextXAlignment=Enum.TextXAlignment.Left
+
+    local close=button(panel,"×",UDim2.fromOffset(704,10),UDim2.fromOffset(38,34))
+    close.TextScaled=false
+    close.TextSize=24
+    close.MouseButton1Click:Connect(showHUD)
+
+    local lootItems={}
+    local totalValue=0
+    for _,item in ipairs(state.Inventory or {}) do
+        if type(item)=="table" and item.Type=="Loot" then
+            local quantity=math.max(0,math.floor(tonumber(item.Quantity) or 0))
+            local unitValue=LootConfig:GetTraderValue(item.Name,Config.Pets)
+            if quantity>0 and unitValue then
+                table.insert(lootItems,{
+                    Name=item.Name,
+                    Quantity=quantity,
+                    UnitValue=unitValue,
+                    TotalValue=unitValue*quantity,
+                })
+                totalValue+=unitValue*quantity
+            end
+        end
+    end
+
+    table.sort(lootItems,function(a,b)
+        if a.UnitValue==b.UnitValue then return tostring(a.Name)<tostring(b.Name) end
+        return a.UnitValue>b.UnitValue
+    end)
+
+    local sellAll=button(
+        panel,
+        #lootItems>0 and ("SELL ALL  ·  "..tostring(totalValue).." COINS") or "NO LOOT TO SELL",
+        UDim2.fromOffset(500,52),
+        UDim2.fromOffset(220,42)
+    )
+    sellAll.TextScaled=false
+    sellAll.TextSize=11
+
+    if #lootItems==0 then
+        sellAll.Active=false
+        sellAll.AutoButtonColor=false
+        sellAll.BackgroundColor3=Color3.fromRGB(56,58,61)
+    else
+        sellAll.MouseButton1Click:Connect(function()
+            sellAll.Active=false
+            sellAll.Text="SELLING..."
+            ShopRemote:FireServer("SellAllLoot")
+        end)
+    end
+
+    local list=Instance.new("ScrollingFrame")
+    list.Name="LootForSale"
+    list.Position=UDim2.fromOffset(20,108)
+    list.Size=UDim2.fromOffset(720,457)
+    list.BackgroundTransparency=1
+    list.BorderSizePixel=0
+    list.ScrollBarThickness=5
+    list.AutomaticCanvasSize=Enum.AutomaticSize.Y
+    list.CanvasSize=UDim2.new()
+    list.Parent=panel
+
+    local layout=Instance.new("UIListLayout")
+    layout.Padding=UDim.new(0,8)
+    layout.Parent=list
+
+    if #lootItems==0 then
+        local empty=text(
+            list,
+            "Your backpack has no sellable wild loot.
+Defeat wild creatures, open their loot bags, then bring the materials here.",
+            UDim2.new(),
+            UDim2.fromOffset(690,84)
+        )
+        empty.TextScaled=false
+        empty.TextSize=15
+        empty.TextWrapped=true
+        return
+    end
+
+    for _,item in ipairs(lootItems) do
+        local row=Instance.new("Frame")
+        row.Size=UDim2.fromOffset(700,78)
+        row.BackgroundColor3=Color3.fromRGB(38,43,52)
+        row.BorderSizePixel=0
+        row.Parent=list
+
+        local corner=Instance.new("UICorner")
+        corner.CornerRadius=UDim.new(0,8)
+        corner.Parent=row
+
+        local icon=text(
+            row,
+            "◆",
+            UDim2.fromOffset(12,14),
+            UDim2.fromOffset(42,42)
+        )
+        icon.TextScaled=false
+        icon.TextSize=24
+        icon.TextColor3=Color3.fromRGB(221,188,108)
+
+        local name=text(
+            row,
+            tostring(item.Name).."  ·  x"..tostring(item.Quantity),
+            UDim2.fromOffset(65,8),
+            UDim2.fromOffset(340,23)
+        )
+        name.TextScaled=false
+        name.TextSize=14
+        name.TextXAlignment=Enum.TextXAlignment.Left
+
+        local price=text(
+            row,
+            tostring(item.UnitValue).." Coins each  ·  Stack value "..tostring(item.TotalValue).." Coins",
+            UDim2.fromOffset(65,36),
+            UDim2.fromOffset(360,21)
+        )
+        price.TextScaled=false
+        price.TextSize=11
+        price.TextColor3=Color3.fromRGB(190,195,205)
+        price.TextXAlignment=Enum.TextXAlignment.Left
+
+        local sellOne=button(
+            row,
+            "SELL 1",
+            UDim2.fromOffset(438,19),
+            UDim2.fromOffset(110,40)
+        )
+        sellOne.TextScaled=false
+        sellOne.TextSize=11
+        sellOne.MouseButton1Click:Connect(function()
+            sellOne.Active=false
+            ShopRemote:FireServer("SellLootItem",{
+                Name=item.Name,
+                Quantity=1,
+            })
+        end)
+
+        local sellStack=button(
+            row,
+            "SELL STACK",
+            UDim2.fromOffset(558,19),
+            UDim2.fromOffset(128,40)
+        )
+        sellStack.TextScaled=false
+        sellStack.TextSize=10
+        sellStack.MouseButton1Click:Connect(function()
+            sellStack.Active=false
+            ShopRemote:FireServer("SellLootItem",{
+                Name=item.Name,
+                Quantity=item.Quantity,
+            })
+        end)
+    end
+end
+
+--------------------------------------------------------------
 -- BEAST TRADER
 --------------------------------------------------------------
 
@@ -1811,6 +2005,9 @@ ShopRemote.OnClientEvent:Connect(function(action, ...)
     if action=="OpenBeastTrader" then
         showBeastTrader("Sell")
 
+    elseif action=="OpenLootTrader" then
+        showLootTrader()
+
     elseif action=="OpenLassoKeeper" then
         showLassoKeeper("Buy")
 
@@ -1837,6 +2034,15 @@ ShopRemote.OnClientEvent:Connect(function(action, ...)
         local message=args[2]
         if success then showBeastTrader("Buyback") end
         notify(message or (success and "Pet bought back." or "Could not buy that pet back."))
+
+    elseif action=="LootTradeResult" then
+        local success=args[1]==true
+        local message=args[2]
+        local amount=tonumber(args[3]) or 0
+        if success and gui:FindFirstChild("LootTrader") then
+            showLootTrader()
+        end
+        notify(message or (success and ("Sold materials for "..tostring(amount).." Coins.") or "Could not sell that material."))
 
     elseif action=="LassoShopResult" then
         local success=args[1]==true
