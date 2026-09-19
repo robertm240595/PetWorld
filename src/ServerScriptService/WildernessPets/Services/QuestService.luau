@@ -690,6 +690,39 @@ local function nearestWildTarget(player, stage)
     return part.Position, tostring(bestModel:GetAttribute("Species") or stage.Species or stage.Rarity or "Quest target")
 end
 
+local function actionObjectiveTarget(player, stage)
+    local action = stage and stage.Action
+    if action == "StartHealing" or action == "CollectHealed" then
+        local plots = world and world:FindFirstChild("Plots")
+        if plots then
+            for _, plot in ipairs(plots:GetChildren()) do
+                local owner = tonumber(plot:GetAttribute("OwnerUserId") or plot:GetAttribute("Owner"))
+                if owner == player.UserId then
+                    local barn = plot:FindFirstChild("HealingBarn")
+                    local promptPart = barn and barn:FindFirstChild("BarnPrompt")
+                    if promptPart and promptPart:IsA("BasePart") then
+                        return promptPart.Position, "Your Pet Barn"
+                    end
+                end
+            end
+        end
+    elseif action == "SellPet" or action == "BuybackPet" then
+        for _, instance in ipairs(workspace:GetDescendants()) do
+            if instance:IsA("Model") then
+                local normalized = instance.Name:lower():gsub("[^%w]", "")
+                if normalized == "beasttrader"
+                    or normalized == "beasttradernpc"
+                    or normalized == "beastmaster"
+                    or normalized == "beastmasternpc" then
+                    local part = instance.PrimaryPart or instance:FindFirstChildWhichIsA("BasePart", true)
+                    if part then return part.Position, "Beast Trader" end
+                end
+            end
+        end
+    end
+    return nil, nil
+end
+
 local function stageReadyForNPC(player, chain, state, stage)
     if not stage then return false end
     if stage.Type == "Talk" then
@@ -804,6 +837,8 @@ function Service:GetClientState(player)
         targetLabel = npcName(chain.NPC)
     elseif stage.Type == "CaptureReturn" or stage.Type == "Kill" then
         targetPosition, targetLabel = nearestWildTarget(player, stage)
+    elseif stage.Type == "Action" then
+        targetPosition, targetLabel = actionObjectiveTarget(player, stage)
     end
 
     local progressText
