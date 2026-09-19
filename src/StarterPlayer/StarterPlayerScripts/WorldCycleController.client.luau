@@ -918,9 +918,13 @@ remotes.Game.OnClientEvent:Connect(function(action,kind,...)
  elseif kind=="CombatState" then local state=... if state=="Engaging" then message("Companion engaging your target") end
  end
 end)
-remotes.Pets.OnClientEvent:Connect(function(action,success,response)
+remotes.Pets.OnClientEvent:Connect(function(action,success,response,coinBalance,gemBalance)
  if action=="CollectionReward" then
-  message(response or (success and "Collection reward claimed." or "Collection reward unavailable."))
+  local feedback=response or (success and "Collection reward claimed." or "Collection reward unavailable.")
+  if success and coinBalance~=nil and gemBalance~=nil then
+   feedback=feedback.."  Balance: "..tostring(coinBalance).." Coins · "..tostring(gemBalance).." Gems"
+  end
+  message(feedback)
   if success and collectionOpen then task.defer(showCollection) end
  end
 end)
