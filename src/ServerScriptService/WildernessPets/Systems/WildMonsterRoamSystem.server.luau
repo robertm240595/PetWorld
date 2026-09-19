@@ -115,6 +115,9 @@ local function startRoaming(monster)
     if not monster:IsA("Model") then
         return
     end
+    if monster:GetAttribute("QuestStationary") then
+        return
+    end
     if not monster.PrimaryPart then
         -- Try to find a primary part
         local part = monster:FindFirstChildWhichIsA("BasePart", true)
