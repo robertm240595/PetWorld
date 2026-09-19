@@ -2,8 +2,8 @@ local Players=game:GetService("Players")
 local DataService=require(script.Parent.Parent.Services.PlayerDataService)
 local PetService=require(script.Parent.Parent.Services.PetService)
 local Animator=require(script.Parent.PetAnimator)
+local ModelFactory=require(script.Parent.PetModelFactory)
 local plots=workspace:WaitForChild("WildernessPets"):WaitForChild("Plots")
-local templates=game.ServerStorage.WildernessPets.Monsters
 local refresh=script.Parent:FindFirstChild("PetDisplayRefresh")
 if not refresh then refresh=Instance.new("BindableEvent") refresh.Name="PetDisplayRefresh" refresh.Parent=script.Parent end
 local states={} local rng=Random.new(12091)
@@ -20,9 +20,9 @@ local function clear(player)
 end
 
 local function make(pet,plot,surface,limit,name,position)
- local template=templates:FindFirstChild(pet.Species)
- if not template then return nil end
- local m=template:Clone() m.Name=name
+ local m=ModelFactory:Create(pet.Species)
+ if not m then return nil end
+ m.Name=name
  for _,v in ipairs(m:GetDescendants()) do
   if v:IsA("BillboardGui") then v:Destroy()
   elseif v:IsA("BasePart") then v.Anchored=true v.CanCollide=false v.CanTouch=false v.CanQuery=false end
