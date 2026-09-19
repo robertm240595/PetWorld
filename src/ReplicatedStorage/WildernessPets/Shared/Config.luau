@@ -6,6 +6,7 @@ Config.StartCoins = 500
 Config.StartGems = 0
 
 Config.MaxPets = 60
+Config.MaxMounts = 40
 Config.MaxPetNameLength = 18
 Config.MaxInventory = 25
 Config.Backpacks = {
@@ -71,7 +72,7 @@ Config.PlotCount = 12
 Config.PlotSize = 108
 Config.PlotSpacing = 285
 
-Config.WildMonsterCount = 128
+Config.WildMonsterCount = 160
 Config.WildSpawn = {
     MinRadius = 175,
     MaxRadius = 640,
@@ -265,6 +266,79 @@ Config.Potions = {
         Description = "Improves your imprint roll on your next successful capture."
     }
 }
+
+Config.Mounts = {}
+
+Config.MountRarityWeights = {
+    Common = 0.22,
+    Uncommon = 0.06,
+    Rare = 0.015,
+    Epic = 0.005,
+    Legendary = 0.0015,
+    Mythic = 0.0005,
+    Limited = 0,
+    Ancient = 0,
+}
+
+Config.WorldBossRewards = {
+    MinimumDamageShare = 0.10,
+    AncientPetChance = 0.0001,
+    AncientMountChance = 0.0001,
+    BossPetMap = {
+        Kraken = "Kraken",
+        ["Jörmungandr"] = "Jörmungandr",
+        Fenrir = "Fenrir",
+        ["Gaia Titan"] = "Gaia Titan",
+    },
+    AncientMountPool = {
+        "Runebound Mammoth",
+        "Abyssal Wyvern",
+    },
+}
+
+local function addMount(name, rarity, speedMultiplier, options)
+    options = options or {}
+    Config.Mounts[name] = {
+        Rarity = rarity,
+        SpeedMultiplier = speedMultiplier,
+        SpawnMode = options.SpawnMode or "Wild",
+        TimeOfDay = options.TimeOfDay,
+        AnimationSpecies = options.AnimationSpecies or name,
+        TemplateSpecies = options.TemplateSpecies,
+        Event = options.Event,
+        WorldBoss = options.WorldBoss,
+        Visual = options.Visual,
+    }
+end
+
+-- Wild rideable mounts. Even Common mounts are intentionally about as rare
+-- as Legendary wild-pet spawns; higher mount rarities become progressively rarer.
+addMount("Trail Horse", "Common", 1.25, {SpawnMode="Wild", TimeOfDay="Day", AnimationSpecies="ShadowStag", Visual={Archetype="Quadruped", Color=Color3.fromRGB(132,92,59), Accent=Color3.fromRGB(219,190,147), Scale=1.12, Feature="mane"}})
+addMount("Forest Elk", "Common", 1.25, {SpawnMode="Wild", TimeOfDay="Night", AnimationSpecies="ShadowStag", Visual={Archetype="Quadruped", Color=Color3.fromRGB(110,84,58), Accent=Color3.fromRGB(191,160,112), Scale=1.18, Feature="antlers"}})
+
+addMount("War Ram", "Uncommon", 1.32, {SpawnMode="Wild", TimeOfDay="Day", AnimationSpecies="Boar", Visual={Archetype="Quadruped", Color=Color3.fromRGB(152,145,132), Accent=Color3.fromRGB(78,70,64), Scale=1.16, Feature="horns"}})
+addMount("Dune Strider", "Uncommon", 1.32, {SpawnMode="Wild", TimeOfDay="Night", AnimationSpecies="ShadowStag", Visual={Archetype="Quadruped", Color=Color3.fromRGB(189,151,99), Accent=Color3.fromRGB(235,202,149), Scale=1.16, Feature="mane"}})
+
+addMount("Saber Cat", "Rare", 1.42, {SpawnMode="Wild", TimeOfDay="Day", AnimationSpecies="Wolf", Visual={Archetype="Quadruped", Color=Color3.fromRGB(190,145,81), Accent=Color3.fromRGB(239,220,168), Scale=1.14, Feature="tusks"}})
+addMount("Crystal Stag", "Rare", 1.42, {SpawnMode="Wild", TimeOfDay="Night", AnimationSpecies="ShadowStag", Visual={Archetype="Quadruped", Color=Color3.fromRGB(85,111,139), Accent=Color3.fromRGB(147,225,255), Scale=1.20, Feature="antlers"}})
+
+addMount("Ember Drake", "Epic", 1.55, {SpawnMode="Wild", TimeOfDay="Day", AnimationSpecies="Dragon", Visual={Archetype="Raptor", Color=Color3.fromRGB(142,62,42), Accent=Color3.fromRGB(255,143,64), Scale=1.28, Feature="wings"}})
+addMount("Nightmare Charger", "Epic", 1.55, {SpawnMode="Wild", TimeOfDay="Night", AnimationSpecies="ShadowStag", Visual={Archetype="Quadruped", Color=Color3.fromRGB(43,42,52), Accent=Color3.fromRGB(167,83,218), Scale=1.24, Feature="mane"}})
+
+addMount("Sun Unicorn", "Legendary", 1.68, {SpawnMode="Wild", TimeOfDay="Day", AnimationSpecies="ShadowStag", Visual={Archetype="Quadruped", Color=Color3.fromRGB(238,229,205), Accent=Color3.fromRGB(255,203,91), Scale=1.22, Feature="horns"}})
+addMount("Moon Kirin", "Legendary", 1.68, {SpawnMode="Wild", TimeOfDay="Night", AnimationSpecies="ShadowStag", Visual={Archetype="Quadruped", Color=Color3.fromRGB(88,84,116), Accent=Color3.fromRGB(170,157,255), Scale=1.22, Feature="horns"}})
+
+addMount("Storm Gryphon", "Mythic", 1.82, {SpawnMode="Wild", TimeOfDay="Day", AnimationSpecies="Griffin", Visual={Archetype="Quadruped", Color=Color3.fromRGB(83,104,123), Accent=Color3.fromRGB(137,211,255), Scale=1.34, Feature="wings"}})
+addMount("Astral Wyvern", "Mythic", 1.82, {SpawnMode="Wild", TimeOfDay="Night", AnimationSpecies="Dragon", Visual={Archetype="Raptor", Color=Color3.fromRGB(68,55,109), Accent=Color3.fromRGB(185,149,255), Scale=1.36, Feature="wings"}})
+
+-- Limited mounts mirror Limited pets: event-only rather than normal wilderness spawns.
+addMount("Frost Sleigh Reindeer", "Limited", 1.92, {SpawnMode="Event", Event="Winter", AnimationSpecies="ShadowStag", Visual={Archetype="Quadruped", Color=Color3.fromRGB(215,228,236), Accent=Color3.fromRGB(117,211,255), Scale=1.24, Feature="antlers"}})
+addMount("Harvest Warg", "Limited", 1.92, {SpawnMode="Event", Event="Halloween", AnimationSpecies="Wolf", Visual={Archetype="Quadruped", Color=Color3.fromRGB(82,55,44), Accent=Color3.fromRGB(255,133,53), Scale=1.28, Feature="mane"}})
+
+-- Ancient mounts never enter the normal wilderness pool. They are reserved for
+-- the 0.01% eligible-player world-boss pouch roll.
+addMount("Runebound Mammoth", "Ancient", 2.05, {SpawnMode="WorldBoss", WorldBoss=true, AnimationSpecies="AncientTitan", Visual={Archetype="Titan", Color=Color3.fromRGB(91,82,74), Accent=Color3.fromRGB(93,219,192), Scale=1.55, Feature="tusks"}})
+addMount("Abyssal Wyvern", "Ancient", 2.05, {SpawnMode="WorldBoss", WorldBoss=true, AnimationSpecies="Dragon", Visual={Archetype="Raptor", Color=Color3.fromRGB(41,61,83), Accent=Color3.fromRGB(79,224,231), Scale=1.52, Feature="wings"}})
 
 Config.Pets = {}
 
