@@ -1,5 +1,6 @@
 local PetAnimator = require(script.Parent.PetAnimator)
 local Config = require(game.ReplicatedStorage.WildernessPets.Shared.Config)
+local WildArea = require(script.Parent.WildArea)
 --[[
     WildMonsterRoamSystem
     Makes wild, uncaptured monsters roam freely around the map.
@@ -9,16 +10,12 @@ local Config = require(game.ReplicatedStorage.WildernessPets.Shared.Config)
 
 local WildMonsters = workspace:WaitForChild("WildernessPets"):WaitForChild("WildMonsters")
 
--- Map bounds for roaming (wilderness area outside town)
+-- Wilderness bounds come from the same runtime perimeter detector used by
+-- spawning, so roaming never deliberately crosses the map's invisible walls.
 local spawnTuning = Config.WildSpawn or {}
-local mapRadius = math.max(300, tonumber(spawnTuning.MaxRadius) or 640)
-local MAP_MIN_X = -mapRadius
-local MAP_MAX_X = mapRadius
-local MAP_MIN_Z = -mapRadius
-local MAP_MAX_Z = mapRadius
 
 -- Keep monsters distributed outside the town/plot hub instead of collapsing inward.
-local TOWN_CENTER_RADIUS = math.max(120, (tonumber(spawnTuning.MinRadius) or 190) - 20)
+local TOWN_CENTER_RADIUS = math.max(120, (tonumber(spawnTuning.MinRadius) or 175) - 20)
 
 -- Roaming parameters
 local ROAM_RADIUS = math.max(80, tonumber(spawnTuning.RoamMaxDistance) or 120)
@@ -45,8 +42,7 @@ local function pickRoamTarget(currentPos)
         local targetX = currentPos.X + math.cos(angle) * distance
         local targetZ = currentPos.Z + math.sin(angle) * distance
 
-        targetX = math.clamp(targetX, MAP_MIN_X, MAP_MAX_X)
-        targetZ = math.clamp(targetZ, MAP_MIN_Z, MAP_MAX_Z)
+        targetX, targetZ = WildArea:ClampXZ(targetX, targetZ)
 
         local distFromCenter = math.sqrt(targetX * targetX + targetZ * targetZ)
         if distFromCenter >= TOWN_CENTER_RADIUS then
