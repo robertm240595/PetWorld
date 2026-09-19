@@ -19,6 +19,8 @@ local Config = require(Root:WaitForChild("Shared"):WaitForChild("Config"))
 local state
 local petsOpen=false
 local selectedPetId
+local tutorialGuideKind
+local tutorialGuidePetId
 local showPets
 local showBeastTrader
 local showLassoKeeper
@@ -630,6 +632,37 @@ showPets = function(tab)
             PetsRemote:FireServer("Rename",pet.Id,renameBox.Text)
         end)
 
+        if tutorialGuideKind=="Rename" and tutorialGuidePetId==pet.Id then
+            local guide=Instance.new("Frame")
+            guide.Name="TutorialRenameHighlight"
+            guide.Position=UDim2.fromOffset(-6,146)
+            guide.Size=UDim2.fromOffset(450,52)
+            guide.BackgroundTransparency=1
+            guide.ZIndex=20
+            guide.Parent=detail
+
+            local guideStroke=Instance.new("UIStroke")
+            guideStroke.Color=Color3.fromRGB(255,205,92)
+            guideStroke.Thickness=3
+            guideStroke.Parent=guide
+
+            local guideText=text(
+                detail,
+                "TUTORIAL  ·  GIVE YOUR COMPANION A NAME",
+                UDim2.fromOffset(0,132),
+                UDim2.fromOffset(438,18)
+            )
+            guideText.Name="TutorialRenameCallout"
+            guideText.TextScaled=false
+            guideText.TextSize=10
+            guideText.TextColor3=Color3.fromRGB(255,215,115)
+            guideText.TextXAlignment=Enum.TextXAlignment.Left
+
+            task.defer(function()
+                if renameBox.Parent then renameBox:CaptureFocus() end
+            end)
+        end
+
         local renameHint=text(
             detail,
             renameCost==0 and "This pet still has its one free rename." or ("Further renames cost "..tostring(renameCost).." Gems."),
@@ -664,6 +697,33 @@ showPets = function(tab)
             b.MouseButton1Click:Connect(function()
                 PetsRemote:FireServer("Upgrade",pet.Id,stat)
             end)
+        end
+
+        if tutorialGuideKind=="Upgrade" and tutorialGuidePetId==pet.Id then
+            local guide=Instance.new("Frame")
+            guide.Name="TutorialUpgradeHighlight"
+            guide.Position=UDim2.fromOffset(-6,362)
+            guide.Size=UDim2.fromOffset(450,52)
+            guide.BackgroundTransparency=1
+            guide.ZIndex=20
+            guide.Parent=detail
+
+            local guideStroke=Instance.new("UIStroke")
+            guideStroke.Color=Color3.fromRGB(255,205,92)
+            guideStroke.Thickness=3
+            guideStroke.Parent=guide
+
+            local guideText=text(
+                detail,
+                "TUTORIAL  ·  SPEND YOUR UPGRADE POINT",
+                UDim2.fromOffset(0,346),
+                UDim2.fromOffset(438,18)
+            )
+            guideText.Name="TutorialUpgradeCallout"
+            guideText.TextScaled=false
+            guideText.TextSize=10
+            guideText.TextColor3=Color3.fromRGB(255,215,115)
+            guideText.TextXAlignment=Enum.TextXAlignment.Left
         end
     end
 
@@ -1785,9 +1845,22 @@ PetsRemote.OnClientEvent:Connect(function(action, success, message)
     end
 end)
 
-QuestRemote.OnClientEvent:Connect(function(action)
+QuestRemote.OnClientEvent:Connect(function(action, value)
     if action == "Reward" then
         showHUD()
+    elseif action == "TutorialGuide" and type(value)=="table" then
+        if value.Kind=="Clear" then
+            tutorialGuideKind=nil
+            tutorialGuidePetId=nil
+        elseif value.Kind=="Rename" or value.Kind=="Upgrade" then
+            tutorialGuideKind=value.Kind
+            tutorialGuidePetId=tostring(value.PetId or "")
+            selectedPetId=tutorialGuidePetId
+            backpackTab="Pets"
+            task.defer(function()
+                showPets("Pets")
+            end)
+        end
     end
 end)
 

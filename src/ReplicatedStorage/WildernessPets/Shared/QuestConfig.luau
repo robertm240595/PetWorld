@@ -7,6 +7,7 @@ QuestConfig.ObjectiveTypes = {
     InspectPet = "SHOW PET",
     Action = "GAMEPLAY TASK",
     ItemTurnIn = "ITEM TURN-IN",
+    Spar = "CHALLENGE",
 }
 
 QuestConfig.LassoTiers = {
@@ -34,9 +35,10 @@ QuestConfig.World = {
     },
 }
 
--- All chains except the starter tutorial require StarterWolves to be complete.
--- RequiredStrength is checked against the highest lasso tier the player has
--- acquired, so progression/NPC arrivals remain unlocked even if that lasso is later sold.
+-- StarterWolves leads directly into BeastHandlingTutorial. All other village
+-- chains are globally hidden until BeastHandlingTutorial is complete.
+-- RequiredStrength uses the highest lasso tier ever acquired, so unlocked
+-- quest tiers remain available even if a lasso is later sold.
 QuestConfig.Chains = {
     StarterWolves = {
         Id = "StarterWolves",
@@ -57,6 +59,30 @@ QuestConfig.Chains = {
                 Objective = "Capture and return 5 Wolves to Warden Rowan.",
                 Detail = "Healthy, unfavourited Wolves free in your backpack count toward the hand-in.",
             },
+        },
+    },
+
+    BeastHandlingTutorial = {
+        Id = "BeastHandlingTutorial",
+        Name = "Your First Companion",
+        NPC = "Rowan",
+        RequiredStrength = 0,
+        Priority = 2,
+        Prerequisite = "StarterWolves",
+        TutorialGate = true,
+        Intro = "Those Wolves proved you can use a lasso. Now you need to learn how to raise a beast of your own. Capture any wild beast you want to keep. I'll walk you through equipping it, naming it, fighting with it, improving it, and caring for it when a battle goes wrong.",
+        CompleteText = "Now you're ready to work without me looking over your shoulder. The rest of the village has heard what you can do, and you'll find several people ready to offer you work.",
+        Reward = {Coins = 2000, Gems = 0},
+        Stages = {
+            {Id="CaptureCompanion", Type="Action", Action="CapturePet", Required=1, Objective="Capture any wild beast to become your first companion.", Detail="Use your lasso on any accessible wild pet you want to keep."},
+            {Id="EquipCompanion", Type="Action", Action="EquipPet", Required=1, Objective="Equip the beast you just captured.", Detail="Open your Backpack, select the captured beast, and equip it."},
+            {Id="RenameCompanion", Type="Action", Action="RenamePet", Required=1, Objective="Give your new companion a name.", Detail="The Backpack will open and highlight the rename controls. The first rename is free."},
+            {Id="FirstVictories", Type="Kill", Required=3, TutorialPetOnly=true, Objective="Use your named companion to defeat 3 wild pets.", Detail="Command your companion to attack wild creatures. Your tutorial companion must land the victories."},
+            {Id="UpgradeCompanion", Type="Action", Action="UpgradePet", Required=1, Objective="Spend an upgrade point on your companion.", Detail="Rowan grants one tutorial upgrade point. The Backpack will highlight the stat upgrade buttons."},
+            {Id="RowanChallenge", Type="Spar", Required=1, Objective="Defeat Rowan's veteran Wolf.", Detail="Rowan presents this as your final combat test. Command your companion to attack his veteran Wolf."},
+            {Id="StartHealing", Type="Action", Action="StartHealing", Required=1, Objective="Place your defeated companion into your Pet Barn.", Detail="Rowan's lesson was deliberate: defeated pets must be healed at the Barn on your plot."},
+            {Id="CollectHealing", Type="Action", Action="CollectHealed", Required=1, Objective="Wait for the healing timer, then collect your companion.", Detail="Barn healing continues in real time. Return when the timer reaches zero."},
+            {Id="Report", Type="Talk", Objective="Return to Warden Rowan after your companion recovers.", Detail="Report back to finish the handling tutorial and unlock the village quest roster."},
         },
     },
 
