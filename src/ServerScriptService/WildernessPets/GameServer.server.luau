@@ -217,12 +217,32 @@ PetsRemote.OnServerEvent:Connect(function(player, action, ...)
         end
 
         local key = tostring(required)
-        data.CollectionRewardsClaimed[key] = true
-
         local coins = math.max(0, math.floor(tonumber(milestone.Coins) or 0))
         local gems = math.max(0, math.floor(tonumber(milestone.Gems) or 0))
-        if coins > 0 then DataService:AddCoins(player, coins) end
-        if gems > 0 then DataService:AddGems(player, gems) end
+
+        -- Grant currency before marking the milestone claimed so a failed grant
+        -- can never consume the reward.
+        local coinBalance = tonumber(data.Coins) or 0
+        local gemBalance = tonumber(data.Gems) or 0
+        if coins > 0 then
+            coinBalance = DataService:AddCoins(player, coins)
+            if coinBalance == nil then
+                PetsRemote:FireClient(player, "CollectionReward", false, "Could not grant the Coin reward. Please try again.")
+                return
+            end
+        end
+        if gems > 0 then
+            gemBalance = DataService:AddGems(player, gems)
+            if gemBalance == nil then
+                if coins > 0 then
+                    data.Coins = math.max(0, (tonumber(data.Coins) or 0) - coins)
+                end
+                PetsRemote:FireClient(player, "CollectionReward", false, "Could not grant the Gem reward. Please try again.")
+                return
+            end
+        end
+
+        data.CollectionRewardsClaimed[key] = true
 
         local parts = {}
         if coins > 0 then table.insert(parts, tostring(coins) .. " Coins") end
@@ -233,7 +253,9 @@ PetsRemote.OnServerEvent:Connect(function(player, action, ...)
             player,
             "CollectionReward",
             true,
-            "Collection milestone " .. tostring(required) .. " claimed: " .. rewardText .. "."
+            "Collection milestone " .. tostring(required) .. " claimed: " .. rewardText .. ".",
+            coinBalance,
+            gemBalance
         )
     end
 end)

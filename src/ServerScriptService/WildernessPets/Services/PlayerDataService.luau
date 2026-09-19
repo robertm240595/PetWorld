@@ -127,6 +127,9 @@ function Service:Load(player)
         data.ActiveEffects = {}
     end
 
+    data.Coins = math.max(0, math.floor(tonumber(data.Coins) or tonumber(Config.StartCoins) or 0))
+    data.Gems = math.max(0, math.floor(tonumber(data.Gems) or tonumber(Config.StartGems) or 0))
+
     data.ActiveEffects.XPBoostUntil = tonumber(data.ActiveEffects.XPBoostUntil) or 0
     data.ActiveEffects.XPBoostPercent = tonumber(data.ActiveEffects.XPBoostPercent) or 0
     data.ActiveEffects.SpeedBoostUntil = tonumber(data.ActiveEffects.SpeedBoostUntil) or 0
@@ -202,18 +205,22 @@ end
 
 function Service:AddCoins(player, amount)
     local data = self:Get(player)
-    if not data then return end
+    if not data then return nil end
 
-    data.Coins += amount
+    local value = math.max(0, math.floor(tonumber(amount) or 0))
+    data.Coins = math.max(0, math.floor(tonumber(data.Coins) or 0)) + value
     syncLeaderstats(player)
+    return data.Coins
 end
 
 function Service:AddGems(player, amount)
     local data = self:Get(player)
-    if not data then return end
+    if not data then return nil end
 
-    data.Gems += amount
+    local value = math.max(0, math.floor(tonumber(amount) or 0))
+    data.Gems = math.max(0, math.floor(tonumber(data.Gems) or 0)) + value
     syncLeaderstats(player)
+    return data.Gems
 end
 
 function Service:SpendCoins(player, amount)
