@@ -1510,6 +1510,12 @@ function Service:IsQuestActiveOrCompleted(player, questId)
     return self:IsQuestActive(player, questId) or self:IsQuestCompleted(player, questId)
 end
 
+function Service:GetQuestStageId(player, questId)
+    local _, _, chain, _, stage = chainStage(player, questId)
+    if not chain or not stage then return nil end
+    return stage.Id
+end
+
 local function completeQuest(player, chain)
     local root = questData(player)
     if not root then return end
@@ -2372,60 +2378,11 @@ local function buildCave()
     caveEntrance = baseGround + Vector3.new(0, .15, 0)
     caveInner = caveEntrance + Vector3.new(0, 0, -18)
 
-    caveModel = Instance.new("Model")
-    caveModel.Name = "HollowfangCave"
-    caveModel.Parent = questWorld
-
-    local rock = Color3.fromRGB(70, 70, 67)
-    local darkRock = Color3.fromRGB(48, 49, 48)
-
-    makePart(caveModel, "CaveFloor", Vector3.new(28, 1.2, 42), CFrame.new(caveEntrance + Vector3.new(0, -.45, -10)), darkRock, Enum.Material.Slate)
-    makePart(caveModel, "LeftWall", Vector3.new(8, 13, 34), CFrame.new(caveEntrance + Vector3.new(-10, 5.8, -9)) * CFrame.Angles(0, 0, math.rad(-5)), rock, Enum.Material.Rock)
-    makePart(caveModel, "RightWall", Vector3.new(8, 13, 34), CFrame.new(caveEntrance + Vector3.new(10, 5.8, -9)) * CFrame.Angles(0, 0, math.rad(5)), rock, Enum.Material.Rock)
-    makePart(caveModel, "Roof", Vector3.new(23, 6, 28), CFrame.new(caveEntrance + Vector3.new(0, 12, -11)), darkRock, Enum.Material.Rock)
-    makePart(caveModel, "BackWall", Vector3.new(22, 12, 5), CFrame.new(caveEntrance + Vector3.new(0, 5.5, -28)), darkRock, Enum.Material.Rock)
-
-    for index, spec in ipairs({
-        {-8, 5, 1, 6, 11, 6},
-        {8, 5, 1, 6, 11, 6},
-        {-5, 10, -1, 7, 5, 6},
-        {5, 10, -1, 7, 5, 6},
-        {0, 12, -2, 8, 4, 7},
-    }) do
-        makePart(
-            caveModel,
-            "EntranceRock" .. tostring(index),
-            Vector3.new(spec[4], spec[5], spec[6]),
-            CFrame.new(caveEntrance + Vector3.new(spec[1], spec[2], spec[3]))
-                * CFrame.Angles(math.rad(index * 7), math.rad(index * 19), math.rad(index * 5)),
-            index % 2 == 0 and rock or darkRock,
-            Enum.Material.Rock
-        )
-    end
-
-    local sign = makePart(
-        caveModel,
-        "CaveSign",
-        Vector3.new(8, 1.6, .45),
-        CFrame.new(caveEntrance + Vector3.new(0, 4, 5)),
-        Color3.fromRGB(82, 61, 42),
-        Enum.Material.Wood
-    )
-    sign.CanCollide = false
-
-    local surface = Instance.new("SurfaceGui")
-    surface.Face = Enum.NormalId.Front
-    surface.CanvasSize = Vector2.new(500, 100)
-    surface.Parent = sign
-
-    local label = Instance.new("TextLabel")
-    label.BackgroundTransparency = 1
-    label.Size = UDim2.fromScale(1, 1)
-    label.Font = Enum.Font.GothamBold
-    label.TextScaled = true
-    label.TextColor3 = Color3.fromRGB(235, 220, 184)
-    label.Text = "HOLLOWFANG CAVE"
-    label.Parent = surface
+    -- The original block-built Hollowfang cave has been retired. Quest logic
+    -- still uses the same entrance/inner coordinates, while the actual cave
+    -- visuals are now supplied by the mesh cave in Studio and the deep-passage
+    -- travel system.
+    caveModel = nil
 end
 
 local function buildLeatherTraderArea()
