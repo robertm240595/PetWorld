@@ -147,6 +147,9 @@ PetsRemote.OnServerEvent:Connect(function(player, action, ...)
         local success, message = PetService:Rename(player, petId, name)
         local refresh = script.Parent.Systems:FindFirstChild("PetDisplayRefresh")
         if success and refresh then refresh:Fire(player) end
+        if success then
+            QuestService:OnPlayerAction(player, "RenamePet", {PetId = petId})
+        end
 
         PetsRemote:FireClient(player, "Updated", success, message)
 
@@ -155,6 +158,9 @@ PetsRemote.OnServerEvent:Connect(function(player, action, ...)
         local stat = args[2]
 
         local success = PetService:Upgrade(player, petId, stat)
+        if success then
+            QuestService:OnPlayerAction(player, "UpgradePet", {PetId = petId})
+        end
 
         PetsRemote:FireClient(player, "Updated", success)
 
@@ -175,7 +181,11 @@ PetsRemote.OnServerEvent:Connect(function(player, action, ...)
         if success and refresh then refresh:Fire(player) end
         PetsRemote:FireClient(player, "Updated", success, message)
     elseif action == "Equip" then
-        local success, message = equipCompanion(player, args[1])
+        local petId = args[1]
+        local success, message = equipCompanion(player, petId)
+        if success then
+            QuestService:OnPlayerAction(player, "EquipPet", {PetId = petId})
+        end
         PetsRemote:FireClient(player, "Updated", success, message)
     elseif action == "Unequip" then
         unequipCompanion(player)
@@ -424,7 +434,7 @@ ShopRemote.OnServerEvent:Connect(function(player, action, ...)
         local success, message, seconds = PetService:StartHealing(player, value)
         if success then
             BarnService:RefreshVisuals(player)
-            QuestService:OnPlayerAction(player, "StartHealing")
+            QuestService:OnPlayerAction(player, "StartHealing", {PetId = value})
             task.delay(math.max(1, tonumber(seconds) or 1), function()
                 if player and player.Parent then
                     BarnService:RefreshVisuals(player)
@@ -445,7 +455,7 @@ ShopRemote.OnServerEvent:Connect(function(player, action, ...)
             BarnService:RefreshVisuals(player)
             local refresh = script.Parent.Systems:FindFirstChild("PetDisplayRefresh")
             if refresh then refresh:Fire(player) end
-            QuestService:OnPlayerAction(player, "CollectHealed")
+            QuestService:OnPlayerAction(player, "CollectHealed", {PetId = value})
         end
         ShopRemote:FireClient(player, "BarnResult", success, message, 0)
     end
@@ -848,6 +858,11 @@ local function rewardCombatKill(player, session, target)
     if rewardGuard[target] then return end
     rewardGuard[target] = true
 
+    if target:GetAttribute("QuestNoRewards") then
+        combatTell(player, "Reward", 0, target:GetAttribute("Rarity") or "Quest")
+        return
+    end
+
     local rarity = target:GetAttribute("Rarity") or "Common"
     local rarityInfo = Config.Rarities[rarity]
     local rank = rarityInfo and rarityInfo.Rank or 1
@@ -873,7 +888,7 @@ local function rewardCombatKill(player, session, target)
     awardedXP = awardedXP or baseXP
     LootService:SpawnBag(player, target, baseCoins)
 
-    QuestService:OnMonsterKilled(player, target)
+    QuestService:OnMonsterKilled(player, target, session.petId)
     combatTell(player, "Reward", awardedXP, rarity)
 
     local refresh = script.Parent.Systems:FindFirstChild("PetDisplayRefresh")
@@ -908,6 +923,7 @@ local function defeatCompanion(player, session, target)
     if pet then
         pet.CurrentHealth = 0
         PetService:MarkDead(player, session.petId)
+        QuestService:OnCompanionDefeated(player, target, session.petId)
     end
 
     if companion and companion.Parent then
