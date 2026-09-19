@@ -1199,7 +1199,20 @@ local function actionObjectiveTarget(player, stage)
     elseif action == "DefeatWyrm" then
         local settings = QuestConfig.World
         if player:GetAttribute("BossArena") == "Wyrm" then
-            return settings.WyrmArenaCenter + Vector3.new(0, 5, -8), "Hollowfang Wyrm"
+            local monsters = world and world:FindFirstChild("WildMonsters")
+            if monsters then
+                for _, monster in ipairs(monsters:GetChildren()) do
+                    if monster:IsA("Model")
+                        and monster:GetAttribute("BossId") == "HollowfangWyrm"
+                        and tonumber(monster:GetAttribute("QuestOwnerUserId")) == player.UserId
+                        and not monster:GetAttribute("Dead") then
+                        local part = monster.PrimaryPart or monster:FindFirstChildWhichIsA("BasePart", true)
+                        if part then
+                            return part.Position, "Hollowfang Wyrm"
+                        end
+                    end
+                end
+            end
         end
         local ground = terrainPoint(settings.CaveXZ.X, settings.CaveXZ.Y, settings.CaveFallbackY)
         return ground + Vector3.new(0, 2, -32), "Hollowfang Cave"
