@@ -391,6 +391,7 @@ function CaptureService:Resolve(player, challengeId, clickTime, timedOut, roundT
 		QuestService:OnPlayerAction(player, "CaptureMount", {
 			MountId = mount.Id,
 			Species = mount.Species,
+			QuestMount = monster:GetAttribute("QuestMountTutorial") == true,
 		})
 	else
 		local lucky = activeEffects and activeEffects.NextCaptureLuck == true
