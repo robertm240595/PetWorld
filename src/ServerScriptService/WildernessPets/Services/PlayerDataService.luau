@@ -37,6 +37,7 @@ local function newData()
         Pets = {},
         PetCollection = {},
         CollectionRewardsClaimed = {},
+        QuestProgress = {},
         SelectedPlot = 0,
         DefencePetId = "",
         EquippedPetId = "",
@@ -116,6 +117,9 @@ function Service:Load(player)
     end
     if type(data.CollectionRewardsClaimed) ~= "table" then
         data.CollectionRewardsClaimed = {}
+    end
+    if type(data.QuestProgress) ~= "table" then
+        data.QuestProgress = {}
     end
     if type(data.PetBuyback) ~= "table" then
         data.PetBuyback = {}
