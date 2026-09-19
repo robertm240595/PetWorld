@@ -1139,8 +1139,11 @@ function Service:GetClientState(player)
         local progressText
         local detailText = stage.Detail or ""
         if stage.Type == "MultiItemTurnIn" then
-            local _, _, ready, parts = multiItemProgress(player, stage)
-            progressText = ready and "READY TO DELIVER" or table.concat(parts, "  ·  ")
+            local total, totalRequired, ready, parts = multiItemProgress(player, stage)
+            progressText = ready
+                and "READY TO DELIVER"
+                or (tostring(total) .. " / " .. tostring(totalRequired) .. " MATERIALS")
+            detailText = table.concat(parts, "  ·  ")
         elseif stage.Type == "Talk" then
             progressText = chain.Special == "LeatherTrader" and "FIND CORVIN" or "READY TO REPORT"
         elseif stage.Type == "Spar" then
