@@ -540,7 +540,8 @@ RunService.RenderStepped:Connect(function()
                 local x = 220 + diff * (195 / 78)
                 questMarker.Position = UDim2.fromOffset(x, -3)
                 questDistance.Position = UDim2.fromOffset(x, 19)
-                questDistance.Text = tostring(math.floor(horizontal.Magnitude + .5)) .. " studs"
+                local metres = math.max(1, math.floor(horizontal.Magnitude / 5 + .5))
+                questDistance.Text = tostring(metres) .. " m"
             end
         else
             questMarker.Visible = true

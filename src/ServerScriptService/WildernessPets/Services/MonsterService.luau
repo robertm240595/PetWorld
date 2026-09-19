@@ -1,6 +1,7 @@
 local Config=require(game.ReplicatedStorage.WildernessPets.Shared.Config)
 local Animator=require(script.Parent.Parent.Systems.PetAnimator)
 local ModelFactory=require(script.Parent.Parent.Systems.PetModelFactory)
+local WildArea=require(script.Parent.Parent.Systems.WildArea)
 local Players=game:GetService("Players")
 local Service={}
 local rng=Random.new()
@@ -64,35 +65,37 @@ local function spawnPosition()
  params.FilterDescendantsInstances={workspace.Terrain}
 
  local spawn=Config.WildSpawn or {}
- local minRadius=math.max(0,tonumber(spawn.MinRadius) or 190)
- local maxRadius=math.max(minRadius+1,tonumber(spawn.MaxRadius) or 640)
- local attempts=math.max(20,math.floor(tonumber(spawn.Attempts) or 90))
+ local minRadius=math.max(0,tonumber(spawn.MinRadius) or 175)
+ local attempts=math.max(20,math.floor(tonumber(spawn.Attempts) or 120))
 
  for _=1,attempts do
-  local angle=rng:NextNumber(0,math.pi*2)
-  local radius=math.sqrt(rng:NextNumber(minRadius*minRadius,maxRadius*maxRadius))
-  local x=math.cos(angle)*radius
-  local z=math.sin(angle)*radius
-  local safe=true
+  -- Sample the full accessible wilderness rectangle instead of a circular
+  -- 640-stud ring. Runtime perimeter detection keeps these points inside the
+  -- map's invisible barrier walls when those walls are present.
+  local x,z=WildArea:RandomXZ(rng,minRadius)
+  if x and z then
+   local safe=true
 
-  for _,plot in world.Plots:GetChildren() do
-   local land=plot:FindFirstChild("Land")
-   if land then
-    local p=land.CFrame:PointToObjectSpace(Vector3.new(x,land.Position.Y,z))
-    if math.abs(p.X)<land.Size.X/2+24 and math.abs(p.Z)<land.Size.Z/2+24 then
-     safe=false
-     break
+   for _,plot in world.Plots:GetChildren() do
+    local land=plot:FindFirstChild("Land")
+    if land then
+     local p=land.CFrame:PointToObjectSpace(Vector3.new(x,land.Position.Y,z))
+     if math.abs(p.X)<land.Size.X/2+24 and math.abs(p.Z)<land.Size.Z/2+24 then
+      safe=false
+      break
+     end
     end
    end
-  end
 
-  if safe then
-   local hit=workspace:Raycast(Vector3.new(x,300,z),Vector3.new(0,-650,0),params)
-   if hit
-    and hit.Normal.Y>.8
-    and hit.Material~=Enum.Material.Water
-    and not nearPlayer(hit.Position,Config.Respawn.SafePlayerRadius) then
-    return hit.Position
+   if safe then
+    local hit=workspace:Raycast(Vector3.new(x,350,z),Vector3.new(0,-750,0),params)
+    if hit
+     and hit.Normal.Y>.78
+     and hit.Material~=Enum.Material.Water
+     and WildArea:ContainsXZ(hit.Position.X,hit.Position.Z)
+     and not nearPlayer(hit.Position,Config.Respawn.SafePlayerRadius) then
+     return hit.Position
+    end
    end
   end
  end
@@ -208,6 +211,12 @@ function Service:Init()
  world:SetAttribute("CycleDuration",Config.WorldCycle.DurationSeconds)
  world:SetAttribute("CycleStartHour",Config.WorldCycle.StartHour)
  world:SetAttribute("IsNight",self:IsNight())
+ local bounds=WildArea:GetBounds(true)
+ world:SetAttribute("WildBoundsDetected",bounds.DetectedBarrierBounds==true)
+ world:SetAttribute("WildBoundsMinX",bounds.MinX)
+ world:SetAttribute("WildBoundsMaxX",bounds.MaxX)
+ world:SetAttribute("WildBoundsMinZ",bounds.MinZ)
+ world:SetAttribute("WildBoundsMaxZ",bounds.MaxZ)
  -- Replace the editor's static population once; respawns thereafter own one slot each.
  for _,m in folder:GetChildren() do if m:IsA("Model") then m:Destroy() end end
  for i=1,Config.WildMonsterCount do slots[i]={model=nil,readyAt=now()} end
