@@ -19,6 +19,7 @@ local Config = require(Root:WaitForChild("Shared"):WaitForChild("Config"))
 local state
 local petsOpen=false
 local selectedPetId
+local selectedMountId
 local tutorialGuideKind
 local tutorialGuidePetId
 local showPets
@@ -119,7 +120,7 @@ end
 --------------------------------------------------------------
 
 showPets = function(tab)
-    if tab == "Pets" or tab == "Inventory" then
+    if tab == "Pets" or tab == "Mounts" or tab == "Inventory" then
         backpackTab = tab
     end
 
@@ -135,6 +136,7 @@ showPets = function(tab)
     end
 
     local pets=state.Pets or {}
+    local mounts=state.Mounts or {}
     local inventory=state.Inventory or {}
     local inventoryCapacity=math.max(1,tonumber(state.InventoryCapacity) or tonumber(Config.MaxInventory) or 25)
 
@@ -164,29 +166,186 @@ showPets = function(tab)
         panel,
         "🐾  PETS   "..tostring(#pets).."/"..tostring(Config.MaxPets or 60),
         UDim2.fromOffset(22,54),
-        UDim2.fromOffset(360,50)
+        UDim2.fromOffset(238,50)
     )
     petTab.TextScaled=false
-    petTab.TextSize=13
+    petTab.TextSize=12
+
+    local mountTab=button(
+        panel,
+        "♞  MOUNTS   "..tostring(#mounts).."/"..tostring(Config.MaxMounts or 40),
+        UDim2.fromOffset(268,54),
+        UDim2.fromOffset(238,50)
+    )
+    mountTab.TextScaled=false
+    mountTab.TextSize=12
 
     local inventoryTab=button(
         panel,
         "🎒  INVENTORY   "..tostring(#inventory).."/"..tostring(inventoryCapacity),
-        UDim2.fromOffset(390,54),
-        UDim2.fromOffset(378,50)
+        UDim2.fromOffset(514,54),
+        UDim2.fromOffset(254,50)
     )
     inventoryTab.TextScaled=false
-    inventoryTab.TextSize=13
+    inventoryTab.TextSize=12
 
     petTab.BackgroundColor3=backpackTab=="Pets" and Color3.fromRGB(75,92,117) or Color3.fromRGB(45,51,61)
+    mountTab.BackgroundColor3=backpackTab=="Mounts" and Color3.fromRGB(75,92,117) or Color3.fromRGB(45,51,61)
     inventoryTab.BackgroundColor3=backpackTab=="Inventory" and Color3.fromRGB(75,92,117) or Color3.fromRGB(45,51,61)
 
     petTab.MouseButton1Click:Connect(function()
         showPets("Pets")
     end)
+    mountTab.MouseButton1Click:Connect(function()
+        showPets("Mounts")
+    end)
     inventoryTab.MouseButton1Click:Connect(function()
         showPets("Inventory")
     end)
+
+    if backpackTab=="Mounts" then
+        local status=text(
+            panel,
+            tostring(#mounts).."/"..tostring(Config.MaxMounts or 40)
+                .." mounts  ·  Rideable collection  ·  Mounts cannot fight",
+            UDim2.fromOffset(22,112),
+            UDim2.fromOffset(770,24)
+        )
+        status.TextScaled=false
+        status.TextSize=13
+        status.TextXAlignment=Enum.TextXAlignment.Left
+
+        local list=Instance.new("ScrollingFrame")
+        list.Name="CollectedMounts"
+        list.Position=UDim2.fromOffset(18,145)
+        list.Size=UDim2.fromOffset(326,445)
+        list.BackgroundTransparency=1
+        list.BorderSizePixel=0
+        list.ScrollBarThickness=4
+        list.AutomaticCanvasSize=Enum.AutomaticSize.Y
+        list.CanvasSize=UDim2.new()
+        list.Parent=panel
+
+        local layout=Instance.new("UIListLayout")
+        layout.Padding=UDim.new(0,7)
+        layout.Parent=list
+
+        local detail=Instance.new("Frame")
+        detail.Name="MountDetails"
+        detail.Position=UDim2.fromOffset(362,145)
+        detail.Size=UDim2.fromOffset(438,445)
+        detail.BackgroundTransparency=1
+        detail.Parent=panel
+
+        local function showMountDetails(mount)
+            selectedMountId=mount.Id
+            detail:ClearAllChildren()
+
+            local title=text(detail,tostring(mount.Name or mount.Species),UDim2.fromOffset(0,0),UDim2.fromOffset(438,32))
+            title.TextScaled=false
+            title.TextSize=22
+            title.TextXAlignment=Enum.TextXAlignment.Left
+
+            local info=Config.Mounts and Config.Mounts[mount.Species]
+            local speed=math.max(16,tonumber(mount.Speed) or tonumber(info and info.Speed) or 22)
+            local equipped=state.EquippedMountId==mount.Id
+
+            local stats=text(
+                detail,
+                tostring(mount.Species).."  ·  "..tostring(mount.Rarity or (info and info.Rarity) or "Common")
+                    .."\n\nRide speed  "..tostring(speed)
+                    .."\nCombat  NONE"
+                    .."\n\nRideable beasts use the lasso minigame but never enter pet combat.",
+                UDim2.fromOffset(0,44),
+                UDim2.fromOffset(438,130)
+            )
+            stats.TextScaled=false
+            stats.TextSize=14
+            stats.TextWrapped=true
+            stats.TextXAlignment=Enum.TextXAlignment.Left
+
+            local equip=button(
+                detail,
+                equipped and "UNEQUIP MOUNT" or "EQUIP MOUNT",
+                UDim2.fromOffset(0,205),
+                UDim2.fromOffset(438,44)
+            )
+            equip.TextScaled=false
+            equip.TextSize=14
+            equip.MouseButton1Click:Connect(function()
+                if equipped then
+                    PetsRemote:FireServer("UnequipMount")
+                else
+                    PetsRemote:FireServer("EquipMount",mount.Id)
+                end
+            end)
+
+            if tutorialGuideKind=="Mount" and tutorialGuidePetId==mount.Id then
+                local guide=Instance.new("Frame")
+                guide.Name="TutorialMountHighlight"
+                guide.Position=UDim2.fromOffset(-6,198)
+                guide.Size=UDim2.fromOffset(450,58)
+                guide.BackgroundTransparency=1
+                guide.ZIndex=20
+                guide.Parent=detail
+
+                local guideStroke=Instance.new("UIStroke")
+                guideStroke.Color=Color3.fromRGB(255,205,92)
+                guideStroke.Thickness=3
+                guideStroke.Parent=guide
+
+                local guideText=text(
+                    detail,
+                    "TUTORIAL  ·  EQUIP YOUR NEW MOUNT",
+                    UDim2.fromOffset(0,181),
+                    UDim2.fromOffset(438,18)
+                )
+                guideText.Name="TutorialMountCallout"
+                guideText.TextScaled=false
+                guideText.TextSize=10
+                guideText.TextColor3=Color3.fromRGB(255,215,115)
+                guideText.TextXAlignment=Enum.TextXAlignment.Left
+            end
+        end
+
+        local chosen
+        for _,mount in ipairs(mounts) do
+            local equipped=state.EquippedMountId==mount.Id
+            local b=button(
+                list,
+                (equipped and "♞ " or "")..tostring(mount.Name or mount.Species)
+                    .."\n"..tostring(mount.Rarity or "Common")
+                    ..(equipped and "  ·  EQUIPPED" or ""),
+                UDim2.new(),
+                UDim2.fromOffset(306,58)
+            )
+            b.TextScaled=false
+            b.TextSize=13
+            b.TextWrapped=true
+            b.BackgroundColor3=equipped and Color3.fromRGB(74,82,105) or Color3.fromRGB(55,70,90)
+            b.MouseButton1Click:Connect(function()
+                showMountDetails(mount)
+            end)
+            if mount.Id==selectedMountId then chosen=mount end
+        end
+
+        chosen=chosen or mounts[1]
+        if chosen then
+            showMountDetails(chosen)
+        else
+            local empty=text(
+                detail,
+                "Your Mount collection is empty.\nHunter's Lasso unlocks Stablemaster Maeve's riding quest.",
+                UDim2.fromOffset(0,70),
+                UDim2.fromOffset(438,130)
+            )
+            empty.TextScaled=false
+            empty.TextSize=16
+            empty.TextWrapped=true
+        end
+
+        return
+    end
 
     if backpackTab=="Inventory" then
         local status=text(
@@ -1909,6 +2068,14 @@ QuestRemote.OnClientEvent:Connect(function(action, value)
             backpackTab="Pets"
             task.defer(function()
                 showPets("Pets")
+            end)
+        elseif value.Kind=="Mount" then
+            tutorialGuideKind="Mount"
+            tutorialGuidePetId=tostring(value.MountId or "")
+            selectedMountId=tutorialGuidePetId
+            backpackTab="Mounts"
+            task.defer(function()
+                showPets("Mounts")
             end)
         end
     end
