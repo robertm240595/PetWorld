@@ -1166,6 +1166,40 @@ function Service:OnMonsterKilled(player, target)
     return true
 end
 
+function Service:OnPlayerAction(player, actionName)
+    if type(actionName) ~= "string" then return false end
+
+    local _, _, chain, state, stage = currentChainStage(player)
+    if not chain or not state or not stage or stage.Type ~= "Action" then
+        return false
+    end
+    if stage.Action ~= actionName then
+        return false
+    end
+
+    state.Count = math.min(
+        math.max(1, tonumber(stage.Required) or 1),
+        state.Count + 1
+    )
+
+    QuestRemote:FireClient(
+        player,
+        "Toast",
+        tostring(stage.Objective or actionName)
+            .. "  ·  "
+            .. tostring(state.Count)
+            .. "/"
+            .. tostring(stage.Required or 1)
+    )
+
+    if state.Count >= math.max(1, tonumber(stage.Required) or 1) then
+        advanceStage(player, chain, state)
+    else
+        Service:PushState(player)
+    end
+    return true
+end
+
 function Service:IsQuestMonsterAllowed(player, target)
     local owner = target and tonumber(target:GetAttribute("QuestOwnerUserId"))
     return owner == nil or owner == player.UserId
