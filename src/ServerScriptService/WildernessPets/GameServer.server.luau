@@ -448,7 +448,8 @@ ShopRemote.OnServerEvent:Connect(function(player, action, ...)
             return
         end
 
-        local success, message, seconds = PetService:StartHealing(player, value)
+        local tutorialHealingSeconds = QuestService:GetTutorialHealingSeconds(player, value)
+        local success, message, seconds = PetService:StartHealing(player, value, tutorialHealingSeconds)
         if success then
             BarnService:RefreshVisuals(player)
             QuestService:OnPlayerAction(player, "StartHealing", {PetId = value})
@@ -937,10 +938,11 @@ local function defeatCompanion(player, session, target)
     local pet = session.pet
     local companion = session.companion
 
+    local tutorialDefeat = false
     if pet then
         pet.CurrentHealth = 0
         PetService:MarkDead(player, session.petId)
-        QuestService:OnCompanionDefeated(player, target, session.petId)
+        tutorialDefeat = QuestService:OnCompanionDefeated(player, target, session.petId) == true
     end
 
     if companion and companion.Parent then
@@ -972,6 +974,9 @@ local function defeatCompanion(player, session, target)
     if refresh and refresh:IsA("BindableEvent") then refresh:Fire(player) end
 
     ActionLockService:End(player, "CompanionCombat")
+    if tutorialDefeat then
+        ActionLockService:AllowReturnHomeNow(player)
+    end
 
     task.delay(0.75, function()
         if companion and companion.Parent then companion:Destroy() end
