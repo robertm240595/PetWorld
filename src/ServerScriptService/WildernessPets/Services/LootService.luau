@@ -213,7 +213,6 @@ function Service:SpawnBag(player, target, baseCoins)
     model:SetAttribute("LootOwnerUserId", player.UserId)
     model:SetAttribute("LootSpecies", species)
     model:SetAttribute("LootRarity", rarity)
-    model.Parent = folder
 
     local record = {
         Id = id,
@@ -236,6 +235,9 @@ function Service:SpawnBag(player, target, baseCoins)
         if bags[id] ~= record or not model.Parent then return end
         LootRemote:FireClient(triggeringPlayer, "Open", clientPayload(record))
     end)
+
+    -- Replicate only after ownership, contents, and prompt handling are ready.
+    model.Parent = folder
 
     task.delay(math.max(30, tonumber(LootConfig.BagLifetimeSeconds) or 120), function()
         if bags[id] == record then
