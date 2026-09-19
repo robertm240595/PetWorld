@@ -197,15 +197,18 @@ local function transition(player, destination, arenaName, title, subtitle, quest
     character:PivotTo(destination)
     player:SetAttribute("BossArena", arenaName or "")
 
-    if questAction then
-        task.defer(function()
-            if player.Parent then
-                QuestService:OnPlayerAction(player, questAction, {
-                    BossArena = arenaName,
-                })
-            end
-        end)
-    end
+    task.defer(function()
+        if not player.Parent then return end
+
+        if questAction then
+            QuestService:OnPlayerAction(player, questAction, {
+                BossArena = arenaName,
+            })
+        end
+
+        -- Refresh compass targets after both entry and return travel.
+        QuestService:PushState(player)
+    end)
 
     task.wait(.16)
     BossTravelRemote:FireClient(player, "FadeIn", title, subtitle)
