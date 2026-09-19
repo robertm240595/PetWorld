@@ -447,19 +447,9 @@ showPets = function(tab)
             deadBadge.TextColor3=Color3.fromRGB(230,92,82)
 
             local healReady=tonumber(pet.HealReadyAt) or 0
-            local healText
-            if healReady>os.time() then
-                local remaining=math.max(0,healReady-os.time())
-                healText="HEALING AT BARN\n"..tostring(math.ceil(remaining)).." seconds remaining"
-            elseif healReady>0 then
-                healText="HEALED — READY TO COLLECT\nReturn to the Barn on your plot to collect this pet."
-            else
-                healText="Heal pet at the Barn on your plot.\nHealing time = 30s × level × rarity rank."
-            end
-
             local hint=text(
                 detail,
-                healText,
+                "",
                 UDim2.fromOffset(0,218),
                 UDim2.fromOffset(205,108)
             )
@@ -468,6 +458,32 @@ showPets = function(tab)
             hint.TextWrapped=true
             hint.TextXAlignment=Enum.TextXAlignment.Left
             hint.TextColor3=Color3.fromRGB(210,198,178)
+
+            local function updateHealingHint()
+                if not hint.Parent then return end
+                if healReady>0 then
+                    local remaining=math.max(0,healReady-os.time())
+                    if remaining>0 then
+                        hint.Text="HEALING AT BARN\n"..formatCountdown(remaining).." remaining"
+                    else
+                        hint.Text="HEALED — READY TO COLLECT\nReturn to the Barn on your plot to collect this pet."
+                        hint.TextColor3=Color3.fromRGB(150,235,158)
+                    end
+                else
+                    hint.Text="Heal pet at the Barn on your plot.\nHealing time = 30s × level × rarity rank."
+                end
+            end
+
+            updateHealingHint()
+            if healReady>os.time() then
+                task.spawn(function()
+                    while hint.Parent and healReady>os.time() do
+                        updateHealingHint()
+                        task.wait(0.25)
+                    end
+                    updateHealingHint()
+                end)
+            end
 
             makeDeadPreview(detail,pet)
             return
@@ -1649,5 +1665,10 @@ PetsRemote.OnClientEvent:Connect(function(action, success, message)
     if action == "Updated" then
         if success and petsOpen then showPets(backpackTab) end
         notify(message or (success and "Pet updated." or "Could not update this pet."))
+    elseif action == "CollectionReward" then
+        if success then
+            showHUD()
+        end
+        notify(message or (success and "Collection reward claimed." or "Collection reward unavailable."))
     end
 end)
