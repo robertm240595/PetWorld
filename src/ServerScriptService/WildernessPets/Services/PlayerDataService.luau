@@ -40,6 +40,9 @@ local function newData()
         },
         Pets = {},
         PetCollection = {},
+        Mounts = {},
+        MountCollection = {},
+        EquippedMountId = "",
         CollectionRewardsClaimed = {},
         QuestProgress = {},
         SelectedPlot = 0,
@@ -165,6 +168,13 @@ function Service:Load(player)
     if type(data.Pets) ~= "table" then
         data.Pets = {}
     end
+    if type(data.Mounts) ~= "table" then
+        data.Mounts = {}
+    end
+    if type(data.MountCollection) ~= "table" then
+        data.MountCollection = {}
+    end
+    data.EquippedMountId = type(data.EquippedMountId) == "string" and data.EquippedMountId or ""
     if type(data.PetCollection) ~= "table" then
         data.PetCollection = {}
     end
@@ -211,6 +221,12 @@ function Service:Load(player)
     for _, entry in ipairs(data.PetBuyback) do
         if type(entry) == "table" and type(entry.Pet) == "table" then
             seedCollection(entry.Pet.Species)
+        end
+    end
+
+    for _, mount in ipairs(data.Mounts) do
+        if type(mount) == "table" and type(mount.Species) == "string" and Config.Mounts and Config.Mounts[mount.Species] then
+            data.MountCollection[mount.Species] = true
         end
     end
 
