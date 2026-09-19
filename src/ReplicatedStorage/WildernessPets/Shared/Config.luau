@@ -6,6 +6,7 @@ Config.StartCoins = 500
 Config.StartGems = 0
 
 Config.MaxPets = 60
+Config.MaxMounts = 40
 Config.MaxPetNameLength = 18
 Config.MaxInventory = 25
 Config.Backpacks = {
@@ -71,7 +72,7 @@ Config.PlotCount = 12
 Config.PlotSize = 108
 Config.PlotSpacing = 285
 
-Config.WildMonsterCount = 128
+Config.WildMonsterCount = 160
 Config.WildSpawn = {
     MinRadius = 175,
     MaxRadius = 640,
@@ -355,6 +356,90 @@ addPet("VoidDragon", "Legendary", 550, 108, 70, 330, {SpawnMode = "Legacy", Anim
 addPet("AbyssLeviathan", "Mythic", 880, 156, 100, 550, {SpawnMode = "Legacy", AnimationSpecies = "Leviathan", TemplateSpecies = "AbyssLeviathan", Legacy = true})
 addPet("AstralStarling", "Limited", 715, 173, 80, 715, {SpawnMode = "Legacy", AnimationSpecies = "Starling", TemplateSpecies = "AstralStarling", Legacy = true})
 addPet("ObsidianTitan", "Ancient", 1320, 226, 150, 1100, {SpawnMode = "Legacy", AnimationSpecies = "AncientTitan", TemplateSpecies = "ObsidianTitan", Legacy = true})
+
+Config.MountMinLassoStrength = 25
+
+-- Mount rarity rolls are absolute per wilderness slot refresh. Common mounts
+-- are deliberately around the same order of rarity as a Legendary wild pet;
+-- every higher tier becomes sharply harder to see.
+Config.MountWildSpawnChances = {
+    Common = 0.0022,
+    Uncommon = 0.0006,
+    Rare = 0.00015,
+    Epic = 0.00004,
+    Legendary = 0.00001,
+    Mythic = 0.0000025,
+    Limited = 0,
+    Ancient = 0,
+}
+
+Config.Mounts = {}
+
+local function addMount(name, rarity, speed, options)
+    options = options or {}
+    Config.Mounts[name] = {
+        Rarity = rarity,
+        Speed = speed,
+        SpawnMode = options.SpawnMode or "Wild",
+        TimeOfDay = options.TimeOfDay,
+        AnimationSpecies = options.AnimationSpecies or name,
+        TemplateSpecies = options.TemplateSpecies,
+        Event = options.Event,
+        WorldBoss = options.WorldBoss,
+        Visual = options.Visual,
+    }
+end
+
+addMount("Horse", "Common", 24, {SpawnMode="Wild", TimeOfDay="Day", AnimationSpecies="ShadowStag", Visual={Archetype="Quadruped", Color=Color3.fromRGB(132,91,58), Accent=Color3.fromRGB(65,45,33), Scale=1.10, Feature="mane"}})
+addMount("Mule", "Common", 23, {SpawnMode="Wild", TimeOfDay="Night", AnimationSpecies="ShadowStag", Visual={Archetype="Quadruped", Color=Color3.fromRGB(128,113,93), Accent=Color3.fromRGB(70,60,51), Scale=1.05, Feature="ears"}})
+
+addMount("Zebra", "Uncommon", 25, {SpawnMode="Wild", TimeOfDay="Day", AnimationSpecies="ShadowStag", Visual={Archetype="Quadruped", Color=Color3.fromRGB(223,222,213), Accent=Color3.fromRGB(49,49,51), Scale=1.10, Feature="stripe"}})
+addMount("Elk", "Uncommon", 25, {SpawnMode="Wild", TimeOfDay="Night", AnimationSpecies="ShadowStag", Visual={Archetype="Quadruped", Color=Color3.fromRGB(138,99,61), Accent=Color3.fromRGB(219,190,133), Scale=1.15, Feature="antlers"}})
+
+addMount("War Boar", "Rare", 27, {SpawnMode="Wild", TimeOfDay="Day", AnimationSpecies="Boar", Visual={Archetype="Quadruped", Color=Color3.fromRGB(91,65,51), Accent=Color3.fromRGB(184,144,94), Scale=1.25, Feature="tusks"}})
+addMount("Dune Camel", "Rare", 27, {SpawnMode="Wild", TimeOfDay="Night", AnimationSpecies="ShadowStag", Visual={Archetype="Quadruped", Color=Color3.fromRGB(194,151,96), Accent=Color3.fromRGB(119,86,52), Scale=1.22, Feature="mane"}})
+
+addMount("Nightmare Courser", "Epic", 29, {SpawnMode="Wild", TimeOfDay="Night", AnimationSpecies="ShadowStag", Visual={Archetype="Quadruped", Color=Color3.fromRGB(48,43,58), Accent=Color3.fromRGB(183,73,220), Scale=1.20, Feature="flame"}})
+addMount("Storm Elk", "Epic", 29, {SpawnMode="Wild", TimeOfDay="Day", AnimationSpecies="ShadowStag", Visual={Archetype="Quadruped", Color=Color3.fromRGB(80,95,112), Accent=Color3.fromRGB(119,202,255), Scale=1.22, Feature="antlers"}})
+
+addMount("Silver Unicorn", "Legendary", 31, {SpawnMode="Wild", TimeOfDay="Day", AnimationSpecies="ShadowStag", Visual={Archetype="Quadruped", Color=Color3.fromRGB(220,224,229), Accent=Color3.fromRGB(185,130,255), Scale=1.18, Feature="horns"}})
+addMount("Sunmane Lion", "Legendary", 31, {SpawnMode="Wild", TimeOfDay="Night", AnimationSpecies="Bear", Visual={Archetype="Quadruped", Color=Color3.fromRGB(188,129,54), Accent=Color3.fromRGB(255,221,112), Scale=1.23, Feature="mane"}})
+
+addMount("Solar Kirin", "Mythic", 34, {SpawnMode="Wild", TimeOfDay="Day", AnimationSpecies="ShadowStag", Visual={Archetype="Quadruped", Color=Color3.fromRGB(221,190,122), Accent=Color3.fromRGB(255,221,84), Scale=1.24, Feature="crown"}})
+addMount("Astral Drake", "Mythic", 34, {SpawnMode="Wild", TimeOfDay="Night", AnimationSpecies="Dragon", Visual={Archetype="Quadruped", Color=Color3.fromRGB(69,62,116), Accent=Color3.fromRGB(177,155,255), Scale=1.28, Feature="wings"}})
+
+addMount("Frostbell Sleighdeer", "Limited", 32, {SpawnMode="Event", Event="Winter", AnimationSpecies="ShadowStag", Visual={Archetype="Quadruped", Color=Color3.fromRGB(212,225,233), Accent=Color3.fromRGB(111,211,255), Scale=1.20, Feature="antlers"}})
+addMount("Pumpkin Charger", "Limited", 32, {SpawnMode="Event", Event="Halloween", AnimationSpecies="ShadowStag", Visual={Archetype="Quadruped", Color=Color3.fromRGB(88,55,43), Accent=Color3.fromRGB(255,133,47), Scale=1.20, Feature="flame"}})
+
+addMount("Moonfang Warg", "Ancient", 38, {SpawnMode="WorldBoss", WorldBoss="AncientPool", AnimationSpecies="Wolf", Visual={Archetype="Quadruped", Color=Color3.fromRGB(68,76,91), Accent=Color3.fromRGB(179,207,255), Scale=1.42, Feature="mane"}})
+addMount("Worldcoil Drake", "Ancient", 38, {SpawnMode="WorldBoss", WorldBoss="AncientPool", AnimationSpecies="Dragon", Visual={Archetype="Quadruped", Color=Color3.fromRGB(55,86,67), Accent=Color3.fromRGB(185,224,118), Scale=1.45, Feature="wings"}})
+
+Config.MountRosterCounts = {
+    Common = 2,
+    Uncommon = 2,
+    Rare = 2,
+    Epic = 2,
+    Legendary = 2,
+    Mythic = 2,
+    Limited = 2,
+    Ancient = 2,
+}
+
+-- Reserved for the future world-boss combat implementation. The reward
+-- service should only create a personal pouch for players who contributed
+-- strictly more than 10% of the boss's maximum Health in damage.
+Config.WorldBossRewardRules = {
+    MinimumDamageFraction = 0.10,
+    AncientPetDropChance = 0.0001,
+    AncientMountDropChance = 0.0001,
+    AncientMountPool = {"Moonfang Warg", "Worldcoil Drake"},
+    SuggestedBossMounts = {
+        Kraken = "Tidebreaker Manta",
+        ["Jörmungandr"] = "Worldcoil Drake",
+        Fenrir = "Moonfang Warg",
+        ["Gaia Titan"] = "Stoneback Mammoth",
+    },
+}
 
 Config.RobuxPets = {
     ["Celestial Wolf"] = {
