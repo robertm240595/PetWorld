@@ -627,6 +627,29 @@ local function buildCavern(parent, name, center, radius, wallHeight, accent, wor
         end
     end
 
+    -- Flattened mesh slabs close most of the ceiling so these distant
+    -- arenas still read as underground caverns instead of outdoor platforms.
+    for index = 1, 5 do
+        local angle = ((index - 1) / 5) * math.pi * 2
+        local offset = Vector3.new(
+            math.cos(angle) * radius * .28,
+            wallHeight * 1.08 + (index % 2) * 2.5,
+            math.sin(angle) * radius * .28
+        )
+        meshRock(
+            model,
+            "CeilingSlab_" .. tostring(index),
+            Vector3.new(radius * .92, 16 + (index % 2) * 4, radius * .92),
+            centerFrame * CFrame.new(offset)
+                * CFrame.Angles(
+                    math.rad((index * 7) % 12 - 6),
+                    math.rad(index * 31),
+                    math.rad((index * 11) % 10 - 5)
+                ),
+            DEEP_ROCK
+        )
+    end
+
     -- Hidden collision shell keeps players inside the playable cavern.
     for index = 1, 20 do
         local angle = (index / 20) * math.pi * 2
