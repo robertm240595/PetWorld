@@ -20,6 +20,7 @@ local function newData()
         Coins = Config.StartCoins,
         Gems = Config.StartGems,
         Lasso = "Rough Rope",
+        MaxLassoStrengthUnlocked = 15,
         Inventory = {
             {Type = "Lasso", Name = "Rough Rope", Quantity = 1}
         },
@@ -163,6 +164,19 @@ function Service:Load(player)
 
     local equippedLasso = type(data.Lasso) == "string" and data.Lasso or "Rough Rope"
     data.Lasso = equippedLasso
+
+    local unlockedStrength = math.max(0, tonumber(data.MaxLassoStrengthUnlocked) or 0)
+    local function noteLasso(name)
+        local info = type(name) == "string" and Config.Lassos[name] or nil
+        unlockedStrength = math.max(unlockedStrength, tonumber(info and info.Strength) or 0)
+    end
+    noteLasso(equippedLasso)
+    for _, item in ipairs(data.Inventory) do
+        if type(item) == "table" and item.Type == "Lasso" and (tonumber(item.Quantity) or 0) > 0 then
+            noteLasso(item.Name)
+        end
+    end
+    data.MaxLassoStrengthUnlocked = unlockedStrength
 
     local ownsEquippedLasso = false
     for _, item in ipairs(data.Inventory) do
