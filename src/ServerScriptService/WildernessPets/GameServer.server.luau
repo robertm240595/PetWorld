@@ -28,9 +28,11 @@ local BarnService = require(script.Parent.Services.BarnService)
 local MonsterService = require(script.Parent.Services.MonsterService)
 local QuestService = require(script.Parent.Services.QuestService)
 local LootService = require(script.Parent.Services.LootService)
+local WorldBossRewardService = require(script.Parent.Services.WorldBossRewardService)
 MonsterService:Init()
 MountService:Init()
 LootService:Init()
+WorldBossRewardService:Init()
 QuestService:Init()
 BeastTraderService:Init()
 LassoKeeperService:Init()
@@ -96,6 +98,7 @@ Players.PlayerAdded:Connect(setupPlayer)
 Players.PlayerRemoving:Connect(function(player)
     MountService:PlayerRemoving(player)
     LootService:PlayerRemoving(player)
+    WorldBossRewardService:PlayerRemoving(player)
     QuestService:PlayerRemoving(player)
     PlotService:Release(player)
     DataService:Cleanup(player)
@@ -778,7 +781,10 @@ unequipCompanion = function(player, silent)
         session.attacking = false
         session.attackToken = (session.attackToken or 0) + 1
         local target = session.target
-        if target and target.Parent and target:GetAttribute("CombatOwnerUserId") == player.UserId then
+        if target
+            and target.Parent
+            and target:GetAttribute("WorldBoss") ~= true
+            and target:GetAttribute("CombatOwnerUserId") == player.UserId then
             target:SetAttribute("InCombat", false)
             target:SetAttribute("CombatOwnerUserId", nil)
             if not target:GetAttribute("Dead") and not target:GetAttribute("Captured") then
@@ -852,7 +858,8 @@ local function selectCombatTarget(player, target)
         return false
     end
     local owner = target:GetAttribute("CombatOwnerUserId")
-    if target:GetAttribute("InCombat") and owner ~= player.UserId then
+    local sharedBoss = target:GetAttribute("WorldBoss") == true
+    if not sharedBoss and target:GetAttribute("InCombat") and owner ~= player.UserId then
         combatTell(player, "Error", "That creature is already in a fight.")
         return false
     end
@@ -901,6 +908,12 @@ end
 local function rewardCombatKill(player, session, target)
     if rewardGuard[target] then return end
     rewardGuard[target] = true
+
+    if target:GetAttribute("WorldBoss") == true then
+        WorldBossRewardService:ResolveBossDeath(target)
+        combatTell(player, "Reward", 0, "World Boss")
+        return
+    end
 
     if target:GetAttribute("QuestNoRewards") then
         combatTell(player, "Reward", 0, target:GetAttribute("Rarity") or "Quest")
@@ -1057,8 +1070,10 @@ local function attackTarget(player)
     session.petDefeated = false
     ActionLockService:Begin(player, "CompanionCombat")
 
-    target:SetAttribute("InCombat", true)
-    target:SetAttribute("CombatOwnerUserId", player.UserId)
+    if target:GetAttribute("WorldBoss") ~= true then
+        target:SetAttribute("InCombat", true)
+        target:SetAttribute("CombatOwnerUserId", player.UserId)
+    end
 
     local token = (session.attackToken or 0) + 1
     session.attackToken = token
@@ -1108,7 +1123,12 @@ local function attackTarget(player)
                             and not session.petDefeated
                             and validMonster(target) then
                             target:SetAttribute("LastHitUserId", player.UserId)
-                            MonsterService:DamageMonster(target, petBaseDamage(session.pet))
+                            local damage = petBaseDamage(session.pet)
+                            if target:GetAttribute("WorldBoss") == true then
+                                local before = math.max(0, tonumber(target:GetAttribute("Health")) or 0)
+                                WorldBossRewardService:RecordDamage(target, player, math.min(before, damage))
+                            end
+                            MonsterService:DamageMonster(target, damage)
                         end
                     end, .9)
 
@@ -1208,7 +1228,10 @@ local function recallCompanion(player)
     session.attackToken = (session.attackToken or 0) + 1
     ActionLockService:End(player, "CompanionCombat")
     local target = session.target
-    if target and target.Parent and target:GetAttribute("CombatOwnerUserId") == player.UserId then
+    if target
+        and target.Parent
+        and target:GetAttribute("WorldBoss") ~= true
+        and target:GetAttribute("CombatOwnerUserId") == player.UserId then
         target:SetAttribute("InCombat", false)
         target:SetAttribute("CombatOwnerUserId", nil)
         if not target:GetAttribute("Dead") and not target:GetAttribute("Captured") then
