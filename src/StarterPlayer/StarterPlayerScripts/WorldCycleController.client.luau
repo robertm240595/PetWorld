@@ -907,7 +907,7 @@ remotes.Game.OnClientEvent:Connect(function(action,kind,...)
  if action~="Combat" then return end
  if kind=="Target" then setTarget((...))
  elseif kind=="ClearTarget" then clearTarget()
- elseif kind=="Reward" then local xp,coins=... message("Victory  ·  +"..tostring(xp).." XP  ·  +"..tostring(coins).." coins") clearTarget()
+ elseif kind=="Reward" then local xp,rarity=... message("Victory  ·  +"..tostring(xp).." XP  ·  "..tostring(rarity or "Wild").." loot dropped") clearTarget()
  elseif kind=="Error" then message((...))
  elseif kind=="Equipped" then rebuildAbilities() message(tostring((...)).." is ready.")
  elseif kind=="Unequipped" then rebuildAbilities()
