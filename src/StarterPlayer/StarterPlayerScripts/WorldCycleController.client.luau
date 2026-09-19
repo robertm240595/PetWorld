@@ -525,10 +525,11 @@ local handle=Instance.new("Frame") handle.Size=UDim2.fromOffset(11,8) handle.Pos
 local pocket=Instance.new("Frame") pocket.Size=UDim2.fromOffset(15,8) pocket.Position=UDim2.fromOffset(4,12) pocket.BackgroundColor3=palette.slot pocket.BorderSizePixel=0 pocket.Parent=bagBody round(pocket,2)
 button("Lasso","1","◎","Lasso",1,function() command("Lasso") end,"Throw your lasso at the selected creature. Your companion stays passive.")
 local attackButton=button("Attack","2","⚔","Attack",2,function() command("Attack") end,"Command your companion to approach and automatically attack your selected target.")
--- Ability kits are fully named/designed in Shared.PetAbilities. Their combat
--- execution remains a later gameplay stage; the HUD exposes the correct kit now.
+-- Companion abilities use keys 3/4/5. Cooldowns are authoritative on
+-- the server; the client only mirrors the remaining time for presentation.
 local abilityButtons={}
 local equippedAbilitySpecs={}
+local abilityCooldownEnds={}
 local function abilityIcon(name)
  local first=tostring(name):match("^%s*(%a)") or "?"
  local second=tostring(name):match("%s+(%a)")
@@ -537,10 +538,18 @@ end
 local function abilityMessage(abilityInfo)
  local name=abilityInfo and abilityInfo.Name or "Ability"
  local description=petAbilities:GetDescription(abilityInfo)
- if description~="" then
-  return name.." — "..description.."  ·  Coming soon"
+ if description~="" then return name.." — "..description end
+ return name
+end
+local function useAbility(slot)
+ local abilityInfo=equippedAbilitySpecs[slot]
+ if not abilityInfo then return end
+ local remaining=math.max(0,(abilityCooldownEnds[slot] or 0)-workspace:GetServerTimeNow())
+ if remaining>0 then
+  message((abilityInfo.Name or "Ability").." ready in "..tostring(math.ceil(remaining)).."s")
+  return
  end
- return name.." · Coming soon"
+ command("Ability"..tostring(slot))
 end
 local function rebuildAbilities()
  for _,b in ipairs(abilityButtons) do b:Destroy() end
@@ -554,13 +563,15 @@ local function rebuildAbilities()
   for i,abilityInfo in ipairs(specs) do
    local name=abilityInfo.Name or ("Ability "..tostring(i))
    local description=petAbilities:GetDescription(abilityInfo)
-   local tip=name.." · "..description.." · Coming soon"
+   local cooldown=tonumber(abilityInfo.Cooldown) or 10
+   local tip=name.." · "..description.." · Cooldown "..tostring(cooldown).."s"
+   local slot=i
    local b=button("Ability"..i,tostring(i+2),abilityIcon(name),name,i+2,function()
-    message(abilityMessage(abilityInfo))
+    useAbility(slot)
    end,tip)
-   b.BackgroundColor3=Color3.fromRGB(31,34,38)
-   b.Icon.TextColor3=palette.muted
-   label(b,"Pending","SOON",UDim2.fromOffset(29,1),UDim2.fromOffset(37,13),8,palette.muted)
+   b.BackgroundColor3=palette.slot
+   b.Icon.TextColor3=palette.gold
+   label(b,"Cooldown","",UDim2.fromOffset(25,1),UDim2.fromOffset(45,13),8,palette.muted)
    table.insert(abilityButtons,b)
   end
  end
@@ -941,8 +952,7 @@ UIS.InputBegan:Connect(function(input,processed)
  elseif key==Enum.KeyCode.Three or key==Enum.KeyCode.Four or key==Enum.KeyCode.Five then
   if equippedSpecies~="" then
    local abilityIndex=key==Enum.KeyCode.Three and 1 or key==Enum.KeyCode.Four and 2 or 3
-   local abilityInfo=equippedAbilitySpecs[abilityIndex]
-   if abilityInfo then message(abilityMessage(abilityInfo)) end
+   useAbility(abilityIndex)
   end
  else
   local map={[Enum.KeyCode.Six]=1,[Enum.KeyCode.Seven]=2,[Enum.KeyCode.Eight]=3,[Enum.KeyCode.Nine]=4}
@@ -971,7 +981,17 @@ remotes.Game.OnClientEvent:Connect(function(action,kind,...)
  elseif kind=="ClearTarget" then clearTarget()
  elseif kind=="Reward" then local xp,rarity=... message("Victory  ·  +"..tostring(xp).." XP  ·  "..tostring(rarity or "Wild").." loot dropped") clearTarget()
  elseif kind=="Error" then message((...))
- elseif kind=="Equipped" then rebuildAbilities() message(tostring((...)).." is ready.")
+ elseif kind=="AbilityUsed" then
+  local slot,feedback,cooldown=...
+  slot=tonumber(slot)
+  if slot then
+   abilityCooldownEnds[slot]=workspace:GetServerTimeNow()+math.max(0,tonumber(cooldown) or 0)
+  end
+  message(tostring(feedback or "Ability used."))
+ elseif kind=="Equipped" then
+  abilityCooldownEnds={}
+  rebuildAbilities()
+  message(tostring((...)).." is ready.")
  elseif kind=="Unequipped" then rebuildAbilities()
  elseif kind=="PetDefeated" then
   rebuildAbilities()
@@ -1049,6 +1069,19 @@ RunService.RenderStepped:Connect(function(dt)
   targetPanel.Visible=false
  elseif not captureGame and selectedTarget and selectedTarget.Parent and not selectedTarget:GetAttribute("Dead") and not selectedTarget:GetAttribute("Captured") then
   targetPanel.Visible=true
+ end
+
+ local currentServerTime=workspace:GetServerTimeNow()
+ for index,b in ipairs(abilityButtons) do
+  local remaining=math.max(0,(abilityCooldownEnds[index] or 0)-currentServerTime)
+  local cooldownLabel=b:FindFirstChild("Cooldown")
+  if cooldownLabel and cooldownLabel:IsA("TextLabel") then
+   cooldownLabel.Text=remaining>0 and (tostring(math.ceil(remaining)).."s") or ""
+  end
+  b.BackgroundColor3=remaining>0 and Color3.fromRGB(31,34,38) or palette.slot
+  if b:FindFirstChild("Icon") then
+   b.Icon.TextColor3=remaining>0 and palette.muted or palette.gold
+  end
  end
 
  local width=18
