@@ -645,16 +645,23 @@ local function updateTarget()
  local m=selectedTarget
  if not m or not m.Parent or m:GetAttribute("Dead") or m:GetAttribute("Captured") then clearTarget() return end
  local species=m:GetAttribute("Species") or m.Name
- local info=config.Pets[species] or {}
- local hp=math.max(0,m:GetAttribute("Health") or info.Health or 0)
- local maximum=math.max(1,m:GetAttribute("MaxHealth") or info.Health or hp)
- local power=m:GetAttribute("Power") or info.Power or 1
- local defence=m:GetAttribute("Defence") or info.Defence or 1
- local rating=math.ceil((maximum*power*defence)/1000)
+ local creatureType=tostring(m:GetAttribute("CreatureType") or "Pet")
+ local info=(creatureType=="Mount" and config.Mounts and config.Mounts[species]) or config.Pets[species] or {}
  targetName.Text=species
- targetDetails.Text=string.format("Lv.%d  ·  %s  ·  Power %s",m:GetAttribute("Level") or 1,m:GetAttribute("Rarity") or info.Rarity or "Common",tostring(rating))
- healthText.Text=string.format("%d / %d HP",math.ceil(hp),math.ceil(maximum))
- healthFill.Size=UDim2.fromScale(math.clamp(hp/maximum,0,1),1)
+ if creatureType=="Mount" then
+  targetDetails.Text=string.format("%s  ·  RIDEABLE MOUNT",m:GetAttribute("Rarity") or info.Rarity or "Common")
+  healthText.Text="NON-COMBAT  ·  LASSO TO CAPTURE"
+  healthFill.Size=UDim2.fromScale(1,1)
+ else
+  local hp=math.max(0,m:GetAttribute("Health") or info.Health or 0)
+  local maximum=math.max(1,m:GetAttribute("MaxHealth") or info.Health or hp)
+  local power=m:GetAttribute("Power") or info.Power or 1
+  local defence=m:GetAttribute("Defence") or info.Defence or 1
+  local rating=math.ceil((maximum*power*defence)/1000)
+  targetDetails.Text=string.format("Lv.%d  ·  %s  ·  Power %s",m:GetAttribute("Level") or 1,m:GetAttribute("Rarity") or info.Rarity or "Common",tostring(rating))
+  healthText.Text=string.format("%d / %d HP",math.ceil(hp),math.ceil(maximum))
+  healthFill.Size=UDim2.fromScale(math.clamp(hp/maximum,0,1),1)
+ end
 end
 local function setTarget(m)
  clearTarget()
