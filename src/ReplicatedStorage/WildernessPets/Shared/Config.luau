@@ -356,6 +356,17 @@ Config.WeeklyReward = {
     Gems = 0
 }
 
+Config.CollectionMilestones = {
+    {Required = 5, Coins = 500, Gems = 0},
+    {Required = 10, Coins = 1500, Gems = 0},
+    {Required = 20, Coins = 5000, Gems = 10},
+    {Required = 30, Coins = 10000, Gems = 20},
+    {Required = 40, Coins = 20000, Gems = 35},
+    {Required = 46, Coins = 30000, Gems = 50},
+    {Required = 50, Coins = 50000, Gems = 75},
+    {Required = 54, Coins = 100000, Gems = 150}
+}
+
 
 -- World cycle and population tuning.
 Config.WorldCycle = {DurationSeconds=720, StartHour=9, NightStart=18, NightEnd=6}

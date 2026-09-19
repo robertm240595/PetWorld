@@ -111,6 +111,8 @@ GetState.OnServerInvoke = function(player)
         PetBuyback = data.PetBuyback or {},
         LassoBuyback = data.LassoBuyback or {},
         ActiveEffects = data.ActiveEffects or {},
+        PetCollection = data.PetCollection or {},
+        CollectionRewardsClaimed = data.CollectionRewardsClaimed or {},
         SelectedPlot = data.SelectedPlot,
         DefencePetId = data.DefencePetId,
         EquippedPetId = data.EquippedPetId,
@@ -170,6 +172,69 @@ PetsRemote.OnServerEvent:Connect(function(player, action, ...)
     elseif action == "Unequip" then
         unequipCompanion(player)
         PetsRemote:FireClient(player, "Updated", true)
+
+    elseif action == "ClaimCollectionReward" then
+        local data = DataService:Get(player)
+        if not data then
+            PetsRemote:FireClient(player, "CollectionReward", false, "Player data unavailable.")
+            return
+        end
+
+        data.PetCollection = type(data.PetCollection) == "table" and data.PetCollection or {}
+        data.CollectionRewardsClaimed = type(data.CollectionRewardsClaimed) == "table" and data.CollectionRewardsClaimed or {}
+
+        local collected = 0
+        for species, discovered in pairs(data.PetCollection) do
+            local info = discovered == true and Config.Pets[species] or nil
+            if info and info.Legacy ~= true and info.SpawnMode ~= "Legacy" then
+                collected += 1
+            end
+        end
+
+        local milestone
+        for _, reward in ipairs(Config.CollectionMilestones or {}) do
+            local key = tostring(math.max(0, math.floor(tonumber(reward.Required) or 0)))
+            if not data.CollectionRewardsClaimed[key] then
+                milestone = reward
+                break
+            end
+        end
+
+        if not milestone then
+            PetsRemote:FireClient(player, "CollectionReward", false, "All collection rewards have already been claimed.")
+            return
+        end
+
+        local required = math.max(0, math.floor(tonumber(milestone.Required) or 0))
+        if collected < required then
+            PetsRemote:FireClient(
+                player,
+                "CollectionReward",
+                false,
+                "Discover " .. tostring(required - collected) .. " more pet species to unlock this reward."
+            )
+            return
+        end
+
+        local key = tostring(required)
+        data.CollectionRewardsClaimed[key] = true
+
+        local coins = math.max(0, math.floor(tonumber(milestone.Coins) or 0))
+        local gems = math.max(0, math.floor(tonumber(milestone.Gems) or 0))
+        if coins > 0 then DataService:AddCoins(player, coins) end
+        if gems > 0 then DataService:AddGems(player, gems) end
+
+        local parts = {}
+        if coins > 0 then table.insert(parts, tostring(coins) .. " Coins") end
+        if gems > 0 then table.insert(parts, tostring(gems) .. " Gems") end
+        local rewardText = #parts > 0 and table.concat(parts, " + ") or "reward"
+
+        PetsRemote:FireClient(
+            player,
+            "CollectionReward",
+            true,
+            "Collection milestone " .. tostring(required) .. " claimed: " .. rewardText .. "."
+        )
     end
 end)
 

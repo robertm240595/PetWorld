@@ -35,6 +35,8 @@ local function newData()
             NextCaptureLuck = false
         },
         Pets = {},
+        PetCollection = {},
+        CollectionRewardsClaimed = {},
         SelectedPlot = 0,
         DefencePetId = "",
         EquippedPetId = "",
@@ -106,6 +108,15 @@ function Service:Load(player)
     if type(data.Inventory) ~= "table" then
         data.Inventory = {}
     end
+    if type(data.Pets) ~= "table" then
+        data.Pets = {}
+    end
+    if type(data.PetCollection) ~= "table" then
+        data.PetCollection = {}
+    end
+    if type(data.CollectionRewardsClaimed) ~= "table" then
+        data.CollectionRewardsClaimed = {}
+    end
     if type(data.PetBuyback) ~= "table" then
         data.PetBuyback = {}
     end
@@ -123,6 +134,25 @@ function Service:Load(player)
     data.ActiveEffects.PetSpeedMultiplier = tonumber(data.ActiveEffects.PetSpeedMultiplier) or 1
     data.ActiveEffects.NextCaptureTranquiliser = data.ActiveEffects.NextCaptureTranquiliser == true
     data.ActiveEffects.NextCaptureLuck = data.ActiveEffects.NextCaptureLuck == true
+
+    local function seedCollection(species)
+        local info = type(species) == "string" and Config.Pets[species] or nil
+        if info and info.Legacy ~= true and info.SpawnMode ~= "Legacy" then
+            data.PetCollection[species] = true
+        end
+    end
+
+    -- Migrate existing profiles into the lifetime collection database.
+    for _, pet in ipairs(data.Pets) do
+        if type(pet) == "table" then
+            seedCollection(pet.Species)
+        end
+    end
+    for _, entry in ipairs(data.PetBuyback) do
+        if type(entry) == "table" and type(entry.Pet) == "table" then
+            seedCollection(entry.Pet.Species)
+        end
+    end
 
     local equippedLasso = type(data.Lasso) == "string" and data.Lasso or "Rough Rope"
     data.Lasso = equippedLasso
