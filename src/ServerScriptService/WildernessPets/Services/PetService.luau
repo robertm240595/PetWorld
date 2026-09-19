@@ -184,6 +184,12 @@ function Service:Create(player, species, options)
     }
 
     table.insert(data.Pets, pet)
+
+    if template.Legacy ~= true and template.SpawnMode ~= "Legacy" then
+        data.PetCollection = type(data.PetCollection) == "table" and data.PetCollection or {}
+        data.PetCollection[species] = true
+    end
+
     return pet
 end
 
