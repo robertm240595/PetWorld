@@ -1274,6 +1274,9 @@ local function cleanupPersonalWyrmArena(player)
     if not record then return end
     personalWyrmArenas[player] = nil
 
+    if record.GateId then
+        gates[record.GateId] = nil
+    end
     if record.Boss and record.Boss.Parent then
         record.Boss:Destroy()
     end
@@ -1311,18 +1314,20 @@ local function ensurePersonalWyrmArena(player)
         + Vector3.new((slot - 1) * spacing, 0, 0)
 
     local built = buildWyrmArena(center, player)
+    local exitGateId = "ExitWyrm_" .. tostring(player.UserId)
     local record = {
         Slot = slot,
         Arena = built.Model,
         Boss = built.Boss,
         Arrival = built.Arrival,
         ExitTrigger = built.ExitTrigger,
+        GateId = exitGateId,
     }
     personalWyrmArenas[player] = record
 
     connectGate(
         built.ExitTrigger,
-        "ExitWyrm_" .. tostring(player.UserId),
+        exitGateId,
         function(candidate)
             if candidate ~= player then
                 return false, "This passage belongs to another handler's Wyrm encounter."
