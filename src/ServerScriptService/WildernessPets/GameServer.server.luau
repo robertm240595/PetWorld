@@ -14,6 +14,7 @@ local PetModelFactory = require(script.Parent.Systems.PetModelFactory)
 
 local DataService = require(script.Parent.Services.PlayerDataService)
 local PetService = require(script.Parent.Services.PetService)
+local MountService = require(script.Parent.Services.MountService)
 local PlotService = require(script.Parent.Services.PlotService)
 local ShopService = require(script.Parent.Services.ShopService)
 local ArenaService = require(script.Parent.Services.ArenaService)
@@ -28,6 +29,7 @@ local MonsterService = require(script.Parent.Services.MonsterService)
 local QuestService = require(script.Parent.Services.QuestService)
 local LootService = require(script.Parent.Services.LootService)
 MonsterService:Init()
+MountService:Init()
 LootService:Init()
 QuestService:Init()
 BeastTraderService:Init()
@@ -66,6 +68,7 @@ local function setupPlayer(player)
     player:SetAttribute("EquippedLassoName", data and data.Lasso or "Rough Rope")
     PetService:RefreshHealing(player)
     ActionLockService:Initialize(player)
+    MountService:PlayerReady(player)
     QuestService:PlayerReady(player)
 
     player.CharacterAdded:Connect(function(character)
@@ -91,6 +94,7 @@ Players.PlayerAdded:Connect(setupPlayer)
 
 Players.PlayerRemoving:Connect(function(player)
     LootService:PlayerRemoving(player)
+    MountService:PlayerRemoving(player)
     QuestService:PlayerRemoving(player)
     PlotService:Release(player)
     DataService:Cleanup(player)
@@ -117,6 +121,9 @@ GetState.OnServerInvoke = function(player)
         InventoryCapacity = math.max(tonumber(Config.MaxInventory) or 25, tonumber(data.InventoryCapacity) or tonumber(Config.MaxInventory) or 25),
         BackpackName = data.BackpackName or "Starter Bag",
         Pets = PetService:GetPets(player),
+        Mounts = MountService:GetMounts(player),
+        MountCollection = data.MountCollection or {},
+        EquippedMountId = data.EquippedMountId or "",
         PetBuyback = data.PetBuyback or {},
         LassoBuyback = data.LassoBuyback or {},
         ActiveEffects = data.ActiveEffects or {},
@@ -191,6 +198,18 @@ PetsRemote.OnServerEvent:Connect(function(player, action, ...)
     elseif action == "Unequip" then
         unequipCompanion(player)
         PetsRemote:FireClient(player, "Updated", true)
+
+    elseif action == "EquipMount" then
+        local mountId = args[1]
+        local success, message = MountService:Equip(player, mountId)
+        if success then
+            QuestService:OnPlayerAction(player, "EquipMount", {MountId = mountId})
+        end
+        PetsRemote:FireClient(player, "Updated", success, message)
+
+    elseif action == "UnequipMount" then
+        local success, message = MountService:Unequip(player)
+        PetsRemote:FireClient(player, "Updated", success, message)
 
     elseif action == "ClaimCollectionReward" then
         local data = DataService:Get(player)
@@ -1011,6 +1030,10 @@ local function attackTarget(player)
     end
     if not QuestService:IsQuestMonsterAllowed(player, target) then
         combatTell(player, "Error", "That quest creature belongs to another player's objective.")
+        return false
+    end
+    if target:GetAttribute("CreatureType") == "Mount" then
+        combatTell(player, "Error", "Rideable mounts cannot be attacked. Use your lasso to capture them.")
         return false
     end
 
