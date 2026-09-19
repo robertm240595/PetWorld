@@ -560,6 +560,8 @@ local function setLocalModelVisible(model, visible)
             item.Enabled = visible
         elseif item:IsA("ProximityPrompt") then
             item.Enabled = visible
+        elseif item:IsA("Beam") or item:IsA("Trail") then
+            item.Enabled = visible
         end
     end
 end
@@ -605,12 +607,19 @@ local function applyNpcState(npcs, miraMarker)
 end
 
 local function configureOwnedQuestMonster(model)
-    if not model:IsA("Model") or model:GetAttribute("QuestTutorialSpar") ~= true then return end
+    if not model:IsA("Model") then return end
+    local personal = model:GetAttribute("QuestTutorialSpar") == true
+        or model:GetAttribute("QuestPrivateCreature") == true
+    if not personal then return end
+
     local visible = tonumber(model:GetAttribute("QuestOwnerUserId")) == player.UserId
     for _, item in ipairs(model:GetDescendants()) do
         if item:IsA("BasePart") then
             item.LocalTransparencyModifier = visible and 0 or 1
+            item.CanQuery = visible
         elseif item:IsA("BillboardGui") then
+            item.Enabled = visible
+        elseif item:IsA("Beam") or item:IsA("Trail") then
             item.Enabled = visible
         end
     end
