@@ -1165,7 +1165,11 @@ function Service:GetClientState(player)
                 or (tostring(total) .. " / " .. tostring(totalRequired) .. " MATERIALS")
             detailText = table.concat(parts, "  ·  ")
         elseif stage.Type == "Talk" then
-            progressText = chain.Special == "LeatherTrader" and "FIND CORVIN" or "READY TO REPORT"
+            if chain.Id == "BeastHandlingTutorial" and stage.Id == "ReturnForChallenge" then
+                progressText = "RETURN TO ROWAN"
+            else
+                progressText = chain.Special == "LeatherTrader" and "FIND CORVIN" or "READY TO REPORT"
+            end
         elseif stage.Type == "Spar" then
             progressText = "CHALLENGE READY"
         else
@@ -1464,12 +1468,18 @@ function Service:TalkToNPC(player, npcId)
             )
             return
         elseif stage.Type == "Talk" then
-            local body = chain.Special == "Hollowfang" and stage.Id == "ReportRowan"
-                and "Mira is safe? Good. Tell me everything she saw inside Hollowfang."
-                or "You've finished this part of the job. Give me your report and we'll close it properly."
-            local buttonText = chain.Special == "Hollowfang" and stage.Id == "ReportRowan"
-                and "REPORT MIRA'S FINDINGS"
-                or "REPORT BACK"
+            local body
+            local buttonText
+            if chain.Id == "BeastHandlingTutorial" and stage.Id == "ReturnForChallenge" then
+                body = "I see you've put that upgrade point to work. Good. Bring your companion close — there's one last combat lesson I want to show you before I send you on village work."
+                buttonText = "START THE FINAL LESSON"
+            elseif chain.Special == "Hollowfang" and stage.Id == "ReportRowan" then
+                body = "Mira is safe? Good. Tell me everything she saw inside Hollowfang."
+                buttonText = "REPORT MIRA'S FINDINGS"
+            else
+                body = "You've finished this part of the job. Give me your report and we'll close it properly."
+                buttonText = "REPORT BACK"
+            end
             sendDialogue(
                 player,
                 npcName(npcId),
