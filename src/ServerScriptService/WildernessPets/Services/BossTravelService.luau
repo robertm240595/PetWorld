@@ -915,6 +915,41 @@ local function createJormungdyrr(arena, center)
     end
 
     local headBase = center + Vector3.new(0, 18, 58)
+    local neckStart = positions[#positions]
+    local neckEnd = headBase + Vector3.new(0, -2, -11)
+    local neckCount = 6
+
+    for index = 1, neckCount do
+        local t = index / (neckCount + 1)
+        local position = neckStart:Lerp(neckEnd, t)
+        local nextPosition = neckStart:Lerp(neckEnd, math.min(1, (index + 1) / (neckCount + 1)))
+        local direction = nextPosition - position
+        if direction.Magnitude < .01 then direction = Vector3.new(0, 0, 1) end
+
+        local neck = meshOrb(
+            model,
+            "Neck_" .. tostring(index),
+            Vector3.new(12.5 + t * 2.5, 9.5 + t * 1.8, 16),
+            CFrame.lookAt(position, position + direction),
+            index % 2 == 0 and deepColor or scaleColor,
+            Enum.Material.Slate
+        )
+
+        if index % 2 == 0 then
+            local crest = meshWedge(
+                model,
+                "NeckCrest_" .. tostring(index),
+                Vector3.new(2.1, 6.5, 2.8),
+                CFrame.lookAt(
+                    position + Vector3.new(0, 6, 0),
+                    position + direction + Vector3.new(0, 6, 0)
+                ) * CFrame.Angles(math.rad(-90), 0, 0),
+                boneColor,
+                Enum.Material.Slate
+            )
+        end
+    end
+
     local head = meshOrb(
         model,
         "Head",
