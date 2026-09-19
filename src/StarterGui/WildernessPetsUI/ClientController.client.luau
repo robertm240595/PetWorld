@@ -2024,7 +2024,10 @@ else
     end)
 end
 PetsRemote.OnClientEvent:Connect(function(action, success, message)
-    if action == "Updated" then
+    if action == "TestCommand" then
+        if petsOpen then showPets(backpackTab) end
+        notify(message or (success and "Test command complete." or "Test command failed."))
+    elseif action == "Updated" then
         if success and petsOpen then showPets(backpackTab) end
         notify(message or (success and "Pet updated." or "Could not update this pet."))
     elseif action == "MountUpdated" then
