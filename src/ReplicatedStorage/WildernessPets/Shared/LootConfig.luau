@@ -1,6 +1,6 @@
 local LootConfig = {}
 
-LootConfig.BagLifetimeSeconds = 120
+LootConfig.BagLifetimeSeconds = 30
 LootConfig.CollectDistance = 20
 
 LootConfig.RarityChances = {
