@@ -25,7 +25,9 @@ local PetMerchantService = require(script.Parent.Services.PetMerchantService)
 local PotionService = require(script.Parent.Services.PotionService)
 local BarnService = require(script.Parent.Services.BarnService)
 local MonsterService = require(script.Parent.Services.MonsterService)
+local QuestService = require(script.Parent.Services.QuestService)
 MonsterService:Init()
+QuestService:Init()
 BeastTraderService:Init()
 LassoKeeperService:Init()
 PetMerchantService:Init()
@@ -62,6 +64,7 @@ local function setupPlayer(player)
     player:SetAttribute("EquippedLassoName", data and data.Lasso or "Rough Rope")
     PetService:RefreshHealing(player)
     ActionLockService:Initialize(player)
+    QuestService:PlayerReady(player)
 
     player.CharacterAdded:Connect(function(character)
         teleportToPlot(player, character)
@@ -85,6 +88,7 @@ end
 Players.PlayerAdded:Connect(setupPlayer)
 
 Players.PlayerRemoving:Connect(function(player)
+    QuestService:PlayerRemoving(player)
     PlotService:Release(player)
     DataService:Cleanup(player)
 end)
@@ -774,6 +778,10 @@ local function selectCombatTarget(player, target)
         combatTell(player, "Error", "That is not a living wild creature.")
         return false
     end
+    if not QuestService:IsQuestMonsterAllowed(player, target) then
+        combatTell(player, "Error", "That quest creature belongs to another player's objective.")
+        return false
+    end
     if (root.Position - targetPart.Position).Magnitude > 160 then
         combatTell(player, "Error", "That creature is too far away.")
         return false
@@ -852,6 +860,7 @@ local function rewardCombatKill(player, session, target)
     local _, _, awardedXP = PetService:AddXP(player, session.petId, baseXP)
     awardedXP = awardedXP or baseXP
 
+    QuestService:OnMonsterKilled(player, target)
     combatTell(player, "Reward", awardedXP, coins, rarity)
 
     local refresh = script.Parent.Systems:FindFirstChild("PetDisplayRefresh")
@@ -947,6 +956,10 @@ local function attackTarget(player)
     local target = session.target
     if not validMonster(target) then
         combatTell(player, "Error", "Select a living wild creature first.")
+        return false
+    end
+    if not QuestService:IsQuestMonsterAllowed(player, target) then
+        combatTell(player, "Error", "That quest creature belongs to another player's objective.")
         return false
     end
 
