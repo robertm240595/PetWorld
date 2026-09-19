@@ -82,7 +82,46 @@ function WildArea:InsetPerimeter()
 
     local parts = perimeterParts()
     if not (parts.East and parts.West and parts.North and parts.South) then
-        return false
+        local world = workspace:FindFirstChild("WildernessPets")
+        if not world then return false end
+
+        local existing = world:FindFirstChild("RuntimeInnerBarrier")
+        if existing then existing:Destroy() end
+
+        local half = math.max(
+            300,
+            (tonumber(spawn.FallbackHalfExtent) or tonumber(spawn.MaxRadius) or 640) - inset
+        )
+        local folder = Instance.new("Folder")
+        folder.Name = "RuntimeInnerBarrier"
+        folder.Parent = world
+
+        local function wall(name, size, position)
+            local part = Instance.new("Part")
+            part.Name = name
+            part.Size = size
+            part.Position = position
+            part.Anchored = true
+            part.CanCollide = true
+            part.CanTouch = false
+            part.CanQuery = false
+            part.Transparency = 1
+            part:SetAttribute("WildernessPetsBarrierInsetApplied", true)
+            part.Parent = folder
+            return part
+        end
+
+        local span = half * 2
+        local height = 220
+        local y = 55
+        wall("PerimeterWest", Vector3.new(4,height,span+8), Vector3.new(-half,y,0))
+        wall("PerimeterEast", Vector3.new(4,height,span+8), Vector3.new(half,y,0))
+        wall("PerimeterNorth", Vector3.new(span+8,height,4), Vector3.new(0,y,-half))
+        wall("PerimeterSouth", Vector3.new(span+8,height,4), Vector3.new(0,y,half))
+
+        cachedBounds = nil
+        cacheAt = 0
+        return true
     end
 
     local moves = {
