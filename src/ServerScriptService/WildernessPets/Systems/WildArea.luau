@@ -40,7 +40,11 @@ local function looksLikePerimeter(part)
         and horizontalLong >= 120
         and horizontalShort <= 50
 
-    return named ~= nil or invisibleWall
+    local namedPerimeter = named ~= nil
+        and part.Size.Y >= 8
+        and horizontalLong >= 120
+
+    return namedPerimeter or invisibleWall
 end
 
 function WildArea:GetBounds(force)
