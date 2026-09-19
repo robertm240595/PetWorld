@@ -442,6 +442,12 @@ QuestRemote.OnClientEvent:Connect(function(action, value)
         showDialogue(value)
     elseif action == "Toast" then
         showToast(value)
+    elseif action == "Reward" and type(value) == "table" then
+        local message = "+" .. tostring(value.Coins or 0) .. " Coins"
+        if value.Balance ~= nil then
+            message ..= "  ·  Balance " .. tostring(value.Balance)
+        end
+        showToast(message)
     end
 end)
 
