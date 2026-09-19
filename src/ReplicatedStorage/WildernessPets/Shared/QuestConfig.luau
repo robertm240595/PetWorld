@@ -26,6 +26,14 @@ QuestConfig.World = {
     CaveFallbackY = 17,
     LeatherTraderXZ = Vector2.new(-235, 165),
     MountQuestXZ = Vector2.new(250, 95),
+
+    -- Boss-travel landmarks remain in the same Roblox place. The arenas are
+    -- deliberately far outside the normal wilderness so they cannot be seen
+    -- from the main map.
+    WorldBossWaterfallXZ = Vector2.new(545, -535),
+    WyrmArenaCenter = Vector3.new(0, 140, 12000),
+    WorldBossArenaCenter = Vector3.new(15000, 190, -15000),
+
     NPCs = {
         Rowan = {Name = "Warden Rowan", XZ = Vector2.new(8, -18), Shirt = Color3.fromRGB(82,94,72), Accent = Color3.fromRGB(137,119,76)},
         Bram = {Name = "Quartermaster Bram", XZ = Vector2.new(-18, -10), Shirt = Color3.fromRGB(87,77,65), Accent = Color3.fromRGB(146,119,78)},
@@ -479,6 +487,41 @@ QuestConfig.Chains = {
             {Id="Weavers", Type="Kill", Species="Void Weaver", Required=4, RequiredStrength=65, Objective="Defeat 4 Void Weavers linked to the Hollowfang disturbance."},
             {Id="VoidSilk", Type="ItemTurnIn", Item="Void Silk", SourceSpecies="Void Weaver", Required=2, Objective="Collect 2 Void Silk from Void Weaver loot bags.", Detail="Rowan needs enough silk to compare multiple nests around Hollowfang."},
             {Id="Report", Type="Talk", Objective="Return the Void Silk evidence to Warden Rowan."},
+        },
+    },
+
+    HollowfangWyrm = {
+        Id = "HollowfangWyrm",
+        Name = "Beneath Hollowfang: The Wounded Wyrm",
+        NPC = "Rowan",
+        RequiredStrength = 65,
+        RequiredLasso = "Steel Lasso",
+        Priority = 32,
+        Prerequisite = "HollowfangWeavers",
+        Intro = "The evidence is finally consistent. Whatever is below Hollowfang drove Bears, Cobras and Void Weavers out of the same tunnels. Go back to the cave and push deeper than Mira could. If there is a creature hiding down there, find out what frightened it badly enough to take refuge beneath our feet.",
+        CompleteText = "Those gouges were already in the Wyrm before you reached it? Then Hollowfang was never the source of the disturbance — it was shelter. I've heard old rumours from the northeast watch: something enormous has been moving near the falls. Search the northeast corner of the wilds. They say there is a cave hidden behind the waterfall.",
+        Reward = {Coins = 0, Gems = 0},
+        Stages = {
+            {Id="EnterDepths", Type="Action", Action="EnterWyrmArena", Required=1, Objective="Enter the deepest chamber of Hollowfang Cave.", Detail="Walk beyond Mira's old refuge. The newly opened passage continues much farther underground."},
+            {Id="DefeatWyrm", Type="Action", Action="DefeatWyrm", Required=1, Objective="Defeat the wounded Wyrm with your companion.", Detail="The Wyrm battle will be connected in the next combat pass. Its arena and travel route are already in place."},
+            {Id="Report", Type="Talk", Objective="Return to Warden Rowan after defeating the Wyrm.", Detail="Tell Rowan about the enormous gouges already carved into the Wyrm's hide."},
+        },
+    },
+
+    WorldBossTrail = {
+        Id = "WorldBossTrail",
+        Name = "The Cave Behind the Falls",
+        NPC = "Rowan",
+        RequiredStrength = 65,
+        RequiredLasso = "Steel Lasso",
+        Priority = 33,
+        Prerequisite = "HollowfangWyrm",
+        Intro = "Those old reports all point northeast. Find the waterfall near the edge of the wilds and look behind the falling water. If the rumours are true, the cave there leads to whatever drove the Wyrm into Hollowfang.",
+        CompleteText = "Whatever happens in that cavern will take more than one handler. Gather people you trust before you challenge something that can leave wounds like those.",
+        Reward = {Coins = 0, Gems = 0},
+        Stages = {
+            {Id="FindWaterfall", Type="Action", Action="EnterJormungdyrrArena", Required=1, Objective="Find the hidden cave behind the northeast waterfall.", Detail="Search the northeast corner of the world. Walk through the waterfall and follow the cave inward."},
+            {Id="DefeatJormungdyrr", Type="Action", Action="DefeatJormungdyrr", Required=1, Objective="Defeat Jormungdyrr with other handlers.", Detail="This is a shared world-boss arena. Combat will be connected in the next boss-system pass."},
         },
     },
 }
