@@ -30,6 +30,44 @@ function Service:GetPool(night)
  for _,names in pairs(pool) do table.sort(names) end
  return pool
 end
+function Service:GetMountPool(night)
+ local pool={}
+ for name,info in pairs(Config.Mounts or {}) do
+  if info.SpawnMode=="Wild"
+   and info.TimeOfDay==(night and "Night" or "Day")
+   and ModelFactory:CanCreate(name) then
+   pool[info.Rarity]=pool[info.Rarity] or {}
+   table.insert(pool[info.Rarity],name)
+  end
+ end
+ for _,names in pairs(pool) do table.sort(names) end
+ return pool
+end
+
+function Service:GetWildMountSpecies(night,random)
+ local pool=self:GetMountPool(night==nil and self:IsNight() or night)
+ local ordered={}
+ for rarity,names in pairs(pool) do
+  local chance=tonumber((Config.MountWildSpawnChances or {})[rarity]) or 0
+  local rarityInfo=Config.Rarities[rarity]
+  if #names>0 and chance>0 and rarityInfo then
+   table.insert(ordered,rarity)
+  end
+ end
+ table.sort(ordered,function(a,b) return Config.Rarities[a].Rank<Config.Rarities[b].Rank end)
+
+ local roll=(random or rng):NextNumber()
+ local cumulative=0
+ for _,rarity in ipairs(ordered) do
+  cumulative+=tonumber(Config.MountWildSpawnChances[rarity]) or 0
+  if roll<cumulative then
+   local names=pool[rarity]
+   return names[(random or rng):NextInteger(1,#names)],rarity
+  end
+ end
+ return nil,nil
+end
+
 function Service:GetRarity(night,random)
  local pool=self:GetPool(night==nil and self:IsNight() or night)
  local total=0 local ordered={}
@@ -103,7 +141,7 @@ local function spawnPosition()
  return nil
 end
 local rarityColors={Common=Color3.fromRGB(220,228,218),Uncommon=Color3.fromRGB(114,220,142),Rare=Color3.fromRGB(109,181,255),Epic=Color3.fromRGB(193,136,255),Legendary=Color3.fromRGB(255,204,89),Mythic=Color3.fromRGB(255,126,189),Limited=Color3.fromRGB(141,250,239),Ancient=Color3.fromRGB(255,130,77)}
-local function label(model,info)
+local function label(model,info,creatureType)
  local gui=Instance.new("BillboardGui")
  gui.Name="CreatureLabel" gui.Size=UDim2.fromOffset(190,62) gui.MaxDistance=65 gui.AlwaysOnTop=false
  gui.StudsOffsetWorldSpace=Vector3.new(0,model:GetExtentsSize().Y*.55+.8,0)
@@ -116,6 +154,22 @@ local function label(model,info)
  text.TextColor3=rarityColors[info.Rarity] or Color3.new(1,1,1)
  text.Text=model:GetAttribute("Species").."  ·  "..info.Rarity
  text.Parent=gui
+
+ if creatureType=="Mount" then
+  local rideable=Instance.new("TextLabel")
+  rideable.Name="Rideable"
+  rideable.Position=UDim2.fromOffset(0,28)
+  rideable.Size=UDim2.new(1,0,0,19)
+  rideable.BackgroundTransparency=1
+  rideable.Font=Enum.Font.GothamBold
+  rideable.TextSize=10
+  rideable.TextStrokeTransparency=.45
+  rideable.TextColor3=Color3.fromRGB(244,213,127)
+  rideable.Text="RIDEABLE MOUNT"
+  rideable.Parent=gui
+  gui.Size=UDim2.fromOffset(190,50)
+  return
+ end
 
  local healthBack=Instance.new("Frame")
  healthBack.Name="HealthBack" healthBack.Position=UDim2.fromOffset(12,31) healthBack.Size=UDim2.fromOffset(166,12)
@@ -162,6 +216,7 @@ local function watchDeath(model)
 end
 function Service:DamageMonster(model,amount)
  if not folder or model.Parent~=folder or model:GetAttribute("Captured") or model:GetAttribute("Dead") then return false end
+ if model:GetAttribute("CreatureType")=="Mount" or model:GetAttribute("Invulnerable") then return false end
  if type(amount)~="number" or amount~=amount or amount<=0 or amount==math.huge then return false end
  model:SetAttribute("Health",math.max(0,(model:GetAttribute("Health") or 0)-amount))
  return true
@@ -170,27 +225,45 @@ function Service:SpawnSlot(index)
  local slot=slots[index]
  if not slot or slot.model and slot.model.Parent then return false end
  local night=self:IsNight()
- local rarity=self:GetRarity(night)
- local name=rarity and self:GetSpecies(rarity,night)
+ local mountName,mountRarity=self:GetWildMountSpecies(night)
+ local creatureType=mountName and "Mount" or "Pet"
+ local rarity=mountRarity
+ local name=mountName
+ if not name then
+  rarity=self:GetRarity(night)
+  name=rarity and self:GetSpecies(rarity,night)
+ end
  if not name then return false end
  local pos=spawnPosition()
  if not pos then slot.readyAt=now()+3 return false end
  local model=ModelFactory:Create(name)
- local info=Config.Pets[name]
+ local info=creatureType=="Mount" and (Config.Mounts and Config.Mounts[name]) or Config.Pets[name]
  if not model or not info then slot.readyAt=now()+5 return false end
  model.Name=name.."_"..index
  for _,p in model:GetDescendants() do if p:IsA("BasePart") then p.Anchored=true p.CanCollide=false p.CanQuery=true end end
  model:SetAttribute("Species",name)
  model:SetAttribute("AnimationSpecies",info.AnimationSpecies or name)
  model:SetAttribute("Rarity",info.Rarity)
+ model:SetAttribute("CreatureType",creatureType)
+ model:SetAttribute("Rideable",creatureType=="Mount")
  model:SetAttribute("SpawnPeriod",night and "Night" or "Day")
  model:SetAttribute("SpawnSlot",index)
  model:SetAttribute("CaptureDifficulty",Config.Rarities[info.Rarity].CaptureDifficulty)
  model:SetAttribute("Level",1)
- model:SetAttribute("Power",info.Power)
- model:SetAttribute("Defence",info.Defence)
- model:SetAttribute("PowerRating",math.ceil((info.Health*info.Power*info.Defence)/1000))
- model:SetAttribute("Health",info.Health) model:SetAttribute("MaxHealth",info.Health)
+ if creatureType=="Mount" then
+  model:SetAttribute("Power",0)
+  model:SetAttribute("Defence",999999)
+  model:SetAttribute("PowerRating",0)
+  model:SetAttribute("Health",1)
+  model:SetAttribute("MaxHealth",1)
+  model:SetAttribute("Invulnerable",true)
+ else
+  model:SetAttribute("Power",info.Power)
+  model:SetAttribute("Defence",info.Defence)
+  model:SetAttribute("PowerRating",math.ceil((info.Health*info.Power*info.Defence)/1000))
+  model:SetAttribute("Health",info.Health)
+  model:SetAttribute("MaxHealth",info.Health)
+ end
  model:SetAttribute("Captured",false) model:SetAttribute("BeingCaptured",false)
  model:SetAttribute("InCombat",false) model:SetAttribute("Dead",false)
  local rig=Animator:_getRig(model)
@@ -198,8 +271,8 @@ function Service:SpawnSlot(index)
  rig.base=CFrame.new(pos+Vector3.new(0,rig.clearance+.06,0))*CFrame.Angles(0,rng:NextNumber()*math.pi*2,0)
  Animator:Stop(model)
  slot.model=model slot.readyAt=math.huge
- label(model,info)
- watchDeath(model)
+ label(model,info,creatureType)
+ if creatureType~="Mount" then watchDeath(model) end
  model.Parent=folder
  return true
 end
