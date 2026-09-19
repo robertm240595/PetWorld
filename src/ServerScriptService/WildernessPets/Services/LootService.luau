@@ -96,7 +96,7 @@ function Service:Roll(species, rarity, baseCoins)
     }
 end
 
-local function bagVisual(parent, position, rarity)
+local function bagVisual(position, rarity)
     local model = Instance.new("Model")
     model.Name = "LootBag"
 
@@ -166,7 +166,6 @@ local function bagVisual(parent, position, rarity)
     prompt.Parent = sack
 
     model.PrimaryPart = sack
-    model.Parent = parent
     return model, prompt
 end
 
@@ -207,13 +206,14 @@ function Service:SpawnBag(player, target, baseCoins)
 
     local rolled = self:Roll(species, rarity, baseCoins)
     local id = HttpService:GenerateGUID(false)
-    local model, prompt = bagVisual(folder, part.Position, rarity)
+    local model, prompt = bagVisual(part.Position, rarity)
 
     model.Name = "LootBag_" .. id
     model:SetAttribute("LootBagId", id)
     model:SetAttribute("LootOwnerUserId", player.UserId)
     model:SetAttribute("LootSpecies", species)
     model:SetAttribute("LootRarity", rarity)
+    model.Parent = folder
 
     local record = {
         Id = id,
@@ -284,10 +284,14 @@ function Service:Collect(player, bagId)
 end
 
 function Service:PlayerRemoving(player)
+    local owned = {}
     for _, record in pairs(bags) do
         if record.OwnerUserId == player.UserId then
-            removeBag(record)
+            table.insert(owned, record)
         end
+    end
+    for _, record in ipairs(owned) do
+        removeBag(record)
     end
 end
 
