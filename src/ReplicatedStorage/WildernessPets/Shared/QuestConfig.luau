@@ -25,6 +25,7 @@ QuestConfig.World = {
     CaveXZ = Vector2.new(390, -390),
     CaveFallbackY = 17,
     LeatherTraderXZ = Vector2.new(-235, 165),
+    LootTraderXZ = Vector2.new(39, -2),
     MountQuestXZ = Vector2.new(250, 95),
 
     -- Boss-travel landmarks remain in the same Roblox place. The arenas are
