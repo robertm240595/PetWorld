@@ -390,6 +390,7 @@ function CaptureService:Resolve(player, challengeId, clickTime, timedOut, roundT
 		QuestService:OnPlayerAction(player, "CaptureMount", {
 			MountId = captured.Id,
 			Species = captured.Species,
+			QuestId = monster:GetAttribute("QuestId"),
 		})
 	else
 		QuestService:OnPlayerAction(player, "CapturePet", {PetId = captured.Id})
