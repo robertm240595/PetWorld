@@ -640,6 +640,10 @@ function Service:HandleAction(player, action)
         end
 
         local balance = DataService:AddCoins(player, chain.WolfQuest.RewardCoins)
+        QuestRemote:FireClient(player, "Reward", {
+            Coins = chain.WolfQuest.RewardCoins,
+            Balance = balance,
+        })
         progress.Stage = STAGE_BEARS
         progress.BearsKilled = 0
         spawnBearObjective(player)
@@ -670,6 +674,10 @@ function Service:HandleAction(player, action)
         end
 
         local balance = DataService:AddCoins(player, chain.BearQuest.RewardCoins)
+        QuestRemote:FireClient(player, "Reward", {
+            Coins = chain.BearQuest.RewardCoins,
+            Balance = balance,
+        })
         progress.Stage = STAGE_COMPLETE
         self:PushState(player)
         sendDialogue(
