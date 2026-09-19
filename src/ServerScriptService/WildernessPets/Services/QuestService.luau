@@ -348,6 +348,7 @@ local function questState(root, questId)
     state.StageIndex = math.max(1, math.floor(tonumber(state.StageIndex) or 1))
     state.Count = math.max(0, math.floor(tonumber(state.Count) or 0))
     state.TargetPetId = type(state.TargetPetId) == "string" and state.TargetPetId or ""
+    state.TargetMountId = type(state.TargetMountId) == "string" and state.TargetMountId or ""
     return state
 end
 
@@ -1082,6 +1083,12 @@ local function stageReadyForNPC(player, chain, state, stage)
     if chain and chain.Special == "LeatherTrader" then
         return false
     end
+    if chain and chain.Id == "FirstMount" and stage.Id == "Report" then
+        local _, data = questData(player)
+        return data ~= nil
+            and state.TargetMountId ~= ""
+            and data.EquippedMountId == state.TargetMountId
+    end
     if stage.Type == "Talk" then
         return true
     elseif stage.Type == "CaptureReturn" then
@@ -1815,10 +1822,21 @@ function Service:HandleAction(player, action)
 
     local talkId = action:match("^Talk:(.+)$")
     if talkId then
-        local _, _, chain, state, stage = chainStage(player, talkId)
+        local _, data, chain, state, stage = chainStage(player, talkId)
         if not chain or not state or not stage or stage.Type ~= "Talk" then return end
         local model = npcModels[chain.NPC]
         if model and not near(player, model:GetPivot().Position, 16) then return end
+        if chain.Id == "FirstMount"
+            and stage.Id == "Report"
+            and (not data or data.EquippedMountId ~= state.TargetMountId) then
+            sendDialogue(
+                player,
+                npcName(chain.NPC),
+                "Equip the Trail Horse I sent you after, then ride back to me. I want to see that you've learned how to use the MOUNTS section properly.",
+                {{Text="I'LL EQUIP IT",Action="Close"}}
+            )
+            return
+        end
         advanceStage(player, chain, state)
         return
     end
