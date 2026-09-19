@@ -1196,6 +1196,21 @@ local function actionObjectiveTarget(player, stage)
         local xz = settings.WorldBossWaterfallXZ
         local ground = terrainPoint(xz.X, xz.Y, settings.CaveFallbackY)
         return ground + Vector3.new(0, 2, 0), "Northeast Waterfall"
+    elseif action == "DefeatWyrm" then
+        local settings = QuestConfig.World
+        if player:GetAttribute("BossArena") == "Wyrm" then
+            return settings.WyrmArenaCenter + Vector3.new(0, 5, -8), "Hollowfang Wyrm"
+        end
+        local ground = terrainPoint(settings.CaveXZ.X, settings.CaveXZ.Y, settings.CaveFallbackY)
+        return ground + Vector3.new(0, 2, -32), "Hollowfang Cave"
+    elseif action == "DefeatJormungdyrr" then
+        local settings = QuestConfig.World
+        if player:GetAttribute("BossArena") == "Jormungdyrr" then
+            return settings.WorldBossArenaCenter + Vector3.new(0, 8, -18), "Jormungdyrr"
+        end
+        local xz = settings.WorldBossWaterfallXZ
+        local ground = terrainPoint(xz.X, xz.Y, settings.CaveFallbackY)
+        return ground + Vector3.new(0, 2, 0), "Northeast Waterfall"
     elseif action == "SellPet" or action == "BuybackPet" then
         for _, instance in ipairs(workspace:GetDescendants()) do
             if instance:IsA("Model") then
