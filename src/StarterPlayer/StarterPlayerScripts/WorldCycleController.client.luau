@@ -567,7 +567,7 @@ player.CharacterAdded:Connect(characterAdded)
 if player.Character then characterAdded(player.Character) end
 
 local targetPanel=Instance.new("Frame") targetPanel.Name="CreatureTarget"
-targetPanel.AnchorPoint=Vector2.new(.5,0) targetPanel.Position=UDim2.new(.5,0,0,8)
+targetPanel.AnchorPoint=Vector2.new(.5,0) targetPanel.Position=UDim2.new(.5,0,0,72)
 targetPanel.Size=UDim2.fromOffset(390,100) targetPanel.BackgroundColor3=palette.bg targetPanel.BorderSizePixel=0
 targetPanel.Visible=false targetPanel.Parent=hud round(targetPanel,12) border(targetPanel)
 local portrait=Instance.new("ViewportFrame") portrait.Name="FacePortrait" portrait.Position=UDim2.fromOffset(8,8)
