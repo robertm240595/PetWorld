@@ -988,6 +988,13 @@ remotes.Game.OnClientEvent:Connect(function(action,kind,...)
    abilityCooldownEnds[slot]=workspace:GetServerTimeNow()+math.max(0,tonumber(cooldown) or 0)
   end
   message(tostring(feedback or "Ability used."))
+ elseif kind=="AbilityCooldown" then
+  local slot,feedback,remaining=...
+  slot=tonumber(slot)
+  if slot then
+   abilityCooldownEnds[slot]=workspace:GetServerTimeNow()+math.max(0,tonumber(remaining) or 0)
+  end
+  message(tostring(feedback or "Ability is still cooling down."))
  elseif kind=="Equipped" then
   abilityCooldownEnds={}
   rebuildAbilities()
