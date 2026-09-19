@@ -26,6 +26,13 @@ local function ensureInventory(data)
     return data.Inventory
 end
 
+local function inventoryCapacity(data)
+    return math.max(
+        tonumber(Config.MaxInventory) or 25,
+        math.floor(tonumber(data and data.InventoryCapacity) or tonumber(Config.MaxInventory) or 25)
+    )
+end
+
 local function ensureBuybacks(data)
     data.PetBuyback = type(data.PetBuyback) == "table" and data.PetBuyback or {}
     data.LassoBuyback = type(data.LassoBuyback) == "table" and data.LassoBuyback or {}
@@ -45,6 +52,12 @@ function Service:CountInventorySlots(player)
     return #ensureInventory(data)
 end
 
+function Service:GetInventoryCapacity(player)
+    local data = DataService:Get(player)
+    if not data then return tonumber(Config.MaxInventory) or 25 end
+    return inventoryCapacity(data)
+end
+
 function Service:AddInventoryItem(player, itemType, name, quantity)
     local data = DataService:Get(player)
     if not data then return false, "Inventory unavailable." end
@@ -59,8 +72,8 @@ function Service:AddInventoryItem(player, itemType, name, quantity)
         end
     end
 
-    if #inventory >= (Config.MaxInventory or 25) then
-        return false, "Your inventory is full."
+    if #inventory >= inventoryCapacity(data) then
+        return false, "Your inventory is full (" .. tostring(#inventory) .. "/" .. tostring(inventoryCapacity(data)) .. ")."
     end
 
     table.insert(inventory, {
@@ -127,7 +140,7 @@ function Service:BuyLasso(player, name)
         end
     end
 
-    if #inventory >= (Config.MaxInventory or 25) then
+    if #inventory >= inventoryCapacity(data) then
         return false, "Your inventory is full."
     end
 
@@ -233,7 +246,7 @@ function Service:BuybackLasso(player, index)
     if not entry then return false, "That buyback is no longer available." end
 
     local inventory = ensureInventory(data)
-    if #inventory >= (Config.MaxInventory or 25) then
+    if #inventory >= inventoryCapacity(data) then
         return false, "Your inventory is full."
     end
 
@@ -330,6 +343,53 @@ function Service:SellPet(player, petId)
     DataService:AddCoins(player, value)
 
     return value, "Sold " .. tostring(pet.Name or pet.Species) .. " for " .. tostring(value) .. " Coins."
+end
+
+function Service:UpgradeInventoryCapacity(player, backpackName)
+    local data = DataService:Get(player)
+    local info = Config.Backpacks and Config.Backpacks[backpackName]
+    if not data or not info then return false, "Backpack unavailable." end
+
+    local target = math.max(tonumber(Config.MaxInventory) or 25, math.floor(tonumber(info.Capacity) or 0))
+    local current = inventoryCapacity(data)
+    if target <= current then
+        return false, "You already have a backpack this size or larger."
+    end
+
+    data.InventoryCapacity = target
+    data.BackpackName = backpackName
+    return true, backpackName .. " equipped. Inventory capacity is now " .. tostring(target) .. " slots."
+end
+
+function Service:BuyBackpack(player, backpackName)
+    local data = DataService:Get(player)
+    local info = Config.Backpacks and Config.Backpacks[backpackName]
+    if not data or not info or info.QuestReward == true then
+        return false, "Backpack unavailable."
+    end
+
+    local target = math.max(0, math.floor(tonumber(info.Capacity) or 0))
+    if target <= inventoryCapacity(data) then
+        return false, "You already have a backpack this size or larger."
+    end
+
+    local validPrice, coinCost, gemCost = validSingleCurrencyPrice(info)
+    if not validPrice then return false, "That backpack has an invalid mixed-currency price." end
+    if data.Coins < coinCost or data.Gems < gemCost then
+        return false, "You cannot afford that backpack."
+    end
+
+    if coinCost > 0 and not DataService:SpendCoins(player, coinCost) then
+        return false, "Not enough Coins."
+    end
+    if gemCost > 0 and not DataService:SpendGems(player, gemCost) then
+        if coinCost > 0 then DataService:AddCoins(player, coinCost) end
+        return false, "Not enough Gems."
+    end
+
+    data.InventoryCapacity = target
+    data.BackpackName = backpackName
+    return true, backpackName .. " equipped. Inventory capacity increased to " .. tostring(target) .. " slots."
 end
 
 function Service:BuybackPet(player, index)
