@@ -1959,6 +1959,23 @@ function Service:OnPlayerAction(player, actionName, details)
                     or actionName == "CollectHealed" then
                     matches = state.TargetPetId ~= "" and petId == state.TargetPetId
                 end
+            elseif chain.Id == "SaddleUp" then
+                local mountId = type(details.MountId) == "string" and details.MountId or ""
+                if actionName == "CaptureMount" then
+                    local mount = mountId ~= "" and MountService:Find(player, mountId) or nil
+                    matches = mount ~= nil
+                        and mount.Species == "Horse"
+                        and details.QuestMount == true
+                    if matches then
+                        state.TargetMountId = mountId
+                        local current = currentPersonal(player)
+                        if current.MountHorse and current.MountHorse.Parent then
+                            current.MountHorse = nil
+                        end
+                    end
+                elseif actionName == "EquipMount" then
+                    matches = state.TargetMountId ~= "" and mountId == state.TargetMountId
+                end
             end
 
             if matches then
