@@ -464,7 +464,12 @@ showPets = function(tab)
                 if healReady>0 then
                     local remaining=math.max(0,healReady-os.time())
                     if remaining>0 then
-                        hint.Text="HEALING AT BARN\n"..formatCountdown(remaining).." remaining"
+                        local seconds=math.max(0,math.ceil(remaining))
+                        local minutes=math.floor(seconds/60)
+                        local countdown=minutes>0
+                            and string.format("%dm %02ds",minutes,seconds%60)
+                            or (tostring(seconds).."s")
+                        hint.Text="HEALING AT BARN\n"..countdown.." remaining"
                     else
                         hint.Text="HEALED — READY TO COLLECT\nReturn to the Barn on your plot to collect this pet."
                         hint.TextColor3=Color3.fromRGB(150,235,158)
