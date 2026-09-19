@@ -560,6 +560,8 @@ local function setLocalModelVisible(model, visible)
             item.Enabled = visible
         elseif item:IsA("ProximityPrompt") then
             item.Enabled = visible
+        elseif item:IsA("Beam") or item:IsA("Trail") then
+            item.Enabled = visible
         end
     end
 end
