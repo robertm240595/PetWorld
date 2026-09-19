@@ -328,14 +328,23 @@ function Factory:Create(species)
     local templates = monsterTemplates()
     local templateName = info.TemplateSpecies or species
     local template = templates and templates:FindFirstChild(templateName)
+    local model
 
     if template and template:IsA("Model") then
-        local clone = template:Clone()
-        clone.Name = species
-        return clone
+        model = template:Clone()
+        model.Name = species
+    else
+        model = buildPlaceholder(species, info)
     end
 
-    return buildPlaceholder(species, info)
+    if model then
+        model:SetAttribute("Species", species)
+        model:SetAttribute("Rarity", info.Rarity)
+        model:SetAttribute("AnimationSpecies", info.AnimationSpecies or species)
+        model:SetAttribute("SpawnMode", info.SpawnMode)
+    end
+
+    return model
 end
 
 return Factory
