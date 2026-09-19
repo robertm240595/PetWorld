@@ -34,6 +34,7 @@ QuestConfig.World = {
         Orin = {Name = "Sage Orin", XZ = Vector2.new(25, 12), Shirt = Color3.fromRGB(72,84,79), Accent = Color3.fromRGB(100,162,137)},
         Rook = {Name = "Captain Rook", XZ = Vector2.new(-6, 23), Shirt = Color3.fromRGB(69,76,86), Accent = Color3.fromRGB(136,146,157)},
         Vale = {Name = "Historian Vale", XZ = Vector2.new(13, 27), Shirt = Color3.fromRGB(94,72,93), Accent = Color3.fromRGB(163,119,160)},
+        Maeve = {Name = "Stablemaster Maeve", XZ = Vector2.new(34, 21), Shirt = Color3.fromRGB(104,76,54), Accent = Color3.fromRGB(205,160,92)},
     },
 }
 
@@ -171,6 +172,45 @@ QuestConfig.Chains = {
             {Id="SellPet", Type="Action", Action="SellPet", Required=1, Objective="Sell 1 non-favourite pet to the Beast Trader.", Detail="Favourited pets are protected from selling."},
             {Id="BuybackPet", Type="Action", Action="BuybackPet", Required=1, Objective="Buy a pet back from the Beast Trader.", Detail="Buyback costs more than the original sale value."},
             {Id="Report", Type="Talk", Objective="Report back to Quartermaster Bram."},
+        },
+    },
+
+    SaddleUp = {
+        Id = "SaddleUp",
+        Name = "Saddle Up",
+        NPC = "Maeve",
+        RequiredStrength = 25,
+        RequiredLasso = "Hunter's Lasso",
+        Priority = 9,
+        Prerequisite = "BeastHandlingTutorial",
+        Special = "MountTutorial",
+        Intro = "That Hunter's Lasso tells me you're ready to handle something bigger than a fighting companion. Rideable beasts are much rarer than ordinary wildlife, and they aren't combat animals. I'll show you the basics. I've tracked a young Horse nearby and tied off a marker line to its trail. Capture it, open the Mounts section of your Backpack, equip it, then ride back to me.",
+        CompleteText = "Good seat, good hands, and you didn't try to turn a mount into a war beast. From here on, any rideable creature you find can join your Mount collection.",
+        Reward = {Coins = 3500, Gems = 0},
+        Stages = {
+            {
+                Id = "CaptureHorse",
+                Type = "Action",
+                Action = "CaptureMount",
+                Species = "Horse",
+                Required = 1,
+                Objective = "Capture Maeve's tracked Horse.",
+                Detail = "Follow the compass to the player-specific Horse. It can retaliate if your lasso attempt fails.",
+            },
+            {
+                Id = "EquipHorse",
+                Type = "Action",
+                Action = "EquipMount",
+                Required = 1,
+                Objective = "Open Backpack → Mounts and equip the Horse you captured.",
+                Detail = "Mounts are a separate collection and cannot fight wild pets.",
+            },
+            {
+                Id = "ReturnMounted",
+                Type = "Talk",
+                Objective = "Ride back and speak to Stablemaster Maeve.",
+                Detail = "Return to Maeve with the tutorial Horse equipped.",
+            },
         },
     },
 
@@ -349,6 +389,6 @@ QuestConfig.Chains = {
     },
 }
 
-QuestConfig.NPCOrder = {"Rowan","Bram","Anya","Elara","Holt","Orin","Rook","Vale"}
+QuestConfig.NPCOrder = {"Rowan","Bram","Anya","Elara","Holt","Orin","Rook","Vale","Maeve"}
 
 return QuestConfig
