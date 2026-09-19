@@ -126,6 +126,318 @@ homeButton.Activated:Connect(function()
  remotes.Game:FireServer("ReturnToPlot")
 end)
 
+local collectionButton=Instance.new("TextButton")
+collectionButton.Name="PetCollectionButton"
+collectionButton.AnchorPoint=Vector2.new(0,1)
+collectionButton.Position=UDim2.new(0,12,1,-82)
+collectionButton.Size=UDim2.fromOffset(58,58)
+collectionButton.BackgroundColor3=palette.slot
+collectionButton.BorderSizePixel=0
+collectionButton.Text="▦"
+collectionButton.TextColor3=palette.text
+collectionButton.Font=Enum.Font.GothamBold
+collectionButton.TextSize=27
+collectionButton.AutoButtonColor=true
+collectionButton.Parent=hud
+round(collectionButton,12)
+border(collectionButton)
+
+local collectionOpen=false
+local collectionPanel
+local collectionSpinners={}
+local collectionSpinAngle=0
+
+local rarityColors={
+ Common=Color3.fromRGB(220,228,218),
+ Uncommon=Color3.fromRGB(114,220,142),
+ Rare=Color3.fromRGB(109,181,255),
+ Epic=Color3.fromRGB(193,136,255),
+ Legendary=Color3.fromRGB(255,204,89),
+ Mythic=Color3.fromRGB(255,126,189),
+ Limited=Color3.fromRGB(141,250,239),
+ Ancient=Color3.fromRGB(255,130,77),
+}
+
+local function collectionRoster()
+ local result={}
+ for species,info in pairs(config.Pets or {}) do
+  if info.Legacy~=true and info.SpawnMode~="Legacy" then
+   table.insert(result,{Species=species,Info=info})
+  end
+ end
+ table.sort(result,function(a,b)
+  local ar=config.Rarities[a.Info.Rarity]
+  local br=config.Rarities[b.Info.Rarity]
+  local aRank=ar and tonumber(ar.Rank) or 99
+  local bRank=br and tonumber(br.Rank) or 99
+  if aRank==bRank then return a.Species<b.Species end
+  return aRank<bRank
+ end)
+ return result
+end
+
+local function closeCollection()
+ collectionOpen=false
+ collectionSpinners={}
+ if collectionPanel then collectionPanel:Destroy() collectionPanel=nil end
+end
+
+local function rewardText(reward)
+ if not reward then return "Collection complete" end
+ local parts={}
+ local coins=math.max(0,math.floor(tonumber(reward.Coins) or 0))
+ local gems=math.max(0,math.floor(tonumber(reward.Gems) or 0))
+ if coins>0 then table.insert(parts,tostring(coins).." Coins") end
+ if gems>0 then table.insert(parts,tostring(gems).." Gems") end
+ return #parts>0 and table.concat(parts," + ") or "Reward"
+end
+
+local function addCollectionPreview(card,species,discovered)
+ local viewport=Instance.new("ViewportFrame")
+ viewport.Name="PetPreview"
+ viewport.Position=UDim2.fromOffset(6,34)
+ viewport.Size=UDim2.fromOffset(120,94)
+ viewport.BackgroundColor3=discovered and Color3.fromRGB(31,38,42) or Color3.fromRGB(28,30,32)
+ viewport.BorderSizePixel=0
+ viewport.Ambient=discovered and Color3.fromRGB(190,190,190) or Color3.fromRGB(120,120,120)
+ viewport.LightColor=discovered and Color3.fromRGB(255,240,220) or Color3.fromRGB(175,175,175)
+ viewport.LightDirection=Vector3.new(-1,-1,-1)
+ viewport.Parent=card
+ round(viewport,8)
+
+ local previews=RS.WildernessPets:FindFirstChild("PetPreviews")
+ local template=previews and previews:FindFirstChild(species)
+ if not template then return end
+
+ local copy=template:Clone()
+ for _,item in ipairs(copy:GetDescendants()) do
+  if item:IsA("BillboardGui") or item:IsA("LuaSourceContainer") or item:IsA("ParticleEmitter") or item:IsA("Beam") or item:IsA("Trail") then
+   item:Destroy()
+  elseif item:IsA("BasePart") then
+   item.Anchored=true item.CanCollide=false item.CanTouch=false item.CanQuery=false
+   if not discovered then
+    local source=item.Color
+    local gray=math.clamp(.14+(source.R*.299+source.G*.587+source.B*.114)*.28,.14,.42)
+    item.Color=Color3.new(gray,gray,gray)
+    item.Material=Enum.Material.SmoothPlastic
+   end
+  end
+ end
+
+ local rootPart=copy.PrimaryPart or copy:FindFirstChildWhichIsA("BasePart",true)
+ if not rootPart then copy:Destroy() return end
+ copy.PrimaryPart=rootPart
+ copy:PivotTo(CFrame.new())
+
+ local worldModel=Instance.new("WorldModel")
+ worldModel.Parent=viewport
+ copy.Parent=worldModel
+
+ local box,size=copy:GetBoundingBox()
+ local focus=box.Position
+ local distance=math.max(6,size.Magnitude*1.05)
+ local camera=Instance.new("Camera")
+ camera.FieldOfView=38
+ camera.CFrame=CFrame.lookAt(
+  focus+Vector3.new(0,math.max(.4,size.Y*.12),distance),
+  focus
+ )
+ camera.Parent=viewport
+ viewport.CurrentCamera=camera
+
+ if discovered then table.insert(collectionSpinners,copy) end
+end
+
+local function showCollection()
+ if captureGame then
+  message("Finish your capture before opening the pet collection.")
+  return
+ end
+
+ local mainUI=playerGui:FindFirstChild("WildernessPetsUI")
+ if mainUI and mainUI:GetAttribute("InventoryOpen")==true then
+  message("Close the current menu before opening the pet collection.")
+  return
+ end
+
+ if collectionPanel then collectionPanel:Destroy() end
+ collectionSpinners={}
+ collectionSpinAngle=0
+
+ local state=remotes.GetState:InvokeServer()
+ if not state then
+  collectionOpen=false
+  message("Pet collection data is unavailable.")
+  return
+ end
+
+ collectionOpen=true
+ local discovered=type(state.PetCollection)=="table" and state.PetCollection or {}
+ local claimed=type(state.CollectionRewardsClaimed)=="table" and state.CollectionRewardsClaimed or {}
+ local roster=collectionRoster()
+ local discoveredCount=0
+ for _,entry in ipairs(roster) do
+  if discovered[entry.Species]==true then discoveredCount+=1 end
+ end
+
+ local nextReward
+ for _,reward in ipairs(config.CollectionMilestones or {}) do
+  local required=math.max(0,math.floor(tonumber(reward.Required) or 0))
+  if not claimed[tostring(required)] then nextReward=reward break end
+ end
+
+ collectionPanel=Instance.new("Frame")
+ collectionPanel.Name="PetCollectionDatabase"
+ collectionPanel.AnchorPoint=Vector2.new(.5,.5)
+ collectionPanel.Position=UDim2.new(.5,0,.5,0)
+ collectionPanel.Size=UDim2.fromOffset(900,640)
+ collectionPanel.BackgroundColor3=palette.bg
+ collectionPanel.BackgroundTransparency=.02
+ collectionPanel.BorderSizePixel=0
+ collectionPanel.Parent=hud
+ round(collectionPanel,12)
+ border(collectionPanel)
+
+ local cameraSize=workspace.CurrentCamera and workspace.CurrentCamera.ViewportSize or Vector2.new(1280,720)
+ local fit=Instance.new("UIScale")
+ fit.Scale=math.min(1,(cameraSize.X-28)/900,(cameraSize.Y-34)/640)
+ fit.Parent=collectionPanel
+
+ local title=label(collectionPanel,"Title","PET COLLECTION DATABASE",UDim2.fromOffset(22,14),UDim2.fromOffset(650,30),22,palette.text)
+ title.TextXAlignment=Enum.TextXAlignment.Left
+
+ local closeButton=Instance.new("TextButton")
+ closeButton.Name="Close"
+ closeButton.Text="×"
+ closeButton.Position=UDim2.fromOffset(842,12)
+ closeButton.Size=UDim2.fromOffset(40,34)
+ closeButton.BackgroundColor3=palette.slot
+ closeButton.TextColor3=palette.text
+ closeButton.Font=Enum.Font.GothamBold
+ closeButton.TextSize=24
+ closeButton.BorderSizePixel=0
+ closeButton.Parent=collectionPanel
+ round(closeButton,8)
+ border(closeButton)
+ closeButton.Activated:Connect(closeCollection)
+
+ local progressCaption=label(
+  collectionPanel,
+  "ProgressCaption",
+  tostring(discoveredCount).." / "..tostring(#roster).." species discovered",
+  UDim2.fromOffset(22,54),
+  UDim2.fromOffset(640,22),
+  13,
+  palette.text
+ )
+ progressCaption.TextXAlignment=Enum.TextXAlignment.Left
+
+ local progressBack=Instance.new("Frame")
+ progressBack.Name="ProgressBar"
+ progressBack.Position=UDim2.fromOffset(22,82)
+ progressBack.Size=UDim2.fromOffset(640,24)
+ progressBack.BackgroundColor3=Color3.fromRGB(47,52,55)
+ progressBack.BorderSizePixel=0
+ progressBack.Parent=collectionPanel
+ round(progressBack,6)
+
+ local targetRequired=nextReward and math.max(1,math.floor(tonumber(nextReward.Required) or #roster)) or math.max(1,#roster)
+ local fillAmount=math.clamp(discoveredCount/targetRequired,0,1)
+ local progressFill=Instance.new("Frame")
+ progressFill.Name="Fill"
+ progressFill.Size=UDim2.fromScale(fillAmount,1)
+ progressFill.BackgroundColor3=palette.gold
+ progressFill.BorderSizePixel=0
+ progressFill.Parent=progressBack
+ round(progressFill,6)
+
+ local milestoneText
+ if nextReward then
+  local required=math.max(0,math.floor(tonumber(nextReward.Required) or 0))
+  milestoneText="Next milestone: "..tostring(required).." species  ·  "..rewardText(nextReward)
+ else
+  milestoneText="All collection milestones completed."
+ end
+ local rewardCaption=label(collectionPanel,"RewardCaption",milestoneText,UDim2.fromOffset(22,112),UDim2.fromOffset(640,22),12,palette.muted)
+ rewardCaption.TextXAlignment=Enum.TextXAlignment.Left
+
+ local collectButton=Instance.new("TextButton")
+ collectButton.Name="CollectReward"
+ collectButton.Position=UDim2.fromOffset(690,62)
+ collectButton.Size=UDim2.fromOffset(182,54)
+ collectButton.Text="COLLECT"
+ collectButton.Font=Enum.Font.GothamBold
+ collectButton.TextSize=15
+ collectButton.BorderSizePixel=0
+ collectButton.TextColor3=palette.text
+ collectButton.Parent=collectionPanel
+ round(collectButton,9)
+ border(collectButton)
+
+ local rewardReady=nextReward and discoveredCount>=math.max(0,math.floor(tonumber(nextReward.Required) or 0))
+ collectButton.Active=rewardReady==true
+ collectButton.AutoButtonColor=rewardReady==true
+ collectButton.BackgroundColor3=rewardReady and Color3.fromRGB(92,78,48) or Color3.fromRGB(39,43,46)
+ collectButton.TextColor3=rewardReady and palette.text or palette.muted
+ collectButton.Activated:Connect(function()
+  if rewardReady then
+   collectButton.Active=false
+   collectButton.AutoButtonColor=false
+   remotes.Pets:FireServer("ClaimCollectionReward")
+  end
+ end)
+
+ local list=Instance.new("ScrollingFrame")
+ list.Name="PetGrid"
+ list.Position=UDim2.fromOffset(20,150)
+ list.Size=UDim2.fromOffset(860,466)
+ list.BackgroundTransparency=1
+ list.BorderSizePixel=0
+ list.ScrollBarThickness=5
+ list.ScrollBarImageColor3=palette.gold
+ list.AutomaticCanvasSize=Enum.AutomaticSize.Y
+ list.CanvasSize=UDim2.new()
+ list.Parent=collectionPanel
+
+ local grid=Instance.new("UIGridLayout")
+ grid.CellSize=UDim2.fromOffset(132,138)
+ grid.CellPadding=UDim2.fromOffset(9,9)
+ grid.SortOrder=Enum.SortOrder.LayoutOrder
+ grid.HorizontalAlignment=Enum.HorizontalAlignment.Center
+ grid.Parent=list
+
+ for index,entry in ipairs(roster) do
+  local info=entry.Info
+  local found=discovered[entry.Species]==true
+  local card=Instance.new("Frame")
+  card.Name="Pet_"..entry.Species
+  card.LayoutOrder=index
+  card.Size=UDim2.fromOffset(132,138)
+  card.BackgroundColor3=palette.slot
+  card.BorderSizePixel=0
+  card.Parent=list
+  round(card,8)
+
+  local stroke=Instance.new("UIStroke")
+  stroke.Color=found and (rarityColors[info.Rarity] or palette.gold) or Color3.fromRGB(88,94,96)
+  stroke.Transparency=found and .28 or .58
+  stroke.Thickness=1
+  stroke.Parent=card
+
+  local name=label(card,"PetName",entry.Species,UDim2.fromOffset(4,5),UDim2.fromOffset(124,25),11,found and palette.text or Color3.fromRGB(176,180,180))
+  name.TextWrapped=true
+  name.TextXAlignment=Enum.TextXAlignment.Center
+  name.TextYAlignment=Enum.TextYAlignment.Center
+
+  addCollectionPreview(card,entry.Species,found)
+
+  local rarity=label(card,"Rarity",info.Rarity,UDim2.fromOffset(4,121),UDim2.fromOffset(124,14),9,found and (rarityColors[info.Rarity] or palette.muted) or palette.muted)
+  rarity.TextXAlignment=Enum.TextXAlignment.Center
+ end
+end
+
+collectionButton.Activated:Connect(showCollection)
+
 local tooltip=label(hud,"Tooltip","",UDim2.new(.5,-235,1,-193),UDim2.fromOffset(470,44),13)
 tooltip.BackgroundColor3=palette.bg tooltip.BackgroundTransparency=.05 tooltip.Visible=false tooltip.TextWrapped=true round(tooltip)
 local function button(name,key,icon,title,order,callback,tip)
@@ -506,7 +818,7 @@ local function advanceCaptureGame(challengeId,completedHits,requiredHits,zoneSta
 end
 
 local function selectAt(position) local main=playerGui:FindFirstChild("WildernessPetsUI")
- if captureGame then return end
+ if captureGame or collectionOpen then return end
  if main and main:GetAttribute("InventoryOpen") then return end
 
  if not player:GetAttribute("VillageReady") then return end
@@ -536,6 +848,7 @@ UIS.InputBegan:Connect(function(input,processed)
  if processed or UIS:GetFocusedTextBox() then return end
  if input.UserInputType==Enum.UserInputType.MouseButton1 then selectAt(UIS:GetMouseLocation()) return end
  if not player:GetAttribute("VillageReady") then return end
+ if collectionOpen then return end
  local key=input.KeyCode
  if key==Enum.KeyCode.B then getOpenBag():Fire()
  elseif key==Enum.KeyCode.One then command("Lasso")
@@ -575,6 +888,13 @@ remotes.Game.OnClientEvent:Connect(function(action,kind,...)
  elseif kind=="CombatState" then local state=... if state=="Engaging" then message("Companion engaging your target") end
  end
 end)
+remotes.Pets.OnClientEvent:Connect(function(action,success,response)
+ if action=="CollectionReward" then
+  message(response or (success and "Collection reward claimed." or "Collection reward unavailable."))
+  if success and collectionOpen then task.defer(showCollection) end
+ end
+end)
+
 remotes.Capture.OnClientEvent:Connect(function(action,...)
  local args={...}
  if action=="Challenge" then
@@ -623,9 +943,10 @@ RunService.RenderStepped:Connect(function()
  hud.Enabled=player:GetAttribute("VillageReady")==true
 
  local mainUI=playerGui:FindFirstChild("WildernessPetsUI")
- local panelOpen=mainUI and mainUI:GetAttribute("InventoryOpen")==true
+ local panelOpen=(mainUI and mainUI:GetAttribute("InventoryOpen")==true) or collectionOpen
  bar.Visible=not panelOpen
  homeButton.Visible=not panelOpen
+ collectionButton.Visible=not panelOpen
  if panelOpen then
   tooltip.Visible=false
   targetPanel.Visible=false
@@ -644,4 +965,16 @@ RunService.RenderStepped:Connect(function()
  homeCooldown.Text=homeActive and "BUSY" or (homeRemaining>0 and (tostring(homeRemaining).."s") or "")
  homeButton.BackgroundColor3=(homeActive or homeRemaining>0) and Color3.fromRGB(31,34,38) or palette.slot
  homeButton.TextColor3=(homeActive or homeRemaining>0) and palette.muted or palette.text
+
+ if collectionOpen then
+  collectionSpinAngle=(collectionSpinAngle+dt*.65)%(math.pi*2)
+  for index=#collectionSpinners,1,-1 do
+   local model=collectionSpinners[index]
+   if model and model.Parent then
+    model:PivotTo(CFrame.Angles(0,collectionSpinAngle,0))
+   else
+    table.remove(collectionSpinners,index)
+   end
+  end
+ end
 end)
