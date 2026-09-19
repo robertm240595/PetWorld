@@ -211,6 +211,11 @@ function Service:DamageEnemy(player, pet, target, rawDamage)
     return damageRawTarget(player, target, damage)
 end
 
+function Service:DamageEnemyFlat(player, target, damage)
+    if not player or not livingTarget(target) then return 0, false end
+    return damageRawTarget(player, target, math.max(1, tonumber(damage) or 1))
+end
+
 local function applyDot(player, pet, target, spec, sourceName)
     if not livingTarget(target) or type(spec) ~= "table" then return end
 
