@@ -35,8 +35,8 @@ QuestConfig.World = {
 }
 
 -- All chains except the starter tutorial require StarterWolves to be complete.
--- RequiredStrength is checked against the strongest lasso the player OWNS, not
--- merely the currently equipped lasso.
+-- RequiredStrength is checked against the highest lasso tier the player has
+-- acquired, so progression/NPC arrivals remain unlocked even if that lasso is later sold.
 QuestConfig.Chains = {
     StarterWolves = {
         Id = "StarterWolves",
