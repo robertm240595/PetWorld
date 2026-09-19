@@ -11,6 +11,7 @@ local CaptureRemote = Remotes:WaitForChild("Capture")
 local PetsRemote = Remotes:WaitForChild("Pets")
 local ShopRemote = Remotes:WaitForChild("Shop")
 local ArenaRemote = Remotes:WaitForChild("Arena")
+local QuestRemote = Remotes:WaitForChild("Quest")
 local GetState = Remotes:WaitForChild("GetState")
 local Config = require(Root:WaitForChild("Shared"):WaitForChild("Config"))
 
@@ -1675,5 +1676,11 @@ PetsRemote.OnClientEvent:Connect(function(action, success, message)
             showHUD()
         end
         notify(message or (success and "Collection reward claimed." or "Collection reward unavailable."))
+    end
+end)
+
+QuestRemote.OnClientEvent:Connect(function(action)
+    if action == "Reward" then
+        showHUD()
     end
 end)
