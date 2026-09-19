@@ -47,6 +47,64 @@ local function looksLikePerimeter(part)
     return namedPerimeter or invisibleWall
 end
 
+local function perimeterParts()
+    local result = {East=nil, West=nil, North=nil, South=nil}
+
+    for _, item in ipairs(workspace:GetDescendants()) do
+        if looksLikePerimeter(item) then
+            local p = item.Position
+            local farFromHub = math.max(math.abs(p.X), math.abs(p.Z)) >= 250
+            if farFromHub then
+                if math.abs(p.X) >= math.abs(p.Z) then
+                    if p.X > 0 and (not result.East or p.X < result.East.Position.X) then
+                        result.East = item
+                    elseif p.X < 0 and (not result.West or p.X > result.West.Position.X) then
+                        result.West = item
+                    end
+                else
+                    if p.Z > 0 and (not result.South or p.Z < result.South.Position.Z) then
+                        result.South = item
+                    elseif p.Z < 0 and (not result.North or p.Z > result.North.Position.Z) then
+                        result.North = item
+                    end
+                end
+            end
+        end
+    end
+
+    return result
+end
+
+function WildArea:InsetPerimeter()
+    local spawn = Config.WildSpawn or {}
+    local inset = math.max(0, tonumber(spawn.BarrierInset) or 0)
+    if inset <= 0 then return false end
+
+    local parts = perimeterParts()
+    if not (parts.East and parts.West and parts.North and parts.South) then
+        return false
+    end
+
+    local moves = {
+        {Part=parts.East, Delta=Vector3.new(-inset,0,0)},
+        {Part=parts.West, Delta=Vector3.new(inset,0,0)},
+        {Part=parts.North, Delta=Vector3.new(0,0,inset)},
+        {Part=parts.South, Delta=Vector3.new(0,0,-inset)},
+    }
+
+    for _, move in ipairs(moves) do
+        local part = move.Part
+        if part:GetAttribute("WildernessPetsBarrierInsetApplied") ~= true then
+            part.CFrame = part.CFrame + move.Delta
+            part:SetAttribute("WildernessPetsBarrierInsetApplied", true)
+        end
+    end
+
+    cachedBounds = nil
+    cacheAt = 0
+    return true
+end
+
 function WildArea:GetBounds(force)
     local now = os.clock()
     if not force and cachedBounds and now - cacheAt < CACHE_SECONDS then
