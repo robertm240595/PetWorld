@@ -13,8 +13,13 @@ local Service = {}
 local started = false
 local world
 local travelWorld
+local wildMonsters
 local gates = {}
 local touchDebounce = setmetatable({}, {__mode = "k"})
+local personalWyrmArenas = setmetatable({}, {__mode = "k"})
+local freeWyrmSlots = {}
+local nextWyrmSlot = 1
+local hollowfangRoute
 
 local ROCK = Color3.fromRGB(58, 60, 61)
 local DARK_ROCK = Color3.fromRGB(31, 34, 35)
@@ -269,9 +274,19 @@ local function connectGate(trigger, gateId, checkAccess, destination, arenaName,
             end
         end
 
+        local resolvedDestination = destination
+        if type(destination) == "function" then
+            local ok, result = pcall(destination, player)
+            if not ok or typeof(result) ~= "CFrame" then
+                sendBlocked(player, "That boss arena could not be prepared. Try entering again.")
+                return
+            end
+            resolvedDestination = result
+        end
+
         transition(
             player,
-            destination,
+            resolvedDestination,
             arenaName,
             title,
             subtitle,
@@ -399,17 +414,6 @@ local function buildHollowfangDepthPassage()
     model.Name = "HollowfangDeepPassage"
     model.Parent = travelWorld
 
-    local questWorld = world:FindFirstChild("QuestWorld")
-    local originalCave = questWorld and questWorld:FindFirstChild("HollowfangCave")
-    if originalCave then
-        local oldBack = originalCave:FindFirstChild("BackWall")
-        if oldBack and oldBack:IsA("BasePart") then
-            oldBack.CanCollide = false
-            oldBack.CanQuery = false
-            oldBack.Transparency = 1
-        end
-    end
-
     local start = CFrame.new(caveEntrance + Vector3.new(0, 0, -22))
     addTunnelRibs(
         model,
@@ -419,15 +423,6 @@ local function buildHollowfangDepthPassage()
         13,
         ROCK,
         Color3.fromRGB(158, 92, 62)
-    )
-
-    makeRockArch(
-        model,
-        CFrame.new(caveEntrance + Vector3.new(0, 0, 2)),
-        21,
-        12,
-        7,
-        ROCK
     )
 
     local warning = meshRock(
@@ -567,11 +562,11 @@ local function buildWaterfallPassage()
     }
 end
 
-local function buildCavern(parent, name, center, radius, wallHeight, accent, worldBoss)
+local function buildCavern(parent, name, center, radius, wallHeight, accent, worldBoss, sharedArena)
     local model = Instance.new("Model")
     model.Name = name
     model:SetAttribute("BossArena", true)
-    model:SetAttribute("SharedArena", true)
+    model:SetAttribute("SharedArena", sharedArena ~= false)
     model.Parent = parent
 
     local centerFrame = CFrame.new(center)
@@ -731,17 +726,35 @@ local function buildCavern(parent, name, center, radius, wallHeight, accent, wor
     return model, floor
 end
 
-local function createWyrm(arena, center)
+local function createWyrm(parent, center, player)
     local model = Instance.new("Model")
-    model.Name = "HollowfangWyrm"
+    model.Name = "HollowfangWyrm_" .. tostring(player.UserId)
     model:SetAttribute("BossType", "MiniBoss")
     model:SetAttribute("BossId", "HollowfangWyrm")
     model:SetAttribute("DisplayName", "Hollowfang Wyrm")
-    model:SetAttribute("CombatReady", false)
-    model:SetAttribute("BossVisualOnly", true)
+    model:SetAttribute("Species", "Hollowfang Wyrm")
+    model:SetAttribute("Rarity", "Epic")
+    model:SetAttribute("CreatureType", "Pet")
+    model:SetAttribute("Level", 12)
+    model:SetAttribute("Health", 1200)
+    model:SetAttribute("MaxHealth", 1200)
+    model:SetAttribute("Power", 48)
+    model:SetAttribute("Defence", 22)
+    model:SetAttribute("PowerRating", math.ceil((1200 * 48 * 22) / 1000))
+    model:SetAttribute("Captured", false)
+    model:SetAttribute("BeingCaptured", false)
+    model:SetAttribute("Dead", false)
+    model:SetAttribute("InCombat", false)
+    model:SetAttribute("CombatReady", true)
+    model:SetAttribute("BossVisualOnly", false)
     model:SetAttribute("WorldBoss", false)
+    model:SetAttribute("MiniBoss", true)
     model:SetAttribute("QuestNoCapture", true)
-    model.Parent = arena
+    model:SetAttribute("QuestNoRewards", true)
+    model:SetAttribute("QuestActionOnDefeat", "DefeatWyrm")
+    model:SetAttribute("QuestOwnerUserId", player.UserId)
+    model:SetAttribute("ArenaOwnerUserId", player.UserId)
+    model.Parent = parent
 
     local bodyColor = Color3.fromRGB(82, 55, 49)
     local underColor = Color3.fromRGB(121, 85, 67)
@@ -856,7 +869,38 @@ local function createWyrm(arena, center)
     end
 
     model.PrimaryPart = primary
-    bossLabel(head, "HOLLOWFANG WYRM", "MINI BOSS  ·  WOUNDED, CORNERED, DANGEROUS", Color3.fromRGB(232, 145, 91), 170)
+
+    -- Combat selection raycasts only query BaseParts. Boss visuals are otherwise
+    -- non-colliding so the companion can reach the target cleanly.
+    for _, item in ipairs(model:GetDescendants()) do
+        if item:IsA("BasePart") then
+            item.Anchored = true
+            item.CanCollide = false
+            item.CanTouch = false
+            item.CanQuery = true
+        end
+    end
+
+    local defeated = false
+    local function refreshDefeatState()
+        if defeated then return end
+        if (tonumber(model:GetAttribute("Health")) or 0) > 0 then return end
+
+        defeated = true
+        model:SetAttribute("Dead", true)
+        model:SetAttribute("InCombat", false)
+        model:SetAttribute("CombatOwnerUserId", nil)
+
+        for _, mark in ipairs(gouges:GetDescendants()) do
+            if mark:IsA("BasePart") then
+                mark.Transparency = 0
+            end
+        end
+    end
+
+    model:GetAttributeChangedSignal("Health"):Connect(refreshDefeatState)
+
+    bossLabel(head, "HOLLOWFANG WYRM", "MINI BOSS  ·  PERSONAL QUEST ENCOUNTER", Color3.fromRGB(232, 145, 91), 170)
 
     return model
 end
@@ -1036,19 +1080,20 @@ local function createJormungdyrr(arena, center)
     return model
 end
 
-local function buildWyrmArena()
-    local center = QuestConfig.World.WyrmArenaCenter
+local function buildWyrmArena(center, player)
     local arena = buildCavern(
         travelWorld,
-        "HollowfangWyrmArena",
+        "HollowfangWyrmArena_" .. tostring(player.UserId),
         center,
         105,
         48,
         Color3.fromRGB(188, 91, 65),
+        false,
         false
     )
+    arena:SetAttribute("ArenaOwnerUserId", player.UserId)
 
-    local boss = createWyrm(arena, center + Vector3.new(0, 0, -8))
+    local boss = createWyrm(wildMonsters, center + Vector3.new(0, 0, -8), player)
 
     local arrival = CFrame.lookAt(
         center + Vector3.new(0, 4, 76),
@@ -1089,6 +1134,7 @@ local function buildWorldBossArena()
         165,
         68,
         Color3.fromRGB(78, 190, 149),
+        true,
         true
     )
 
@@ -1126,7 +1172,7 @@ end
 
 local function canEnterWyrm(player)
     if QuestService:IsQuestCompleted(player, "HollowfangWyrm") then
-        return true
+        return false, "The Wyrm is already defeated. Hollowfang's deepest chamber is sealed again."
     end
 
     if not QuestService:IsQuestCompleted(player, "HollowfangWeavers") then
@@ -1137,7 +1183,13 @@ local function canEnterWyrm(player)
         return false, "The passage is open, but Rowan needs to brief you before you go deeper."
     end
 
-    return true
+    local stageId = QuestService:GetQuestStageId(player, "HollowfangWyrm")
+    if stageId == "Report" then
+        return false, "You already defeated the Wyrm. Return to Rowan and report what you found."
+    end
+
+    return stageId == "EnterDepths" or stageId == "DefeatWyrm",
+        "The deepest chamber is not available at this point in the quest."
 end
 
 local function canEnterWorldBoss(player)
@@ -1147,18 +1199,106 @@ local function canEnterWorldBoss(player)
     return true
 end
 
+local function releaseWyrmSlot(slot)
+    if slot then
+        table.insert(freeWyrmSlots, slot)
+    end
+end
+
+local function cleanupPersonalWyrmArena(player)
+    local record = personalWyrmArenas[player]
+    if not record then return end
+    personalWyrmArenas[player] = nil
+
+    if record.Boss and record.Boss.Parent then
+        record.Boss:Destroy()
+    end
+    if record.Arena and record.Arena.Parent then
+        record.Arena:Destroy()
+    end
+
+    releaseWyrmSlot(record.Slot)
+end
+
+local function allocateWyrmSlot()
+    local slot = table.remove(freeWyrmSlots)
+    if slot then return slot end
+
+    slot = nextWyrmSlot
+    nextWyrmSlot += 1
+    return slot
+end
+
+local function ensurePersonalWyrmArena(player)
+    local existing = personalWyrmArenas[player]
+    if existing
+        and existing.Arena
+        and existing.Arena.Parent
+        and existing.Boss
+        and existing.Boss.Parent then
+        return existing.Arrival
+    end
+
+    cleanupPersonalWyrmArena(player)
+
+    local slot = allocateWyrmSlot()
+    local spacing = 850
+    local center = QuestConfig.World.WyrmArenaCenter
+        + Vector3.new((slot - 1) * spacing, 0, 0)
+
+    local built = buildWyrmArena(center, player)
+    local record = {
+        Slot = slot,
+        Arena = built.Model,
+        Boss = built.Boss,
+        Arrival = built.Arrival,
+        ExitTrigger = built.ExitTrigger,
+    }
+    personalWyrmArenas[player] = record
+
+    connectGate(
+        built.ExitTrigger,
+        "ExitWyrm_" .. tostring(player.UserId),
+        function(candidate)
+            if candidate ~= player then
+                return false, "This passage belongs to another handler's Wyrm encounter."
+            end
+            return true
+        end,
+        hollowfangRoute.Return,
+        "",
+        "HOLLOWFANG CAVE",
+        "You climb back toward the familiar tunnels.",
+        nil,
+        nil
+    )
+
+    return record.Arrival
+end
+
 local function bindPlayer(player)
     player:SetAttribute("BossArena", "")
 
+    player:GetAttributeChangedSignal("BossArena"):Connect(function()
+        if player:GetAttribute("BossArena") ~= "Wyrm" then
+            task.delay(1.0, function()
+                if player.Parent and player:GetAttribute("BossArena") ~= "Wyrm" then
+                    cleanupPersonalWyrmArena(player)
+                end
+            end)
+        end
+    end)
+
     player.CharacterAdded:Connect(function()
         -- Death/respawn returns through the normal plot flow, so clear stale
-        -- arena state if a character is rebuilt.
+        -- personal arena state if a character is rebuilt.
         player:SetAttribute("BossArena", "")
     end)
 end
 
 function Service:PlayerRemoving(player)
     touchDebounce[player] = nil
+    cleanupPersonalWyrmArena(player)
 end
 
 function Service:Init()
@@ -1166,6 +1306,7 @@ function Service:Init()
     started = true
 
     world = workspace:WaitForChild("WildernessPets")
+    wildMonsters = world:WaitForChild("WildMonsters")
 
     local old = world:FindFirstChild("BossTravelWorld")
     if old then old:Destroy() end
@@ -1175,32 +1316,23 @@ function Service:Init()
     travelWorld.Parent = world
 
     local hollowfang = buildHollowfangDepthPassage()
+    hollowfangRoute = hollowfang
+
     local waterfall = buildWaterfallPassage()
-    local wyrmArena = buildWyrmArena()
     local worldBossArena = buildWorldBossArena()
 
     connectGate(
         hollowfang.Trigger,
         "EnterWyrm",
         canEnterWyrm,
-        wyrmArena.Arrival,
+        function(player)
+            return ensurePersonalWyrmArena(player)
+        end,
         "Wyrm",
         "HOLLOWFANG DEPTHS",
-        "The cave narrows, then opens into something far older.",
+        "The cave narrows, then opens into your own sealed Wyrm chamber.",
         "EnterWyrmArena",
         hollowfang.Denied
-    )
-
-    connectGate(
-        wyrmArena.ExitTrigger,
-        "ExitWyrm",
-        nil,
-        hollowfang.Return,
-        "",
-        "HOLLOWFANG CAVE",
-        "You climb back toward the familiar tunnels.",
-        nil,
-        nil
     )
 
     connectGate(
