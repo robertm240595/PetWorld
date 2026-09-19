@@ -723,6 +723,23 @@ function Service:GetClientState(player)
     }
 
     if not chain or not stage then
+        if not root.Completed.StarterWolves then
+            payload.Tracker = {
+                Chain = "Getting Started",
+                QuestId = "TutorialTalk",
+                Stage = "MeetRowan",
+                Active = true,
+                Title = "Getting Started",
+                ObjectiveType = "Talk",
+                ObjectiveTypeLabel = QuestConfig.ObjectiveTypes.Talk,
+                Objective = "Speak to Warden Rowan in the centre village.",
+                Detail = "Look for the gold ! above Warden Rowan.",
+                Progress = "0 / 1",
+                TargetPosition = npcPosition("Rowan"),
+                TargetLabel = npcName("Rowan"),
+                Reward = "",
+            }
+        end
         return payload
     end
 
