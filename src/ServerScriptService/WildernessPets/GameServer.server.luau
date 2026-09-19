@@ -14,6 +14,7 @@ local PetModelFactory = require(script.Parent.Systems.PetModelFactory)
 
 local DataService = require(script.Parent.Services.PlayerDataService)
 local PetService = require(script.Parent.Services.PetService)
+local PetAbilityService = require(script.Parent.Services.PetAbilityService)
 local MountService = require(script.Parent.Services.MountService)
 local PlotService = require(script.Parent.Services.PlotService)
 local ShopService = require(script.Parent.Services.ShopService)
@@ -105,6 +106,7 @@ Players.PlayerRemoving:Connect(function(player)
     TestCommandService:PlayerRemoving(player)
     MountService:PlayerRemoving(player)
     LootService:PlayerRemoving(player)
+    PetAbilityService:PlayerRemoving(player)
     WorldBossRewardService:PlayerRemoving(player)
     BossTravelService:PlayerRemoving(player)
     QuestService:PlayerRemoving(player)
@@ -1096,6 +1098,7 @@ local function attackTarget(player)
 
     session.attacking = true
     session.petDefeated = false
+    session.nextEnemyAttackAt = os.clock()
     ActionLockService:Begin(player, "CompanionCombat")
 
     if target:GetAttribute("WorldBoss") ~= true then
@@ -1144,19 +1147,18 @@ local function attackTarget(player)
                 if not current then break end
 
                 local close = (current.Position - companion:GetPivot().Position).Magnitude
+                if session.abilityBusy then
+                    task.wait(.05)
+                    continue
+                end
                 if close <= 9 then
                     PetAnimator:PlayAttack(companion, current.Position, .72, function()
                         if combatSessions[player] == session
                             and session.attacking
                             and not session.petDefeated
                             and validMonster(target) then
-                            target:SetAttribute("LastHitUserId", player.UserId)
                             local damage = petBaseDamage(session.pet)
-                            if target:GetAttribute("WorldBoss") == true then
-                                local before = math.max(0, tonumber(target:GetAttribute("Health")) or 0)
-                                WorldBossRewardService:RecordDamage(target, player, math.min(before, damage))
-                            end
-                            MonsterService:DamageMonster(target, damage)
+                            PetAbilityService:DamageEnemy(player, session.pet, target, damage)
                         end
                     end, .9)
 
@@ -1172,38 +1174,71 @@ local function attackTarget(player)
                         and companion.Parent
                         and companion.PrimaryPart then
 
-                        PetAnimator:PlayAttack(target, companion.PrimaryPart.Position, .72, function()
-                            if combatSessions[player] ~= session
-                                or not session.attacking
-                                or session.petDefeated
-                                or not companion.Parent then
+                        local currentTime = os.clock()
+                        local enemyReadyAt = tonumber(session.nextEnemyAttackAt) or 0
+
+                        if currentTime >= enemyReadyAt and not PetAbilityService:IsEnemyStunned(target) then
+                            local enemyInterval = (tonumber((Config.Combat or {}).WildAttackInterval) or 1.05)
+                                * PetAbilityService:GetEnemyAttackIntervalMultiplier(target)
+                            session.nextEnemyAttackAt = currentTime + enemyInterval
+
+                            local misses = PetAbilityService:EnemyAttackMisses(target)
+
+                            PetAnimator:PlayAttack(target, companion.PrimaryPart.Position, .72, function()
+                                if combatSessions[player] ~= session
+                                    or not session.attacking
+                                    or session.petDefeated
+                                    or not companion.Parent
+                                    or misses then
+                                    return
+                                end
+
+                                local rawDamage = wildPetDamage(target, session.pet)
+                                local damage, reflected = PetAbilityService:ResolveIncomingPetDamage(
+                                    session.pet,
+                                    target,
+                                    rawDamage
+                                )
+
+                                if damage > 0 then
+                                    session.pet.CurrentHealth = math.max(
+                                        0,
+                                        (tonumber(session.pet.CurrentHealth) or session.pet.Health) - damage
+                                    )
+                                    companion:SetAttribute("Health", session.pet.CurrentHealth)
+                                    syncCompanionLabel(companion, session.pet)
+
+                                    task.spawn(function()
+                                        if companion.Parent then
+                                            pcall(function() PetAnimator:PlayHit(companion, .22) end)
+                                        end
+                                    end)
+                                end
+
+                                if reflected > 0 and validMonster(target) then
+                                    PetAbilityService:DamageEnemy(player, session.pet, target, reflected)
+                                end
+                            end, .9)
+
+                            if (tonumber(session.pet.CurrentHealth) or 0) <= 0 then
+                                defeatCompanion(player, session, target)
                                 return
                             end
 
-                            local damage = wildPetDamage(target, session.pet)
-                            session.pet.CurrentHealth = math.max(
-                                0,
-                                (tonumber(session.pet.CurrentHealth) or session.pet.Health) - damage
-                            )
-                            companion:SetAttribute("Health", session.pet.CurrentHealth)
-                            syncCompanionLabel(companion, session.pet)
-
-                            task.spawn(function()
-                                if companion.Parent then
-                                    pcall(function() PetAnimator:PlayHit(companion, .22) end)
-                                end
-                            end)
-                        end, .9)
-
-                        if (tonumber(session.pet.CurrentHealth) or 0) <= 0 then
-                            defeatCompanion(player, session, target)
-                            return
+                            if (tonumber(target:GetAttribute("Health")) or 0) <= 0
+                                or target:GetAttribute("Dead") then
+                                rewardCombatKill(player, session, target)
+                                break
+                            end
                         end
                     end
                 end
 
-                local interval = tonumber((Config.Combat or {}).WildAttackInterval) or 1.05
-                task.wait(math.max(.08, interval - .72))
+                local baseInterval = tonumber((Config.Combat or {}).PetAttackInterval)
+                    or tonumber((Config.Combat or {}).WildAttackInterval)
+                    or 1.05
+                local petInterval = baseInterval * PetAbilityService:GetPetAttackIntervalMultiplier(session.pet)
+                task.wait(math.max(.08, petInterval - .72))
             end
         end)
 
@@ -1239,8 +1274,41 @@ end
 
 local function abilityTarget(player, slot)
     if slot ~= 1 and slot ~= 2 and slot ~= 3 then return false end
-    combatTell(player, "Error", "Ability "..tostring(slot).." is reserved for this pet's unique skill.")
-    return false
+
+    local session = combatSessions[player]
+    if not session
+        or not session.pet
+        or not session.companion
+        or not session.companion.Parent then
+        combatTell(player, "Error", "Equip a companion before using abilities.")
+        return false
+    end
+
+    if not session.attacking or not validMonster(session.target) then
+        combatTell(player, "Error", "Start a fight before using companion abilities.")
+        return false
+    end
+
+    local success, message, cooldown, killed = PetAbilityService:UseAbility(
+        player,
+        session,
+        slot,
+        combatSessions
+    )
+
+    if not success then
+        combatTell(player, "Error", message)
+        return false
+    end
+
+    syncCompanionLabel(session.companion, session.pet)
+    combatTell(player, "AbilityUsed", slot, message, cooldown)
+
+    if killed and session.target then
+        rewardCombatKill(player, session, session.target)
+    end
+
+    return true
 end
 local function recallCompanion(player)
     local session = combatSessions[player]
