@@ -171,10 +171,6 @@ local function damageRawTarget(player, target, damage)
     local before = math.max(0, tonumber(target:GetAttribute("Health")) or 0)
     if before <= 0 then return 0, true end
 
-    if target:GetAttribute("WorldBoss") == true then
-        WorldBossRewardService:RecordDamage(target, player, math.min(before, damage))
-    end
-
     target:SetAttribute("LastHitUserId", player.UserId)
 
     local dealt
@@ -184,6 +180,13 @@ local function damageRawTarget(player, target, damage)
         local after = math.max(0, before - damage)
         target:SetAttribute("Health", after)
         dealt = before - after
+    end
+
+    if dealt > 0 and target:GetAttribute("WorldBoss") == true then
+        WorldBossRewardService:RecordDamage(target, player, dealt)
+    end
+    if dealt > 0 and target:GetAttribute("BossAIManaged") == true then
+        BossCombatService:RecordThreat(target, player, dealt)
     end
 
     return dealt, (tonumber(target:GetAttribute("Health")) or 0) <= 0
@@ -204,12 +207,19 @@ local function outgoingDamage(pet, target, rawDamage)
     -- without making ordinary wild fights dramatically slower.
     local mitigation = math.min(0.45, defence * 0.003)
 
+    local bossReduction = math.clamp(
+        tonumber(target:GetAttribute("BossDamageReduction")) or 0,
+        0,
+        0.95
+    )
+
     return math.max(
         1,
         rawDamage
             * (1 + powerBuff)
             * (1 - mitigation)
             * (1 + expose)
+            * (1 - bossReduction)
     )
 end
 
@@ -259,6 +269,8 @@ local function applyDot(player, pet, target, spec, sourceName)
     end
 
     target:SetAttribute("Status_" .. dotType .. "_Until", workspace:GetServerTimeNow() + duration)
+    target:SetAttribute("Status_" .. dotType .. "_Value", scale)
+    target:SetAttribute("Status_" .. dotType .. "_Source", tostring(sourceName or ""))
 
     task.spawn(function()
         local last = now()
