@@ -65,10 +65,27 @@ local function clearSession(player)
     applyMovement(player)
 end
 
+local function ensureMountDefaults(mount)
+    if type(mount) ~= "table" then return mount end
+
+    local info = mountInfo(mount.Species)
+    mount.Favourite = mount.Favourite == true
+    mount.Tradeable = mount.Tradeable ~= false
+        and (not info or info.Tradeable ~= false)
+    mount.VendorSellable = false
+
+    return mount
+end
+
 function Service:GetMounts(player)
     local data = DataService:Get(player)
     if not data then return {} end
     data.Mounts = type(data.Mounts) == "table" and data.Mounts or {}
+
+    for _, mount in ipairs(data.Mounts) do
+        ensureMountDefaults(mount)
+    end
+
     return data.Mounts
 end
 
@@ -102,6 +119,9 @@ function Service:Create(player, species, options)
         Rarity = info.Rarity,
         Imprint = imprint,
         AcquiredFrom = options.AcquiredFrom or "Capture",
+        Favourite = false,
+        Tradeable = info.Tradeable ~= false,
+        VendorSellable = false,
     }
     table.insert(data.Mounts, mount)
 
@@ -109,6 +129,16 @@ function Service:Create(player, species, options)
     data.MountCollection[species] = true
 
     return mount
+end
+
+function Service:SetFavourite(player, mountId, favourite)
+    local mount = self:Find(player, mountId)
+    if not mount then return false, "Mount not found." end
+
+    mount.Favourite = favourite == true
+    return true, mount.Favourite
+        and "Mount added to favourites."
+        or "Mount removed from favourites."
 end
 
 function Service:Unequip(player)
