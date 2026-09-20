@@ -1,6 +1,7 @@
 local Animator = require(script.Parent.Parent.Systems.PetAnimator)
 local ModelFactory = require(script.Parent.Parent.Systems.PetModelFactory)
 local PetService = require(script.Parent.PetService)
+local EquipmentConfig = require(game.ReplicatedStorage.WildernessPets.Shared.EquipmentConfig)
 local Service = {}
 local displaying = false
 local function damage(attacker, defender)
@@ -57,22 +58,40 @@ local function replay(petA,petB,hits,winner)
 end
 function Service:Fight(petA,petB)
  if not petA or not petB then return nil end
+
  local statsA=PetService:GetEffectiveStats(petA)
  local statsB=PetService:GetEffectiveStats(petB)
+ local gearA=EquipmentConfig:GetBonuses(petA)
+ local gearB=EquipmentConfig:GetBonuses(petB)
+
  local hpA,hpB=statsA.Health,statsB.Health
- local turn=1
+ local intervalA=1/math.max(1,1+(tonumber(gearA.AttackHaste) or 0))
+ local intervalB=1/math.max(1,1+(tonumber(gearB.AttackHaste) or 0))
+ local nextA,nextB=0,0
+ local actions=0
  local hits={}
- while hpA>0 and hpB>0 and turn<=100 do
-  hpB-=damage(statsA,statsB)
-  table.insert(hits,{side=1})
-  if hpB<=0 then break end
-  hpA-=damage(statsB,statsA)
-  table.insert(hits,{side=2})
-  if hpA<=0 then break end
-  turn+=1
+
+ while hpA>0 and hpB>0 and actions<200 do
+  if nextA<=nextB then
+   local dealt=damage(statsA,statsB)
+   hpB-=dealt
+   local steal=math.max(0,tonumber(gearA.Lifesteal) or 0)
+   if steal>0 then hpA=math.min(statsA.Health,hpA+math.floor(dealt*steal+.5)) end
+   table.insert(hits,{side=1})
+   nextA+=intervalA
+  else
+   local dealt=damage(statsB,statsA)
+   hpA-=dealt
+   local steal=math.max(0,tonumber(gearB.Lifesteal) or 0)
+   if steal>0 then hpB=math.min(statsB.Health,hpB+math.floor(dealt*steal+.5)) end
+   table.insert(hits,{side=2})
+   nextB+=intervalB
+  end
+  actions+=1
  end
+
  local winner=hpA>hpB and "A" or "B"
  replay(petA,petB,hits,winner)
- return {Winner=winner,Turns=turn}
+ return {Winner=winner,Turns=actions}
 end
 return Service
