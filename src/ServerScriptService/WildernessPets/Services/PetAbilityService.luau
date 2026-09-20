@@ -704,6 +704,7 @@ local function applyAura(casterSession, info, allSessions)
     local origin = companion:GetPivot().Position
     local radius = math.max(1, tonumber(info.Radius) or 25)
     local count = 0
+    local engagedCount = 0
 
     for allyPlayer, session in pairs(allSessions or {}) do
         if session.pet
@@ -718,6 +719,11 @@ local function applyAura(casterSession, info, allSessions)
                     local scale = isSelf and math.clamp(tonumber(info.SelfScale) or 1, 0, 1) or 1
                     applySelfEffects(session.pet, session.companion, info, scale)
                     count += 1
+                    if session.attacking
+                        and casterSession.target
+                        and session.target == casterSession.target then
+                        engagedCount += 1
+                    end
 
                     if not isSelf and typeof(allyPlayer) == "Instance" and allyPlayer:IsA("Player") then
                         GameRemote:FireClient(
@@ -733,7 +739,7 @@ local function applyAura(casterSession, info, allSessions)
         end
     end
 
-    return count
+    return count, engagedCount
 end
 
 local function healPet(session, info)
@@ -808,12 +814,12 @@ function Service:UseAbility(player, session, slot, allSessions)
 
     local ok, err = pcall(function()
         if info.AllyAura then
-            local count = applyAura(session, info, allSessions)
+            local count, engagedCount = applyAura(session, info, allSessions)
             table.insert(summary, "affected " .. tostring(count) .. " allied pet" .. (count == 1 and "" or "s"))
 
-            if target and target:GetAttribute("WorldBoss") == true and count > 0 then
+            if target and target:GetAttribute("WorldBoss") == true and engagedCount > 0 then
                 local maximum = math.max(1, tonumber(target:GetAttribute("MaxHealth")) or 1)
-                local supportScore = maximum * 0.006 * count
+                local supportScore = maximum * 0.006 * engagedCount
                 WorldBossRewardService:RecordSupport(target, player, supportScore)
                 BossCombatService:RecordSupportThreat(target, player, supportScore)
             end
