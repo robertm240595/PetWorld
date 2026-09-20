@@ -13,6 +13,7 @@ local nextBasicAt = setmetatable({}, {__mode = "k"})
 local nextSpecialAt = setmetatable({}, {__mode = "k"})
 local lastSoloHealAt = setmetatable({}, {__mode = "k"})
 local lastThreatDecayAt = setmetatable({}, {__mode = "k"})
+local lastActiveAt = setmetatable({}, {__mode = "k"})
 local respawnScheduled = setmetatable({}, {__mode = "k"})
 local started = false
 local wildMonsters
@@ -503,10 +504,27 @@ local function runBoss(boss)
                 boss:SetAttribute("BossSoloWard", false)
                 boss:SetAttribute("BossDamageReduction", 0)
                 clearTelegraph(boss)
+
+                if boss:GetAttribute("WorldBoss") == true then
+                    local maximum = math.max(1, tonumber(boss:GetAttribute("MaxHealth")) or 1)
+                    local currentHealth = math.max(0, tonumber(boss:GetAttribute("Health")) or 0)
+                    local lastActive = tonumber(lastActiveAt[boss]) or clockNow()
+
+                    if currentHealth < maximum and clockNow() - lastActive >= 45 then
+                        boss:SetAttribute("Health", maximum)
+                        boss:SetAttribute("BossEnraged", false)
+                        boss:SetAttribute("BossPhase", "HUNTING")
+                        boss:SetAttribute("BossPowerMultiplier", 1)
+                        clearBossStatuses(boss)
+                        threat[boss] = nil
+                    end
+                end
+
                 task.wait(0.35)
                 continue
             end
 
+            lastActiveAt[boss] = clockNow()
             boss:SetAttribute("InCombat", true)
             if boss:GetAttribute("BossPhase") == nil then
                 boss:SetAttribute("BossPhase", "HUNTING")
