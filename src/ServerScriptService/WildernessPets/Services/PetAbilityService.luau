@@ -240,7 +240,14 @@ end
 
 function Service:DamageEnemyFlat(player, target, damage)
     if not player or not livingTarget(target) then return 0, false end
-    return damageRawTarget(player, target, math.max(1, tonumber(damage) or 1))
+
+    local reduction = math.clamp(
+        tonumber(target:GetAttribute("BossDamageReduction")) or 0,
+        0,
+        0.95
+    )
+    local adjusted = math.max(1, (tonumber(damage) or 1) * (1 - reduction))
+    return damageRawTarget(player, target, adjusted)
 end
 
 local function applyDot(player, pet, target, spec, sourceName)
