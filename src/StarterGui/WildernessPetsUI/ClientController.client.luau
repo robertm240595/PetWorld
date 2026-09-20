@@ -13,6 +13,7 @@ local ShopRemote = Remotes:WaitForChild("Shop")
 local ArenaRemote = Remotes:WaitForChild("Arena")
 local QuestRemote = Remotes:WaitForChild("Quest")
 local LootRemote = Remotes:WaitForChild("Loot")
+local BossLootRemote = Remotes:WaitForChild("BossLoot")
 local GetState = Remotes:WaitForChild("GetState")
 local Shared = Root:WaitForChild("Shared")
 local Config = require(Shared:WaitForChild("Config"))
@@ -294,11 +295,26 @@ showPets = function(tab)
                 detail.TextColor3=Color3.fromRGB(190,195,205)
                 detail.TextXAlignment=Enum.TextXAlignment.Left
 
+                local favourite=button(
+                    row,
+                    mount.Favourite and "★" or "☆",
+                    UDim2.fromOffset(548,18),
+                    UDim2.fromOffset(44,36)
+                )
+                favourite.TextScaled=false
+                favourite.TextSize=18
+                favourite.BackgroundColor3=mount.Favourite
+                    and Color3.fromRGB(110,88,48)
+                    or Color3.fromRGB(48,54,62)
+                favourite.MouseButton1Click:Connect(function()
+                    PetsRemote:FireServer("FavouriteMount",mount.Id,not mount.Favourite)
+                end)
+
                 local action=button(
                     row,
                     equipped and "UNEQUIP" or "EQUIP",
-                    UDim2.fromOffset(602,18),
-                    UDim2.fromOffset(130,36)
+                    UDim2.fromOffset(600,18),
+                    UDim2.fromOffset(132,36)
                 )
                 action.TextScaled=false
                 action.TextSize=12
@@ -407,7 +423,11 @@ showPets = function(tab)
                         local info=Config.Potions and Config.Potions[itemName]
                         detailText=info and tostring(info.Description or "") or ""
                     elseif itemType=="Loot" then
-                        detailText="Wild loot material  ·  Used for quests and trading"
+                        detailText="Wild loot material  ·  Sell to the Material Trader or trade with players"
+                    elseif itemType=="BossPetToken" then
+                        detailText="ULTRA-RARE WORLD BOSS PET RELIC  ·  Tradeable  ·  USE to add the Ancient pet to your collection"
+                    elseif itemType=="BossMountToken" then
+                        detailText="ULTRA-RARE WORLD BOSS MOUNT RELIC  ·  Tradeable  ·  USE to add the Ancient mount to your collection"
                     end
 
                     local itemDetail=text(
@@ -435,6 +455,15 @@ showPets = function(tab)
                         use.TextSize=12
                         use.MouseButton1Click:Connect(function()
                             ShopRemote:FireServer("UsePotion",itemName,selectedPetId)
+                        end)
+                    elseif itemType=="BossPetToken" or itemType=="BossMountToken" then
+                        local use=button(row,"USE RELIC",UDim2.fromOffset(602,18),UDim2.fromOffset(130,36))
+                        use.TextScaled=false
+                        use.TextSize=10
+                        use.MouseButton1Click:Connect(function()
+                            use.Active=false
+                            use.Text="USING..."
+                            BossLootRemote:FireServer("UseRewardItem",itemType,itemName)
                         end)
                     end
                 end
@@ -1674,8 +1703,13 @@ showBeastTrader = function(tab)
     for _,pet in ipairs(pets) do
         local info=Config.Pets[pet.Species]
         local rarity=Config.Rarities[pet.Rarity]
+        local vendorLocked=pet.VendorSellable==false
+            or (info and info.VendorSellable==false)
+            or (info and info.SpawnMode=="WorldBoss")
+            or pet.Rarity=="Ancient"
+
         local value=0
-        if info and rarity then
+        if info and rarity and not vendorLocked then
             value=math.floor(
                 (info.SellValue or 0)
                 * (rarity.SellMultiplier or 1)
@@ -1709,7 +1743,8 @@ showBeastTrader = function(tab)
 
         local meta=text(
             row,
-            tostring(pet.Species).."  ·  "..tostring(pet.Rarity).."  ·  "..tostring(value).." Coins",
+            tostring(pet.Species).."  ·  "..tostring(pet.Rarity).."  ·  "
+                ..(vendorLocked and "PLAYER TRADE ONLY" or (tostring(value).." Coins")),
             UDim2.fromOffset(14,36),
             UDim2.fromOffset(455,19)
         )
@@ -1720,14 +1755,14 @@ showBeastTrader = function(tab)
 
         local sell=button(
             row,
-            pet.Favourite and "FAVOURITE" or ("SELL  "..tostring(value)),
+            vendorLocked and "TRADE ONLY" or (pet.Favourite and "FAVOURITE" or ("SELL  "..tostring(value))),
             UDim2.fromOffset(535,17),
             UDim2.fromOffset(150,38)
         )
         sell.TextScaled=false
         sell.TextSize=11
 
-        if pet.Favourite then
+        if pet.Favourite or vendorLocked then
             sell.Active=false
             sell.BackgroundColor3=Color3.fromRGB(63,57,48)
         else
@@ -2279,5 +2314,18 @@ end)
 LootRemote.OnClientEvent:Connect(function(action, success)
     if action == "CollectResult" and success == true then
         showHUD()
+    end
+end)
+
+BossLootRemote.OnClientEvent:Connect(function(action, success, message)
+    if action == "UseResult" then
+        if success == true then
+            if petsOpen then
+                showPets(backpackTab)
+            else
+                showHUD()
+            end
+        end
+        notify(message or (success and "Creature relic used." or "Could not use that creature relic."))
     end
 end)
