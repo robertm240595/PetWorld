@@ -1858,7 +1858,7 @@ function Service:TalkToNPC(player, npcId)
             sendDialogue(
                 player,
                 npcName(npcId),
-                "You have what I asked for. I'll only take eligible animals that are healthy, unfavourited, and not assigned to another role.",
+                "You have what I asked for. I'll only take eligible animals that are healthy, unfavourited, not assigned to another role, and not wearing Wildforge equipment.",
                 {
                     {Text = "HAND OVER " .. tostring(required), Action = "TurnIn:" .. chain.Id},
                     {Text = "KEEP THEM FOR NOW", Action = "Close"},
@@ -2098,7 +2098,7 @@ function Service:HandleAction(player, action)
         local model = npcModels[chain.NPC]
         if model and not near(player, model:GetPivot().Position, 16) then return end
         if not removeTurnInPets(player, stage) then
-            sendDialogue(player, npcName(chain.NPC), "I can't take the requested animals yet. Make sure enough eligible pets are free in your backpack.", {{Text="CLOSE",Action="Close"}})
+            sendDialogue(player, npcName(chain.NPC), "I can't take the requested animals yet. Make sure enough eligible pets are free, unfavourited, and have all Wildforge equipment removed.", {{Text="CLOSE",Action="Close"}})
             Service:PushState(player)
             return
         end
