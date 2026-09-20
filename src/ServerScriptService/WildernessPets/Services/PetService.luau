@@ -2,7 +2,9 @@ local HttpService = game:GetService("HttpService")
 local TextService = game:GetService("TextService")
 local RunService = game:GetService("RunService")
 local Config = require(game.ReplicatedStorage.WildernessPets.Shared.Config)
+local EquipmentConfig = require(game.ReplicatedStorage.WildernessPets.Shared.EquipmentConfig)
 local DataService = require(script.Parent.PlayerDataService)
+local EquipmentRuntime = require(script.Parent.EquipmentRuntime)
 
 local Service = {}
 local rng = Random.new()
@@ -35,6 +37,12 @@ local function ensurePetDefaults(pet)
     pet.Battles = math.max(0, math.floor(tonumber(pet.Battles) or 0))
     pet.Wins = math.max(0, math.floor(tonumber(pet.Wins) or 0))
     pet.Displayed = pet.Displayed == true
+    pet.Equipment = type(pet.Equipment) == "table" and pet.Equipment or {}
+    for _, slotName in ipairs(EquipmentConfig.Slots) do
+        if pet.Equipment[slotName] ~= nil and type(pet.Equipment[slotName]) ~= "table" then
+            pet.Equipment[slotName] = nil
+        end
+    end
 
     pet.HealthBoostUntil = tonumber(pet.HealthBoostUntil) or 0
     pet.HealthBoostPercent = math.max(0, tonumber(pet.HealthBoostPercent) or 0)
@@ -72,11 +80,15 @@ function Service:GetEffectiveStats(pet, atTime)
     ensurePetDefaults(pet)
     atTime = tonumber(atTime) or nowUnix()
 
+    local equipment = EquipmentConfig:GetBonuses(pet)
+    local aura = EquipmentRuntime:GetAuraBonuses(pet)
+
     local effectiveHealth = math.max(
         1,
         math.floor(
             pet.Health
             * timedMultiplier(pet.HealthBoostUntil, pet.HealthBoostPercent, atTime)
+            * (1 + math.max(0, equipment.Health or 0) + math.max(0, aura.Health or 0))
             + 0.5
         )
     )
@@ -85,6 +97,7 @@ function Service:GetEffectiveStats(pet, atTime)
         math.floor(
             pet.Power
             * timedMultiplier(pet.PowerBoostUntil, pet.PowerBoostPercent, atTime)
+            * (1 + math.max(0, equipment.Power or 0) + math.max(0, aura.Power or 0))
             + 0.5
         )
     )
@@ -93,6 +106,7 @@ function Service:GetEffectiveStats(pet, atTime)
         math.floor(
             pet.Defence
             * timedMultiplier(pet.DefenceBoostUntil, pet.DefenceBoostPercent, atTime)
+            * (1 + math.max(0, equipment.Defence or 0) + math.max(0, aura.Defence or 0))
             + 0.5
         )
     )
@@ -108,7 +122,9 @@ function Service:GetEffectiveStats(pet, atTime)
     return {
         Health = effectiveHealth,
         Power = effectivePower,
-        Defence = effectiveDefence
+        Defence = effectiveDefence,
+        Equipment = equipment,
+        Aura = aura,
     }
 end
 
@@ -180,6 +196,7 @@ function Service:Create(player, species, options)
         Wins = 0,
         Displayed = false,
         Favourite = false,
+        Equipment = {},
         Tradeable = template.Tradeable ~= false,
         VendorSellable = template.VendorSellable ~= false,
         Dead = false,
