@@ -264,11 +264,14 @@ local function applyDot(player, pet, target, spec, sourceName)
     local token
 
     if current and (tonumber(current.ExpiresAt) or 0) > now() then
-        current.Scale = math.max(tonumber(current.Scale) or 0, scale)
+        local previousScale = tonumber(current.Scale) or 0
+        if scale >= previousScale then
+            current.Scale = scale
+            current.Player = player
+            current.Pet = pet
+            current.Source = sourceName
+        end
         current.ExpiresAt = math.max(tonumber(current.ExpiresAt) or 0, expiresAt)
-        current.Player = player
-        current.Pet = pet
-        current.Source = sourceName
         current.Token = (tonumber(current.Token) or 0) + 1
         token = current.Token
     else
