@@ -156,9 +156,18 @@ local function applyDebuff(target, spec, sourceName)
     end
 
     local state = targetState(target)
-    local appliedValue = applyStrongestTimed(state.Debuffs, statusType, value, duration, sourceName)
+    local appliedValue, expiresAt = applyStrongestTimed(
+        state.Debuffs,
+        statusType,
+        value,
+        duration,
+        sourceName
+    )
 
-    target:SetAttribute("Status_" .. statusType .. "_Until", workspace:GetServerTimeNow() + duration)
+    target:SetAttribute(
+        "Status_" .. statusType .. "_Until",
+        workspace:GetServerTimeNow() + math.max(0, expiresAt - now())
+    )
     target:SetAttribute("Status_" .. statusType .. "_Value", appliedValue)
     target:SetAttribute("Status_" .. statusType .. "_Source", tostring(sourceName or ""))
     return duration
@@ -268,8 +277,11 @@ local function applyDot(player, pet, target, spec, sourceName)
         token = 1
     end
 
-    target:SetAttribute("Status_" .. dotType .. "_Until", workspace:GetServerTimeNow() + duration)
-    target:SetAttribute("Status_" .. dotType .. "_Value", scale)
+    target:SetAttribute(
+        "Status_" .. dotType .. "_Until",
+        workspace:GetServerTimeNow() + math.max(0, (tonumber(current.ExpiresAt) or expiresAt) - now())
+    )
+    target:SetAttribute("Status_" .. dotType .. "_Value", tonumber(current.Scale) or scale)
     target:SetAttribute("Status_" .. dotType .. "_Source", tostring(sourceName or ""))
 
     task.spawn(function()
@@ -331,8 +343,21 @@ local function applyBuff(pet, spec, sourceName, scale, companion)
 
     local value = math.max(0, tonumber(spec.Value) or 0) * (tonumber(scale) or 1)
     local duration = math.max(0.1, tonumber(spec.Duration) or 0.1)
-    local appliedValue = applyStrongestTimed(state.Buffs, tostring(spec.Type), value, duration, sourceName)
-    setPetStatusAttribute(companion, "PetStatus", tostring(spec.Type), appliedValue, duration, sourceName)
+    local appliedValue, expiresAt = applyStrongestTimed(
+        state.Buffs,
+        tostring(spec.Type),
+        value,
+        duration,
+        sourceName
+    )
+    setPetStatusAttribute(
+        companion,
+        "PetStatus",
+        tostring(spec.Type),
+        appliedValue,
+        math.max(0.1, expiresAt - now()),
+        sourceName
+    )
 end
 
 local function applyShield(pet, shieldSpec, scale, companion, sourceName)
@@ -455,8 +480,21 @@ function Service:ApplyPetDebuff(pet, companion, spec, sourceName)
         value = math.max(value, tonumber(PetAbilities.BlindMissChance) or 0.80)
     end
 
-    local appliedValue = applyStrongestTimed(state.Harmful, statusType, value, duration, sourceName)
-    setPetStatusAttribute(companion, "PetDebuff", statusType, appliedValue, duration, sourceName)
+    local appliedValue, expiresAt = applyStrongestTimed(
+        state.Harmful,
+        statusType,
+        value,
+        duration,
+        sourceName
+    )
+    setPetStatusAttribute(
+        companion,
+        "PetDebuff",
+        statusType,
+        appliedValue,
+        math.max(0.1, expiresAt - now()),
+        sourceName
+    )
     return duration
 end
 
@@ -493,7 +531,14 @@ function Service:ApplyPetDot(pet, companion, spec, sourceName, onTick)
         token = 1
     end
 
-    setPetStatusAttribute(companion, "PetDebuff", statusType, current.Value, duration, sourceName)
+    setPetStatusAttribute(
+        companion,
+        "PetDebuff",
+        statusType,
+        current.Value,
+        math.max(0.1, (tonumber(current.ExpiresAt) or (now() + duration)) - now()),
+        sourceName
+    )
 
     task.spawn(function()
         for _ = 1, ticks do
