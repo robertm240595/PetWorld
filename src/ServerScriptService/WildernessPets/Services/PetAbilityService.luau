@@ -749,9 +749,26 @@ end
 
 function Service:ClearEquipmentAura(pet)
     local id = pet and tostring(pet.Id or "") or ""
-    if id ~= "" then
-        EquipmentRuntime:ClearId(id)
-        equipmentAuraIds[id] = nil
+    if id == "" then return end
+
+    local beforeStats = PetService:GetEffectiveStats(pet)
+    local healthRatio = beforeStats.Health > 0
+        and math.clamp(
+            (tonumber(pet.CurrentHealth) or beforeStats.Health) / beforeStats.Health,
+            0,
+            1
+        )
+        or 1
+
+    EquipmentRuntime:ClearId(id)
+    equipmentAuraIds[id] = nil
+
+    if not pet.Dead then
+        local afterStats = PetService:GetEffectiveStats(pet)
+        pet.CurrentHealth = math.max(
+            1,
+            math.floor(afterStats.Health * healthRatio + 0.5)
+        )
     end
 end
 
@@ -1187,8 +1204,7 @@ function Service:PlayerRemoving(player)
         if id ~= "" then
             cooldowns[id] = nil
             petStates[id] = nil
-            EquipmentRuntime:ClearId(id)
-            equipmentAuraIds[id] = nil
+            Service:ClearEquipmentAura(pet)
         end
     end
 end
