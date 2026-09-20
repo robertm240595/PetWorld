@@ -305,7 +305,25 @@ local function applyDot(player, pet, target, spec, sourceName)
     end)
 end
 
-local function applyBuff(pet, spec, sourceName, scale)
+local function setPetStatusAttribute(companion, prefix, statusType, value, duration, sourceName)
+    if not companion or not companion.Parent then return end
+
+    local key = tostring(prefix or "PetStatus") .. "_" .. tostring(statusType)
+    companion:SetAttribute(key .. "_Until", workspace:GetServerTimeNow() + math.max(0.1, tonumber(duration) or 0.1))
+    companion:SetAttribute(key .. "_Value", tonumber(value) or 0)
+    companion:SetAttribute(key .. "_Source", tostring(sourceName or ""))
+end
+
+local function clearPetStatusAttributes(companion, prefix)
+    if not companion or not companion.Parent then return end
+    for name in pairs(companion:GetAttributes()) do
+        if name:match("^" .. prefix .. "_") then
+            companion:SetAttribute(name, nil)
+        end
+    end
+end
+
+local function applyBuff(pet, spec, sourceName, scale, companion)
     if not pet or type(spec) ~= "table" then return end
 
     local state = petState(pet)
@@ -313,18 +331,23 @@ local function applyBuff(pet, spec, sourceName, scale)
 
     local value = math.max(0, tonumber(spec.Value) or 0) * (tonumber(scale) or 1)
     local duration = math.max(0.1, tonumber(spec.Duration) or 0.1)
-    applyStrongestTimed(state.Buffs, tostring(spec.Type), value, duration, sourceName)
+    local appliedValue = applyStrongestTimed(state.Buffs, tostring(spec.Type), value, duration, sourceName)
+    setPetStatusAttribute(companion, "PetStatus", tostring(spec.Type), appliedValue, duration, sourceName)
 end
 
-local function applyShield(pet, shieldSpec, scale)
+local function applyShield(pet, shieldSpec, scale, companion, sourceName)
     if not pet or type(shieldSpec) ~= "table" then return end
 
     local state = petState(pet)
     if not state then return end
 
     local stats = PetService:GetEffectiveStats(pet)
-    local amount = math.max(1, stats.Health * math.max(0, tonumber(shieldSpec.Percent) or 0) * (tonumber(scale) or 1))
-    local expiresAt = now() + math.max(0.1, tonumber(shieldSpec.Duration) or 0.1)
+    local duration = math.max(0.1, tonumber(shieldSpec.Duration) or 0.1)
+    local amount = math.max(
+        1,
+        stats.Health * math.max(0, tonumber(shieldSpec.Percent) or 0) * (tonumber(scale) or 1)
+    )
+    local expiresAt = now() + duration
     local reflect = math.max(0, tonumber(shieldSpec.ReflectPercent) or 0)
 
     local current = state.Shield
@@ -343,9 +366,14 @@ local function applyShield(pet, shieldSpec, scale)
             ExpiresAt = expiresAt,
         }
     end
+
+    setPetStatusAttribute(companion, "PetStatus", "Shield", amount, duration, sourceName)
+    if reflect > 0 then
+        setPetStatusAttribute(companion, "PetStatus", "Reflect", reflect, duration, sourceName)
+    end
 end
 
-local function applyGuard(pet, guardSpec, scale)
+local function applyGuard(pet, guardSpec, scale, companion, sourceName)
     if not pet or type(guardSpec) ~= "table" then return end
 
     local state = petState(pet)
@@ -368,27 +396,82 @@ local function applyGuard(pet, guardSpec, scale)
             ExpiresAt = expiresAt,
         }
     end
+
+    if reduction > 0 then
+        setPetStatusAttribute(companion, "PetStatus", "DamageReduction", reduction, duration, sourceName)
+    end
+    if reflect > 0 then
+        setPetStatusAttribute(companion, "PetStatus", "Reflect", reflect, duration, sourceName)
+    end
 end
 
-local function cleansePet(pet, mode)
+local function cleansePet(pet, mode, companion)
     local state = petState(pet)
     if not state then return end
 
     if mode == "All" then
         state.Harmful = {}
+        clearPetStatusAttributes(companion, "PetDebuff")
+        return
+    end
+
+    if mode == "DoT" then
+        for key in pairs(state.Harmful) do
+            if key == "Poison" or key == "Burn" or key == "Bleed" or key == "Frostbite" then
+                state.Harmful[key] = nil
+                if companion then
+                    companion:SetAttribute("PetDebuff_" .. key .. "_Until", nil)
+                    companion:SetAttribute("PetDebuff_" .. key .. "_Value", nil)
+                    companion:SetAttribute("PetDebuff_" .. key .. "_Source", nil)
+                end
+            end
+        end
         return
     end
 
     local key = next(state.Harmful)
     if key then
         state.Harmful[key] = nil
+        if companion then
+            companion:SetAttribute("PetDebuff_" .. key .. "_Until", nil)
+            companion:SetAttribute("PetDebuff_" .. key .. "_Value", nil)
+            companion:SetAttribute("PetDebuff_" .. key .. "_Source", nil)
+        end
     end
+end
+
+function Service:ApplyPetDebuff(pet, companion, spec, sourceName)
+    if not pet or type(spec) ~= "table" then return 0 end
+
+    local statusType = tostring(spec.Type or "")
+    if statusType == "" then return 0 end
+
+    local state = petState(pet)
+    if not state then return 0 end
+
+    local duration = math.max(0.1, tonumber(spec.Duration) or 0.1)
+    local value = math.max(0, tonumber(spec.Value) or 0)
+    if statusType == "Blind" then
+        value = math.max(value, tonumber(PetAbilities.BlindMissChance) or 0.80)
+    end
+
+    local appliedValue = applyStrongestTimed(state.Harmful, statusType, value, duration, sourceName)
+    setPetStatusAttribute(companion, "PetDebuff", statusType, appliedValue, duration, sourceName)
+    return duration
 end
 
 function Service:GetPetAttackIntervalMultiplier(pet)
     local state = petState(pet)
     local haste = getTimedValue(state and state.Buffs, "AttackHaste")
-    return 1 / math.max(1, 1 + haste)
+    local slow = math.clamp(getTimedValue(state and state.Harmful, "AttackSlow"), 0, 0.75)
+    return (1 / math.max(1, 1 + haste)) * (1 / math.max(0.25, 1 - slow))
+end
+
+function Service:PetAttackMisses(pet)
+    local state = petState(pet)
+    local blind = getTimedValue(state and state.Harmful, "Blind")
+    if blind <= 0 then return false end
+    return rng:NextNumber() < math.clamp(blind, 0, 0.95)
 end
 
 function Service:IsEnemyStunned(target)
@@ -486,17 +569,17 @@ local function enemyAbilityRequiresTarget(info)
     return false
 end
 
-local function applySelfEffects(pet, info, scale)
+local function applySelfEffects(pet, companion, info, scale)
     for _, spec in ipairs(info.Buffs or {}) do
-        applyBuff(pet, spec, info.Name, scale)
+        applyBuff(pet, spec, info.Name, scale, companion)
     end
 
     if info.Shield then
-        applyShield(pet, info.Shield, scale)
+        applyShield(pet, info.Shield, scale, companion, info.Name)
     end
 
     if info.Guard then
-        applyGuard(pet, info.Guard, scale)
+        applyGuard(pet, info.Guard, scale, companion, info.Name)
     end
 
     if info.AvoidNextAttack then
@@ -506,6 +589,7 @@ local function applySelfEffects(pet, info, scale)
             tonumber(state.AvoidNextAttackUntil) or 0,
             now() + duration
         )
+        setPetStatusAttribute(companion, "PetStatus", "Evade", 1, duration, info.Name)
     end
 end
 
@@ -517,7 +601,7 @@ local function applyAura(casterSession, info, allSessions)
     local radius = math.max(1, tonumber(info.Radius) or 25)
     local count = 0
 
-    for _, session in pairs(allSessions or {}) do
+    for allyPlayer, session in pairs(allSessions or {}) do
         if session.pet
             and not session.pet.Dead
             and session.companion
@@ -528,8 +612,18 @@ local function applyAura(casterSession, info, allSessions)
                 local isSelf = session == casterSession
                 if not isSelf or info.IncludeSelf == true then
                     local scale = isSelf and math.clamp(tonumber(info.SelfScale) or 1, 0, 1) or 1
-                    applySelfEffects(session.pet, info, scale)
+                    applySelfEffects(session.pet, session.companion, info, scale)
                     count += 1
+
+                    if not isSelf and typeof(allyPlayer) == "Instance" and allyPlayer:IsA("Player") then
+                        GameRemote:FireClient(
+                            allyPlayer,
+                            "Combat",
+                            "SupportBuff",
+                            info.Name,
+                            casterSession.pet and (casterSession.pet.Name or casterSession.pet.Species) or "An ally"
+                        )
+                    end
                 end
             end
         end
