@@ -872,7 +872,7 @@ local function createWyrm(parent, center, player)
         mark:SetAttribute("DefeatEvidence", true)
     end
 
-    model.PrimaryPart = primary
+    model.PrimaryPart = head
 
     -- Combat selection raycasts only query BaseParts. Boss visuals are otherwise
     -- non-colliding so the companion can reach the target cleanly.
@@ -1162,7 +1162,7 @@ local function createJormungdyrr(parent, center)
     )
     pointLight(brow, runeColor, 1.2, 20)
 
-    model.PrimaryPart = primary or head
+    model.PrimaryPart = head
 
     for _, item in ipairs(model:GetDescendants()) do
         if item:IsA("BasePart") then
