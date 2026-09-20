@@ -648,7 +648,7 @@ local function healPet(session, info)
     end
 
     if info.Cleanse then
-        cleansePet(pet, info.Cleanse)
+        cleansePet(pet, info.Cleanse, session.companion)
     end
 
     return healed
@@ -706,13 +706,27 @@ function Service:UseAbility(player, session, slot, allSessions)
         if info.AllyAura then
             local count = applyAura(session, info, allSessions)
             table.insert(summary, "affected " .. tostring(count) .. " allied pet" .. (count == 1 and "" or "s"))
+
+            if target and target:GetAttribute("WorldBoss") == true and count > 0 then
+                local maximum = math.max(1, tonumber(target:GetAttribute("MaxHealth")) or 1)
+                local supportScore = maximum * 0.006 * count
+                WorldBossRewardService:RecordSupport(target, player, supportScore)
+                BossCombatService:RecordSupportThreat(target, player, supportScore)
+            end
         else
-            applySelfEffects(pet, info, 1)
+            applySelfEffects(pet, session.companion, info, 1)
         end
 
         if info.HealPercent then
             local healed = healPet(session, info)
             table.insert(summary, "healed " .. tostring(healed) .. " HP")
+
+            if target and target:GetAttribute("WorldBoss") == true and healed > 0 then
+                local maximum = math.max(1, tonumber(target:GetAttribute("MaxHealth")) or 1)
+                local supportScore = maximum * 0.003
+                WorldBossRewardService:RecordSupport(target, player, supportScore)
+                BossCombatService:RecordSupportThreat(target, player, supportScore)
+            end
         end
 
         if enemyAbilityRequiresTarget(info) then
@@ -743,8 +757,19 @@ function Service:UseAbility(player, session, slot, allSessions)
                 end
             end
 
+            local appliedDebuffCount = 0
             for _, spec in ipairs(info.Debuffs or {}) do
-                applyDebuff(target, spec, info.Name)
+                local appliedDuration = applyDebuff(target, spec, info.Name)
+                if appliedDuration > 0 then
+                    appliedDebuffCount += 1
+                end
+            end
+
+            if target:GetAttribute("WorldBoss") == true and appliedDebuffCount > 0 then
+                local maximum = math.max(1, tonumber(target:GetAttribute("MaxHealth")) or 1)
+                local supportScore = maximum * 0.004 * appliedDebuffCount
+                WorldBossRewardService:RecordSupport(target, player, supportScore)
+                BossCombatService:RecordSupportThreat(target, player, supportScore)
             end
 
             if info.Dot then
