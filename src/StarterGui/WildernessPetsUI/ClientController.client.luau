@@ -1710,10 +1710,12 @@ showBeastTrader = function(tab)
     for _,pet in ipairs(pets) do
         local info=Config.Pets[pet.Species]
         local rarity=Config.Rarities[pet.Rarity]
+        local equipmentLocked=type(pet.Equipment)=="table" and next(pet.Equipment)~=nil
         local vendorLocked=pet.VendorSellable==false
             or (info and info.VendorSellable==false)
             or (info and info.SpawnMode=="WorldBoss")
             or pet.Rarity=="Ancient"
+            or equipmentLocked
 
         local value=0
         if info and rarity and not vendorLocked then
@@ -1751,7 +1753,9 @@ showBeastTrader = function(tab)
         local meta=text(
             row,
             tostring(pet.Species).."  ·  "..tostring(pet.Rarity).."  ·  "
-                ..(vendorLocked and "PLAYER TRADE ONLY" or (tostring(value).." Coins")),
+                ..(equipmentLocked
+                    and "REMOVE WILDFORGE EQUIPMENT FIRST"
+                    or (vendorLocked and "PLAYER TRADE ONLY" or (tostring(value).." Coins"))),
             UDim2.fromOffset(14,36),
             UDim2.fromOffset(455,19)
         )
@@ -1762,7 +1766,7 @@ showBeastTrader = function(tab)
 
         local sell=button(
             row,
-            vendorLocked and "TRADE ONLY" or (pet.Favourite and "FAVOURITE" or ("SELL  "..tostring(value))),
+            equipmentLocked and "GEAR EQUIPPED" or (vendorLocked and "TRADE ONLY" or (pet.Favourite and "FAVOURITE" or ("SELL  "..tostring(value)))),
             UDim2.fromOffset(535,17),
             UDim2.fromOffset(150,38)
         )
