@@ -1131,6 +1131,11 @@ local function attackTarget(player)
                 local companion = session.companion
                 if not companion or not companion.Parent then break end
 
+                if (tonumber(session.pet and session.pet.CurrentHealth) or 0) <= 0 then
+                    defeatCompanion(player, session, target)
+                    return
+                end
+
                 local current = monsterPart(target)
                 if not current then break end
 
@@ -1162,12 +1167,16 @@ local function attackTarget(player)
                     continue
                 end
                 if close <= 9 then
+                    local attackSpeedMultiplier = PetAbilityService:GetPetAttackIntervalMultiplier(session.pet)
+                    local attackDuration = math.clamp(.72 * attackSpeedMultiplier, .34, .72)
+
                     session.basicAttackBusy = true
-                    PetAnimator:PlayAttack(companion, current.Position, .72, function()
+                    PetAnimator:PlayAttack(companion, current.Position, attackDuration, function()
                         if combatSessions[player] == session
                             and session.attacking
                             and not session.petDefeated
-                            and validMonster(target) then
+                            and validMonster(target)
+                            and not PetAbilityService:PetAttackMisses(session.pet) then
                             local damage = petBaseDamage(session.pet)
                             PetAbilityService:DamageEnemy(player, session.pet, target, damage)
                         end
@@ -1180,7 +1189,8 @@ local function attackTarget(player)
                         break
                     end
 
-                    if session.attacking
+                    if target:GetAttribute("BossAIManaged") ~= true
+                        and session.attacking
                         and not session.petDefeated
                         and validMonster(target)
                         and companion.Parent
@@ -1249,8 +1259,10 @@ local function attackTarget(player)
                 local baseInterval = tonumber((Config.Combat or {}).PetAttackInterval)
                     or tonumber((Config.Combat or {}).WildAttackInterval)
                     or 1.05
-                local petInterval = baseInterval * PetAbilityService:GetPetAttackIntervalMultiplier(session.pet)
-                task.wait(math.max(.08, petInterval - .72))
+                local attackSpeedMultiplier = PetAbilityService:GetPetAttackIntervalMultiplier(session.pet)
+                local petInterval = baseInterval * attackSpeedMultiplier
+                local recoveryDuration = math.clamp(.72 * attackSpeedMultiplier, .34, .72)
+                task.wait(math.max(.06, petInterval - recoveryDuration))
             end
         end)
 
@@ -1301,8 +1313,20 @@ local function abilityTarget(player, slot)
         return false
     end
     if session.basicAttackBusy then
-        combatTell(player, "Error", "Your companion is finishing its current strike.")
-        return false
+        combatTell(player, "AbilityQueued", slot)
+
+        local deadline = os.clock() + 1.2
+        repeat
+            task.wait(.03)
+        until not session.basicAttackBusy
+            or session.petDefeated
+            or not session.attacking
+            or os.clock() >= deadline
+
+        if session.basicAttackBusy then
+            combatTell(player, "Error", "Your companion could not queue that ability yet.")
+            return false
+        end
     end
 
     local success, message, cooldown, killed = PetAbilityService:UseAbility(
