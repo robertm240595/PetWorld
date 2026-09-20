@@ -249,17 +249,40 @@ local function assetDescription(asset)
         return "MOUNT  ·  " .. tostring(asset.DisplayName or asset.Name or asset.Species)
             .. "  ·  " .. tostring(asset.Rarity or "")
     elseif asset.Kind == "Equipment" then
+        local stats = {}
+        if type(asset.MainStat) == "table" then
+            table.insert(
+                stats,
+                tostring(asset.MainStat.Name or "Stat")
+                    .. " "
+                    .. tostring(math.floor((tonumber(asset.MainStat.Value) or 0) * 1000 + 0.5) / 10)
+                    .. "%"
+            )
+        end
+        for _, sub in ipairs(asset.Substats or {}) do
+            if type(sub) == "table" then
+                table.insert(
+                    stats,
+                    tostring(sub.Name or "Stat")
+                        .. " "
+                        .. tostring(math.floor((tonumber(sub.Value) or 0) * 1000 + 0.5) / 10)
+                        .. "%"
+                )
+            end
+        end
+
         return "EQUIPMENT  ·  "
             .. tostring(asset.DisplayName or asset.Name or "Gear")
             .. "  ·  "
             .. tostring(asset.Rarity or "")
             .. " "
             .. tostring(asset.Quality or "")
-            .. "  ·  Lv."
+            .. " Lv."
             .. tostring(asset.ItemLevel or 1)
             .. ((tonumber(asset.WorldforgeLevel) or 0) > 0
-                and ("  ·  +" .. tostring(asset.WorldforgeLevel))
+                and (" +" .. tostring(asset.WorldforgeLevel))
                 or "")
+            .. (#stats > 0 and ("  ·  " .. table.concat(stats, " / ")) or "")
     end
 
     return tostring(asset.Name or "Item")
@@ -325,6 +348,8 @@ local function buildTradeableAssets(state)
                 ItemLevel = item.ItemLevel,
                 WorldforgeLevel = item.WorldforgeLevel,
                 BossUnique = item.BossUnique == true,
+                MainStat = item.MainStat,
+                Substats = item.Substats,
                 Quantity = 1,
             })
         end
@@ -434,10 +459,11 @@ renderSession = function(update)
             available,
             (chosen and "✓  " or "   ") .. assetDescription(asset),
             UDim2.new(),
-            UDim2.fromOffset(414, 42)
+            UDim2.fromOffset(414, asset.Kind == "Equipment" and 58 or 42)
         )
         row.TextXAlignment = Enum.TextXAlignment.Left
-        row.TextSize = 10
+        row.TextWrapped = true
+        row.TextSize = asset.Kind == "Equipment" and 8 or 10
         row.BackgroundColor3 = chosen
             and Color3.fromRGB(60, 91, 73)
             or Color3.fromRGB(43, 50, 59)
