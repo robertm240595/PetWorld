@@ -242,8 +242,6 @@ BossLootRemote.OnClientEvent:Connect(function(action, first, second)
         else
             showToast(second or "Could not collect world-boss pouch.", false)
         end
-    elseif action == "UseResult" then
-        showToast(second or (first and "Creature relic used." or "Could not use that relic."), first == true)
     elseif action == "Error" then
         showToast(first or "That world-boss pouch is unavailable.", false)
     end
