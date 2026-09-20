@@ -71,7 +71,7 @@ local function showPouch(data)
     panel.Name = "BossPouchWindow"
     panel.AnchorPoint = Vector2.new(.5, .5)
     panel.Position = UDim2.new(.5, 0, .5, 40)
-    panel.Size = UDim2.fromOffset(470, 300)
+    panel.Size = UDim2.fromOffset(470, 380)
     panel.BackgroundColor3 = Color3.fromRGB(25, 25, 31)
     panel.BorderSizePixel = 0
     panel.Parent = gui
@@ -115,7 +115,7 @@ local function showPouch(data)
 
     local contents = Instance.new("TextLabel")
     contents.Position = UDim2.fromOffset(20, 85)
-    contents.Size = UDim2.fromOffset(430, 120)
+    contents.Size = UDim2.fromOffset(430, 185)
     contents.BackgroundColor3 = Color3.fromRGB(37, 39, 46)
     contents.BorderSizePixel = 0
     contents.Font = Enum.Font.GothamMedium
@@ -176,6 +176,20 @@ local function showPouch(data)
                     .. "%"
             )
         end
+        for index, sub in ipairs(item.Substats or {}) do
+            if type(sub) == "table" then
+                table.insert(
+                    rewards,
+                    "SUB "
+                        .. tostring(index)
+                        .. ": "
+                        .. tostring(sub.Name or "Stat")
+                        .. " +"
+                        .. tostring(math.floor((tonumber(sub.Value) or 0) * 1000 + 0.5) / 10)
+                        .. "%"
+                )
+            end
+        end
     end
 
     if #rewards == 0 then
@@ -185,8 +199,8 @@ local function showPouch(data)
 
     local note = Instance.new("TextLabel")
     note.BackgroundTransparency = 1
-    note.Position = UDim2.fromOffset(20, 215)
-    note.Size = UDim2.fromOffset(430, 28)
+    note.Position = UDim2.fromOffset(20, 280)
+    note.Size = UDim2.fromOffset(430, 32)
     note.Font = Enum.Font.GothamMedium
     note.TextSize = 10
     note.TextWrapped = true
@@ -196,7 +210,7 @@ local function showPouch(data)
 
     local collect = Instance.new("TextButton")
     collect.AnchorPoint = Vector2.new(.5, 0)
-    collect.Position = UDim2.new(.5, 0, 0, 250)
+    collect.Position = UDim2.new(.5, 0, 0, 326)
     collect.Size = UDim2.fromOffset(220, 36)
     collect.BackgroundColor3 = Color3.fromRGB(88, 61, 47)
     collect.BorderSizePixel = 0
