@@ -116,6 +116,25 @@ local function pouchVisual(position, ownerUserId, bossSpecies)
     return model, prompt
 end
 
+local function contributionEntry(boss, player)
+    local entry = contributions[boss]
+    if not entry then
+        entry = {}
+        contributions[boss] = entry
+    end
+
+    local record = entry[player]
+    if type(record) ~= "table" then
+        record = {
+            Damage = math.max(0, tonumber(record) or 0),
+            Support = 0,
+        }
+        entry[player] = record
+    end
+
+    return record
+end
+
 function Service:RecordDamage(boss, player, damage)
     if not boss or not boss.Parent or not player or not player.Parent then return end
     if boss:GetAttribute("WorldBoss") ~= true then return end
@@ -123,19 +142,45 @@ function Service:RecordDamage(boss, player, damage)
     damage = math.max(0, tonumber(damage) or 0)
     if damage <= 0 then return end
 
+    local record = contributionEntry(boss, player)
+    record.Damage += damage
+end
+
+function Service:RecordSupport(boss, player, score)
+    if not boss or not boss.Parent or not player or not player.Parent then return end
+    if boss:GetAttribute("WorldBoss") ~= true then return end
+
+    score = math.max(0, tonumber(score) or 0)
+    if score <= 0 then return end
+
+    local maximum = math.max(1, tonumber(boss:GetAttribute("MaxHealth")) or 1)
+    local record = contributionEntry(boss, player)
+
+    -- Support can qualify a genuine support build for rewards, but cannot be
+    -- spammed indefinitely to outweigh actual participation.
+    record.Support = math.min(maximum * 0.35, record.Support + score)
+end
+
+function Service:GetContribution(boss, player)
     local entry = contributions[boss]
-    if not entry then
-        entry = {}
-        contributions[boss] = entry
+    local record = entry and entry[player]
+    if type(record) ~= "table" then
+        return math.max(0, tonumber(record) or 0), 0
     end
-    entry[player] = math.max(0, tonumber(entry[player]) or 0) + damage
+    return math.max(0, tonumber(record.Damage) or 0),
+        math.max(0, tonumber(record.Support) or 0)
 end
 
 function Service:GetDamageShare(boss, player)
-    local entry = contributions[boss]
-    if not entry then return 0 end
+    local damage = self:GetContribution(boss, player)
     local maximum = math.max(1, tonumber(boss:GetAttribute("MaxHealth")) or 1)
-    return math.max(0, tonumber(entry[player]) or 0) / maximum
+    return damage / maximum
+end
+
+function Service:GetContributionShare(boss, player)
+    local damage, support = self:GetContribution(boss, player)
+    local maximum = math.max(1, tonumber(boss:GetAttribute("MaxHealth")) or 1)
+    return (damage + support) / maximum
 end
 
 function Service:ResolveBossDeath(boss)
@@ -152,8 +197,16 @@ function Service:ResolveBossDeath(boss)
     local created = 0
     local angleIndex = 0
 
-    for player, dealt in pairs(entry) do
-        if player.Parent and (math.max(0, tonumber(dealt) or 0) / maximum) > threshold then
+    for player, record in pairs(entry) do
+        local dealt = type(record) == "table"
+            and math.max(0, tonumber(record.Damage) or 0)
+            or math.max(0, tonumber(record) or 0)
+        local support = type(record) == "table"
+            and math.max(0, tonumber(record.Support) or 0)
+            or 0
+        local share = (dealt + support) / maximum
+
+        if player.Parent and share >= threshold then
             angleIndex += 1
             local petReward
             local mountReward
