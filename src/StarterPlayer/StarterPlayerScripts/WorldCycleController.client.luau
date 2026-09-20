@@ -995,6 +995,15 @@ remotes.Game.OnClientEvent:Connect(function(action,kind,...)
    abilityCooldownEnds[slot]=workspace:GetServerTimeNow()+math.max(0,tonumber(remaining) or 0)
   end
   message(tostring(feedback or "Ability is still cooling down."))
+ elseif kind=="AbilityQueued" then
+  local slot=tonumber((...))
+  local info=slot and equippedAbilitySpecs[slot]
+  message((info and info.Name or "Ability").." queued after the current strike.")
+ elseif kind=="SupportBuff" then
+  local abilityName,sourceName=...
+  message(tostring(sourceName or "An ally").." shared "..tostring(abilityName or "a support buff").." with your pet.")
+ elseif kind=="BossHit" then
+  message("Boss attack: "..tostring((...) or "Incoming attack"))
  elseif kind=="Equipped" then
   abilityCooldownEnds={}
   rebuildAbilities()
