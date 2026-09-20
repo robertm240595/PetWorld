@@ -274,7 +274,7 @@ showPets = function(tab)
 
                 local nameLabel=text(
                     row,
-                    tostring(mount.Name or mount.Species).."  ·  "..tostring(mount.Rarity or "Common"),
+                    (mount.Favourite and "★ " or "")..tostring(mount.Name or mount.Species).."  ·  "..tostring(mount.Rarity or "Common"),
                     UDim2.fromOffset(66,8),
                     UDim2.fromOffset(430,22)
                 )
@@ -402,9 +402,16 @@ showPets = function(tab)
                     itemIcon.TextScaled=false
                     itemIcon.TextSize=26
 
+                    local itemTypeLabel=itemType
+                    if itemType=="BossPetToken" then
+                        itemTypeLabel="ANCIENT PET RELIC"
+                    elseif itemType=="BossMountToken" then
+                        itemTypeLabel="ANCIENT MOUNT RELIC"
+                    end
+
                     local itemLabel=text(
                         row,
-                        itemName.."  ·  "..itemType.."  ·  x"..tostring(quantity),
+                        itemName.."  ·  "..itemTypeLabel.."  ·  x"..tostring(quantity),
                         UDim2.fromOffset(66,8),
                         UDim2.fromOffset(455,22)
                     )
