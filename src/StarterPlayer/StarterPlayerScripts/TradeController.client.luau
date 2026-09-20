@@ -248,6 +248,18 @@ local function assetDescription(asset)
     elseif asset.Kind == "Mount" then
         return "MOUNT  ·  " .. tostring(asset.DisplayName or asset.Name or asset.Species)
             .. "  ·  " .. tostring(asset.Rarity or "")
+    elseif asset.Kind == "Equipment" then
+        return "EQUIPMENT  ·  "
+            .. tostring(asset.DisplayName or asset.Name or "Gear")
+            .. "  ·  "
+            .. tostring(asset.Rarity or "")
+            .. " "
+            .. tostring(asset.Quality or "")
+            .. "  ·  Lv."
+            .. tostring(asset.ItemLevel or 1)
+            .. ((tonumber(asset.WorldforgeLevel) or 0) > 0
+                and ("  ·  +" .. tostring(asset.WorldforgeLevel))
+                or "")
     end
 
     return tostring(asset.Name or "Item")
@@ -293,6 +305,26 @@ local function buildTradeableAssets(state)
                 DisplayName = mount.Name or mount.Species,
                 Species = mount.Species,
                 Rarity = mount.Rarity,
+                Quantity = 1,
+            })
+        end
+    end
+
+    for _, item in ipairs(state.Equipment or {}) do
+        if type(item) == "table"
+            and item.Favourite ~= true
+            and item.Tradeable ~= false then
+            table.insert(assets, {
+                Kind = "Equipment",
+                Id = item.Id,
+                Name = item.Name,
+                DisplayName = item.Name,
+                Rarity = item.Tier,
+                Quality = item.Quality,
+                Slot = item.Slot,
+                ItemLevel = item.ItemLevel,
+                WorldforgeLevel = item.WorldforgeLevel,
+                BossUnique = item.BossUnique == true,
                 Quantity = 1,
             })
         end
@@ -361,7 +393,7 @@ renderSession = function(update)
 
     local safety = makeText(
         panel,
-        "Changing either offer removes both confirmations. Favourite pets/mounts cannot be traded.",
+        "Changing either offer removes both confirmations. Favourite pets, mounts and equipment cannot be traded.",
         UDim2.fromOffset(18, 44),
         UDim2.fromOffset(710, 30),
         10
@@ -431,7 +463,7 @@ renderSession = function(update)
         local empty = makeText(
             available,
             "Nothing currently tradeable.
-Unequip/unfavourite creatures or collect tradeable materials.",
+Unequip/unfavourite creatures or equipment, or collect tradeable materials.",
             UDim2.new(),
             UDim2.fromOffset(410, 70),
             12
