@@ -504,7 +504,7 @@ QuestConfig.Chains = {
         Reward = {Coins = 0, Gems = 0},
         Stages = {
             {Id="EnterDepths", Type="Action", Action="EnterWyrmArena", Required=1, Objective="Enter the deepest chamber of Hollowfang Cave.", Detail="Walk beyond Mira's old refuge. The newly opened passage continues much farther underground."},
-            {Id="DefeatWyrm", Type="Action", Action="DefeatWyrm", Required=1, Objective="Defeat the wounded Wyrm with your companion.", Detail="The Wyrm battle will be connected in the next combat pass. Its arena and travel route are already in place."},
+            {Id="DefeatWyrm", Type="Action", Action="DefeatWyrm", Required=1, Objective="Defeat the wounded Wyrm with your companion.", Detail="Attack the Wyrm with your companion. Its body bears enormous old gouges from something far larger."},
             {Id="Report", Type="Talk", Objective="Return to Warden Rowan after defeating the Wyrm.", Detail="Tell Rowan about the enormous gouges already carved into the Wyrm's hide."},
         },
     },
@@ -517,12 +517,13 @@ QuestConfig.Chains = {
         RequiredLasso = "Steel Lasso",
         Priority = 33,
         Prerequisite = "HollowfangWyrm",
-        Intro = "Those old reports all point northeast. Find the waterfall near the edge of the wilds and look behind the falling water. If the rumours are true, the cave there leads to whatever drove the Wyrm into Hollowfang.",
-        CompleteText = "Whatever happens in that cavern will take more than one handler. Gather people you trust before you challenge something that can leave wounds like those.",
+        Intro = "Those old reports all point northeast. Find the waterfall near the edge of the wilds and look behind the falling water. If the rumours are true, the cave there leads to whatever drove the Wyrm into Hollowfang. Do not expect to face it alone.",
+        CompleteText = "So the old stories were true. Jormungdyrr was what drove the Wyrm into Hollowfang. The village will remember the handlers who stood together against it — and the relics it leaves behind may be rarer than anything we have ever catalogued.",
         Reward = {Coins = 0, Gems = 0},
         Stages = {
-            {Id="FindWaterfall", Type="Action", Action="EnterJormungdyrrArena", Required=1, Objective="Find the hidden cave behind the northeast waterfall.", Detail="Search the northeast corner of the world. Walk through the waterfall and follow the cave inward."},
-            {Id="DefeatJormungdyrr", Type="Action", Action="DefeatJormungdyrr", Required=1, Objective="Defeat Jormungdyrr with other handlers.", Detail="This is a shared world-boss arena. Combat will be connected in the next boss-system pass."},
+            {Id="FindWaterfall", Type="Action", Action="EnterJormungdyrrArena", Required=1, Objective="Find the hidden cave behind the northeast waterfall.", Detail="Search the northeast corner of the world. Walk through the waterfall and follow the cave inward. The passage leads to a shared world-boss arena."},
+            {Id="DefeatJormungdyrr", Type="Action", Action="DefeatJormungdyrr", Required=1, Objective="Defeat Jormungdyrr with other handlers.", Detail="Jormungdyrr is protected against solo attempts. Gather other handlers, combine support abilities and contribute meaningfully to the shared fight."},
+            {Id="ReportVictory", Type="Talk", Objective="Return to Warden Rowan after defeating Jormungdyrr.", Detail="Tell Rowan what was hiding beyond the waterfall and what happened in the cavern."},
         },
     },
 }
