@@ -68,6 +68,9 @@ local function payload(record)
         MountReward = record.MountReward,
         MountItemName = record.MountReward and tokenName(record.MountReward, "Mount") or nil,
         EquipmentReward = record.EquipmentReward,
+        DamageContribution = math.floor(tonumber(record.DamageContribution) or 0),
+        SupportContribution = math.floor(tonumber(record.SupportContribution) or 0),
+        ContributionShare = tonumber(record.ContributionShare) or 0,
         Materials = record.Materials or {},
     }
 end
@@ -325,6 +328,9 @@ function Service:ResolveBossDeath(boss)
                 PetReward = petReward,
                 MountReward = mountReward,
                 EquipmentReward = equipmentReward,
+                DamageContribution = dealt,
+                SupportContribution = support,
+                ContributionShare = share,
                 Materials = materials,
                 Model = model,
             }
