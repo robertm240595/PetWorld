@@ -9,6 +9,7 @@ Config.MaxPets = 60
 Config.MaxMounts = 40
 Config.MaxPetNameLength = 18
 Config.MaxInventory = 25
+Config.MaxEquipment = 100
 Config.Backpacks = {
     ["Starter Bag"] = {Capacity = 25, Coins = 0, Gems = 0},
     ["Leather Satchel"] = {Capacity = 30, Coins = 0, Gems = 0, QuestReward = true},
@@ -288,6 +289,7 @@ Config.WorldBossRewards = {
     -- owner's collection.
     AncientPetChance = 0.0001,   -- 0.01%
     AncientMountChance = 0.0001, -- 0.01%
+    BossEquipmentChance = 0.01,  -- 1% world-boss-specific equipment
 
     BossPetMap = {
         Kraken = "Kraken",
