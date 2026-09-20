@@ -695,7 +695,12 @@ local function makeForgedItem(session, forgeScore)
 
         table.insert(substats, {
             Name = statName,
-            Value = roundStat(value),
+            Value = roundStat(
+                math.min(
+                    value,
+                    tonumber(EquipmentConfig.StatCaps[statName]) or value
+                )
+            ),
         })
     end
 
@@ -710,7 +715,12 @@ local function makeForgedItem(session, forgeScore)
         ForgeScore = forgeScore,
         MainStat = {
             Name = blueprint.MainStat,
-            Value = roundStat(mainValue),
+            Value = roundStat(
+                math.min(
+                    mainValue,
+                    tonumber(EquipmentConfig.StatCaps[blueprint.MainStat]) or mainValue
+                )
+            ),
         },
         Substats = substats,
         WorldforgeLevel = 0,
