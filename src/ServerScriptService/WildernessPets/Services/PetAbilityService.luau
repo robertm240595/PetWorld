@@ -729,7 +729,8 @@ local function applyAura(casterSession, info, allSessions)
                     local scale = isSelf and math.clamp(tonumber(info.SelfScale) or 1, 0, 1) or 1
                     applySelfEffects(session.pet, session.companion, info, scale)
                     count += 1
-                    if session.attacking
+                    if not isSelf
+                        and session.attacking
                         and casterSession.target
                         and session.target == casterSession.target then
                         engagedCount += 1
