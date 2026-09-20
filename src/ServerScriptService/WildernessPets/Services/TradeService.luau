@@ -90,6 +90,8 @@ local function cloneAssetSummary(asset)
         "ItemLevel",
         "WorldforgeLevel",
         "BossUnique",
+        "MainStat",
+        "Substats",
     }) do
         copy[key] = asset[key]
     end
@@ -210,6 +212,8 @@ local function validateEquipment(player, itemId)
                 ItemLevel = math.max(1, math.floor(tonumber(item.ItemLevel) or 1)),
                 WorldforgeLevel = math.max(0, math.floor(tonumber(item.WorldforgeLevel) or 0)),
                 BossUnique = item.BossUnique == true,
+                MainStat = deepClone(item.MainStat),
+                Substats = deepClone(item.Substats),
                 Quantity = 1,
             }
         end
