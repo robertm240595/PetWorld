@@ -387,6 +387,9 @@ local function resetWorldBoss(boss)
     if not boss or not boss.Parent then return end
 
     clearBossStatuses(boss)
+    if type(callbacks.ResetBossAttempt) == "function" then
+        pcall(callbacks.ResetBossAttempt, boss)
+    end
     threat[boss] = nil
     respawnScheduled[boss] = nil
     nextBasicAt[boss] = clockNow() + 2
@@ -396,6 +399,7 @@ local function resetWorldBoss(boss)
     boss:SetAttribute("Health", maximum)
     boss:SetAttribute("Dead", false)
     boss:SetAttribute("BossPouchesResolved", false)
+    boss:SetAttribute("BossDeathHandled", false)
     boss:SetAttribute("BossEnraged", false)
     boss:SetAttribute("BossSoloWard", false)
     boss:SetAttribute("BossDamageReduction", 0)
@@ -488,6 +492,13 @@ local function runBoss(boss)
                 boss:SetAttribute("Dead", true)
                 boss:SetAttribute("InCombat", false)
 
+                if boss:GetAttribute("BossDeathHandled") ~= true then
+                    boss:SetAttribute("BossDeathHandled", true)
+                    if type(callbacks.OnBossDefeated) == "function" then
+                        pcall(callbacks.OnBossDefeated, boss)
+                    end
+                end
+
                 if boss:GetAttribute("WorldBoss") == true then
                     scheduleRespawn(boss)
                 end
@@ -515,8 +526,12 @@ local function runBoss(boss)
                         boss:SetAttribute("BossEnraged", false)
                         boss:SetAttribute("BossPhase", "HUNTING")
                         boss:SetAttribute("BossPowerMultiplier", 1)
+                        boss:SetAttribute("BossDeathHandled", false)
                         clearBossStatuses(boss)
                         threat[boss] = nil
+                        if type(callbacks.ResetBossAttempt) == "function" then
+                            pcall(callbacks.ResetBossAttempt, boss)
+                        end
                     end
                 end
 
