@@ -866,10 +866,16 @@ function Service:UseAbility(player, session, slot, allSessions)
                     totalDamage += dealt
                 end
 
-                local played = pcall(function()
-                    PetAnimator:PlayAttack(session.companion, part.Position, 0.55, strike, 0.9)
+                local okAnimation, played = pcall(function()
+                    return PetAnimator:PlayAttack(
+                        session.companion,
+                        part.Position,
+                        0.55,
+                        strike,
+                        0.9
+                    )
                 end)
-                if not played then
+                if not okAnimation or played ~= true then
                     strike()
                 end
             end
