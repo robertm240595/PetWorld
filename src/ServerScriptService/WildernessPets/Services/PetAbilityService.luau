@@ -405,13 +405,18 @@ local function applyShield(pet, shieldSpec, scale, companion, sourceName)
     if not state then return end
 
     local stats = PetService:GetEffectiveStats(pet)
+    local equipment = EquipmentConfig:GetBonuses(pet)
     local duration = math.max(0.1, tonumber(shieldSpec.Duration) or 0.1)
     local amount = math.max(
         1,
-        stats.Health * math.max(0, tonumber(shieldSpec.Percent) or 0) * (tonumber(scale) or 1)
+        stats.Health
+            * math.max(0, tonumber(shieldSpec.Percent) or 0)
+            * (tonumber(scale) or 1)
+            * (1 + math.max(0, tonumber(equipment.ShieldPotency) or 0))
     )
     local expiresAt = now() + duration
     local reflect = math.max(0, tonumber(shieldSpec.ReflectPercent) or 0)
+        * (1 + math.max(0, tonumber(equipment.ReflectStrength) or 0))
 
     local current = state.Shield
     if current and (tonumber(current.ExpiresAt) or 0) > now() then
@@ -442,10 +447,13 @@ local function applyGuard(pet, guardSpec, scale, companion, sourceName)
     local state = petState(pet)
     if not state then return end
 
+    local equipment = EquipmentConfig:GetBonuses(pet)
     local duration = math.max(0.1, tonumber(guardSpec.Duration) or 0.1)
     local expiresAt = now() + duration
     local reduction = math.max(0, tonumber(guardSpec.DamageReductionPercent) or 0) * (tonumber(scale) or 1)
-    local reflect = math.max(0, tonumber(guardSpec.ReflectPercent) or 0) * (tonumber(scale) or 1)
+    local reflect = math.max(0, tonumber(guardSpec.ReflectPercent) or 0)
+        * (tonumber(scale) or 1)
+        * (1 + math.max(0, tonumber(equipment.ReflectStrength) or 0))
 
     local current = state.Guard
     if current and (tonumber(current.ExpiresAt) or 0) > now() then
@@ -512,7 +520,13 @@ function Service:ApplyPetDebuff(pet, companion, spec, sourceName)
     local state = petState(pet)
     if not state then return 0 end
 
-    local duration = math.max(0.1, tonumber(spec.Duration) or 0.1)
+    local equipment = EquipmentConfig:GetBonuses(pet)
+    local resistance = math.clamp(
+        tonumber(equipment.StatusResistance) or 0,
+        0,
+        tonumber(EquipmentConfig.StatCaps.StatusResistance) or 0.30
+    )
+    local duration = math.max(0.1, (tonumber(spec.Duration) or 0.1) * (1 - resistance))
     local value = math.max(0, tonumber(spec.Value) or 0)
     if statusType == "Blind" then
         value = math.max(value, tonumber(PetAbilities.BlindMissChance) or 0.80)
@@ -540,8 +554,16 @@ function Service:ApplyPetDot(pet, companion, spec, sourceName, onTick)
     if not pet or type(spec) ~= "table" or type(onTick) ~= "function" then return 0 end
 
     local statusType = tostring(spec.Type or "Poison")
+    local equipment = EquipmentConfig:GetBonuses(pet)
+    local resistance = math.clamp(
+        tonumber(equipment.StatusResistance) or 0,
+        0,
+        tonumber(EquipmentConfig.StatCaps.StatusResistance) or 0.30
+    )
+
     local perTick = math.max(0, tonumber(spec.PercentMaxHealth) or 0)
-    local ticks = math.max(1, math.floor(tonumber(spec.Ticks) or 1))
+    local baseTicks = math.max(1, math.floor(tonumber(spec.Ticks) or 1))
+    local ticks = math.max(1, math.ceil(baseTicks * (1 - resistance)))
     local interval = math.max(0.25, tonumber(spec.Interval) or 1)
     if perTick <= 0 then return 0 end
 
