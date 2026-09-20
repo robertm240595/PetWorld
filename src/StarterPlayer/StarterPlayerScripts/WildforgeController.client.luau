@@ -651,6 +651,27 @@ renderEquipment = function()
                 slotButton.Active = false
             end
         end
+
+        local bonuses = EquipmentConfig:GetBonuses(selectedPet)
+        local capped = {}
+        for statName, cap in pairs(EquipmentConfig.StatCaps) do
+            if cap > 0 and (tonumber(bonuses[statName]) or 0) >= cap - 0.0001 then
+                table.insert(capped, EquipmentConfig.StatLabels[statName] or statName)
+            end
+        end
+        table.sort(capped)
+
+        local capLabel = text(
+            petBox,
+            #capped > 0
+                and ("EQUIPMENT CAP REACHED: " .. table.concat(capped, " · "))
+                or "Equipment caps active · Power 40% · Health 50% · Defence 40% · Haste 35% · Cooldowns 25%",
+            UDim2.fromOffset(18, 136),
+            UDim2.fromOffset(904, 16),
+            8
+        )
+        capLabel.TextXAlignment = Enum.TextXAlignment.Center
+        capLabel.TextColor3 = #capped > 0 and palette.gold or palette.muted
     end
 
     local storedTitle = text(
