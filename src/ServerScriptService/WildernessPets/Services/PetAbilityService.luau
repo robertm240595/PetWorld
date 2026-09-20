@@ -1,12 +1,15 @@
+local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Root = ReplicatedStorage:WaitForChild("WildernessPets")
+local GameRemote = Root.Remotes:WaitForChild("Game")
 local Config = require(Root.Shared.Config)
 local PetAbilities = require(Root.Shared.PetAbilities)
 
 local PetService = require(script.Parent.PetService)
 local MonsterService = require(script.Parent.MonsterService)
 local WorldBossRewardService = require(script.Parent.WorldBossRewardService)
+local BossCombatService = require(script.Parent.BossCombatService)
 local PetAnimator = require(script.Parent.Parent.Systems.PetAnimator)
 
 local Service = {}
@@ -129,7 +132,10 @@ local function getControlDuration(target, family, baseDuration)
     record.LastAt = currentTime
 
     local multipliers = drConfig.Multipliers or {1, 0.65, 0.4, 0.2}
-    local multiplier = tonumber(multipliers[math.min(record.Count, #multipliers)]) or 0.2
+    local tier = math.min(record.Count, #multipliers)
+    local multiplier = tonumber(multipliers[tier]) or 0.2
+    target:SetAttribute("StatusDR_" .. family, tier)
+    target:SetAttribute("StatusDR_" .. family .. "_Until", workspace:GetServerTimeNow() + window)
     return math.max(0.1, baseDuration * multiplier)
 end
 
@@ -150,9 +156,11 @@ local function applyDebuff(target, spec, sourceName)
     end
 
     local state = targetState(target)
-    applyStrongestTimed(state.Debuffs, statusType, value, duration, sourceName)
+    local appliedValue = applyStrongestTimed(state.Debuffs, statusType, value, duration, sourceName)
 
     target:SetAttribute("Status_" .. statusType .. "_Until", workspace:GetServerTimeNow() + duration)
+    target:SetAttribute("Status_" .. statusType .. "_Value", appliedValue)
+    target:SetAttribute("Status_" .. statusType .. "_Source", tostring(sourceName or ""))
     return duration
 end
 
