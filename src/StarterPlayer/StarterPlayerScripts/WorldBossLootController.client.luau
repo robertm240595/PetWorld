@@ -154,6 +154,30 @@ local function showPouch(data)
         )
     end
 
+    if type(data.EquipmentReward) == "table" then
+        local item = data.EquipmentReward
+        table.insert(
+            rewards,
+            "1% WORLD-BOSS EQUIPMENT  ·  "
+                .. tostring(item.Name or "Ancient Equipment")
+                .. "  ·  "
+                .. tostring(item.Quality or "Ancient")
+                .. " Lv."
+                .. tostring(item.ItemLevel or 5)
+        )
+
+        if type(item.MainStat) == "table" then
+            table.insert(
+                rewards,
+                "MAIN: "
+                    .. tostring(item.MainStat.Name or "Stat")
+                    .. " +"
+                    .. tostring(math.floor((tonumber(item.MainStat.Value) or 0) * 1000 + 0.5) / 10)
+                    .. "%"
+            )
+        end
+    end
+
     if #rewards == 0 then
         table.insert(rewards, "No boss rewards were generated.")
     end
@@ -167,7 +191,7 @@ local function showPouch(data)
     note.TextSize = 10
     note.TextWrapped = true
     note.TextColor3 = Color3.fromRGB(163, 166, 172)
-    note.Text = "Ancient pet/mount relics go into your inventory first. Trade the relic, or USE it to bind the creature to your collection."
+    note.Text = "Pet/mount relics go into your backpack first. The separate 1% world-boss equipment roll is stored in Wildforge equipment storage."
     note.Parent = panel
 
     local collect = Instance.new("TextButton")
@@ -231,6 +255,23 @@ BossLootRemote.OnClientEvent:Connect(function(action, first, second)
             end
             if result.MountReward then
                 table.insert(rewards, tostring(result.MountItemName or result.MountReward .. " Mount Relic"))
+            end
+            if type(result.EquipmentReward) == "table" then
+                table.insert(rewards, tostring(result.EquipmentReward.Name or "Ancient world-boss equipment"))
+            end
+
+            local share = math.max(0, tonumber(result.ContributionShare) or 0)
+            if share > 0 then
+                table.insert(
+                    rewards,
+                    "Contribution "
+                        .. tostring(math.floor(share * 1000 + 0.5) / 10)
+                        .. "% ("
+                        .. tostring(math.floor(tonumber(result.DamageContribution) or 0))
+                        .. " damage + "
+                        .. tostring(math.floor(tonumber(result.SupportContribution) or 0))
+                        .. " support)"
+                )
             end
 
             showToast(
