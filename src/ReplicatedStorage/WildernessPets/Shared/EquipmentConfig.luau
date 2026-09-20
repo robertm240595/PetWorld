@@ -17,6 +17,7 @@ EquipmentConfig.TierOrder = {
     "Epic",
     "Legendary",
     "Mythic",
+    "Limited",
 }
 
 EquipmentConfig.Tiers = {
@@ -26,6 +27,8 @@ EquipmentConfig.Tiers = {
     Epic = {Rank = 4, Coins = 5000, Primary = 8, Secondary = 5},
     Legendary = {Rank = 5, Coins = 14000, Primary = 10, Secondary = 6},
     Mythic = {Rank = 6, Coins = 35000, Primary = 12, Secondary = 7},
+    -- Limited uses the Mythic stat budget but consumes seasonal Limited loot.
+    Limited = {Rank = 6, Coins = 45000, Primary = 12, Secondary = 7},
 }
 
 EquipmentConfig.Investments = {
@@ -582,7 +585,9 @@ function EquipmentConfig:GetMaterialGroup(itemName)
         or name:find("carapace", 1, true)
         or name:find("plate", 1, true)
         or name:find("bark", 1, true)
-        or name:find("stone", 1, true) then
+        or name:find("stone", 1, true)
+        or name:find("seed", 1, true)
+        or name:find("petal", 1, true) then
         return "Structural"
     end
 
