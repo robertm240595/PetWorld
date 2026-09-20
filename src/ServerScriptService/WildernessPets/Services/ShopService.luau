@@ -392,6 +392,9 @@ function Service:SellPet(player, petId)
     if pet.Favourite then
         return false, "Favourite pets cannot be sold. Remove the favourite first."
     end
+    if type(pet.Equipment) == "table" and next(pet.Equipment) ~= nil then
+        return false, "Remove all Wildforge equipment from this pet before selling it."
+    end
 
     local value = self:GetPetSellValue(pet)
     if not value then
