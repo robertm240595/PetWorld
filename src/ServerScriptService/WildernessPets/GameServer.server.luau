@@ -1444,6 +1444,133 @@ local function returnToPlot(player)
     return true
 end
 
+local function bossCombatants(boss)
+    local result = {}
+
+    for player, session in pairs(combatSessions) do
+        if player.Parent
+            and session
+            and session.target == boss
+            and session.attacking
+            and not session.petDefeated
+            and session.pet
+            and not session.pet.Dead
+            and session.companion
+            and session.companion.Parent then
+            table.insert(result, {
+                Player = player,
+                Session = session,
+            })
+        end
+    end
+
+    return result
+end
+
+local function applyBossDamageToSession(player, boss, scale, attackName, effects)
+    local session = combatSessions[player]
+    if not session
+        or session.target ~= boss
+        or not session.attacking
+        or session.petDefeated
+        or not session.pet
+        or not session.companion
+        or not session.companion.Parent then
+        return false
+    end
+
+    local function applyDamage(rawDamage, allowReflect)
+        if session.petDefeated or not session.companion or not session.companion.Parent then
+            return false
+        end
+
+        local damage, reflected = PetAbilityService:ResolveIncomingPetDamage(
+            session.pet,
+            boss,
+            rawDamage
+        )
+
+        if damage > 0 then
+            session.pet.CurrentHealth = math.max(
+                0,
+                (tonumber(session.pet.CurrentHealth) or session.pet.Health) - damage
+            )
+            session.companion:SetAttribute("Health", session.pet.CurrentHealth)
+            syncCompanionLabel(session.companion, session.pet)
+
+            task.spawn(function()
+                if session.companion and session.companion.Parent then
+                    pcall(function()
+                        PetAnimator:PlayHit(session.companion, .22)
+                    end)
+                end
+            end)
+        end
+
+        if allowReflect and reflected > 0 and validMonster(boss) then
+            PetAbilityService:DamageEnemyFlat(player, boss, reflected)
+        end
+
+        if (tonumber(session.pet.CurrentHealth) or 0) <= 0 then
+            defeatCompanion(player, session, boss)
+            return true
+        end
+
+        return false
+    end
+
+    local baseDamage = wildPetDamage(boss, session.pet)
+    local defeated = applyDamage(
+        math.max(1, math.floor(baseDamage * math.max(0, tonumber(scale) or 1) + 0.5)),
+        true
+    )
+
+    if defeated then return true end
+
+    effects = type(effects) == "table" and effects or {}
+
+    if effects.PetDebuff then
+        PetAbilityService:ApplyPetDebuff(
+            session.pet,
+            session.companion,
+            effects.PetDebuff,
+            attackName
+        )
+    end
+
+    if effects.Dot then
+        PetAbilityService:ApplyPetDot(
+            session.pet,
+            session.companion,
+            effects.Dot,
+            attackName,
+            function(percentMaxHealth)
+                if combatSessions[player] ~= session
+                    or session.petDefeated
+                    or session.pet.Dead then
+                    return
+                end
+
+                local stats = PetService:GetEffectiveStats(session.pet)
+                local rawTick = math.max(
+                    1,
+                    math.floor(stats.Health * math.max(0, percentMaxHealth) + 0.5)
+                )
+                applyDamage(rawTick, false)
+            end
+        )
+    end
+
+    combatTell(player, "BossHit", tostring(attackName or "Boss Attack"))
+    return false
+end
+
+BossCombatService:Configure({
+    GetCombatants = bossCombatants,
+    DamageCompanion = applyBossDamageToSession,
+})
+BossCombatService:Init()
+
 GameRemote.OnServerEvent:Connect(function(player, action, value)
     if action == "CombatSelect" then
         selectCombatTarget(player, value)
