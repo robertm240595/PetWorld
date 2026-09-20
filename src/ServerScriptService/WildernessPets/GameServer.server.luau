@@ -1568,6 +1568,31 @@ end
 BossCombatService:Configure({
     GetCombatants = bossCombatants,
     DamageCompanion = applyBossDamageToSession,
+
+    OnBossDefeated = function(boss)
+        if not boss or not boss.Parent then return end
+
+        if boss:GetAttribute("WorldBoss") == true then
+            WorldBossRewardService:ResolveBossDeath(boss)
+            return
+        end
+
+        local action = boss:GetAttribute("QuestActionOnDefeat")
+        local ownerUserId = tonumber(boss:GetAttribute("QuestOwnerUserId"))
+        local owner = ownerUserId and Players:GetPlayerByUserId(ownerUserId)
+
+        if owner and type(action) == "string" and action ~= "" then
+            QuestService:OnPlayerAction(owner, action, {
+                Target = boss,
+                BossId = boss:GetAttribute("BossId"),
+                Species = boss:GetAttribute("Species"),
+            })
+        end
+    end,
+
+    ResetBossAttempt = function(boss)
+        WorldBossRewardService:ResetBoss(boss)
+    end,
 })
 BossCombatService:Init()
 
