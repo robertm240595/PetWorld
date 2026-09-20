@@ -5,8 +5,10 @@ local Root = ReplicatedStorage:WaitForChild("WildernessPets")
 local GameRemote = Root.Remotes:WaitForChild("Game")
 local Config = require(Root.Shared.Config)
 local PetAbilities = require(Root.Shared.PetAbilities)
+local EquipmentConfig = require(Root.Shared.EquipmentConfig)
 
 local PetService = require(script.Parent.PetService)
+local EquipmentRuntime = require(script.Parent.EquipmentRuntime)
 local MonsterService = require(script.Parent.MonsterService)
 local WorldBossRewardService = require(script.Parent.WorldBossRewardService)
 local BossCombatService = require(script.Parent.BossCombatService)
@@ -16,6 +18,7 @@ local Service = {}
 
 local cooldowns = {}
 local petStates = {}
+local equipmentAuraIds = {}
 local targetStates = setmetatable({}, {__mode = "k"})
 local rng = Random.new()
 
@@ -204,6 +207,7 @@ end
 local function outgoingDamage(pet, target, rawDamage)
     local state = petState(pet)
     local powerBuff = getTimedValue(state and state.Buffs, "Power")
+    local equipment = EquipmentConfig:GetBonuses(pet)
 
     local targetStatus = targetState(target)
     local sunder = getTimedValue(targetStatus.Debuffs, "Sunder")
@@ -222,6 +226,10 @@ local function outgoingDamage(pet, target, rawDamage)
         0.95
     )
 
+    local bossDamage = target:GetAttribute("WorldBoss") == true
+        and math.max(0, tonumber(equipment.BossDamage) or 0)
+        or 0
+
     return math.max(
         1,
         rawDamage
@@ -229,13 +237,30 @@ local function outgoingDamage(pet, target, rawDamage)
             * (1 - mitigation)
             * (1 + expose)
             * (1 - bossReduction)
+            * (1 + bossDamage)
     )
 end
 
 function Service:DamageEnemy(player, pet, target, rawDamage)
     if not player or not pet or not livingTarget(target) then return 0, false end
+
     local damage = outgoingDamage(pet, target, math.max(1, tonumber(rawDamage) or 1))
-    return damageRawTarget(player, target, damage)
+    local dealt, killed = damageRawTarget(player, target, damage)
+
+    if dealt > 0 then
+        local equipment = EquipmentConfig:GetBonuses(pet)
+        local lifesteal = math.max(0, tonumber(equipment.Lifesteal) or 0)
+        if lifesteal > 0 and not pet.Dead then
+            local stats = PetService:GetEffectiveStats(pet)
+            local current = math.max(0, tonumber(pet.CurrentHealth) or stats.Health)
+            local recovered = math.max(0, math.floor(dealt * lifesteal + 0.5))
+            if recovered > 0 then
+                pet.CurrentHealth = math.min(stats.Health, current + recovered)
+            end
+        end
+    end
+
+    return dealt, killed
 end
 
 function Service:DamageEnemyFlat(player, target, damage)
@@ -255,6 +280,9 @@ local function applyDot(player, pet, target, spec, sourceName)
 
     local dotType = tostring(spec.Type or "DamageOverTime")
     local scale = math.max(0, tonumber(spec.Scale) or 0)
+    local equipment = EquipmentConfig:GetBonuses(pet)
+    scale *= 1 + math.max(0, tonumber(equipment.DoTDamage) or 0)
+
     local duration = math.max(1, tonumber(spec.Duration) or 1)
     if scale <= 0 then return end
 
