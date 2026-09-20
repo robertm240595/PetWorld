@@ -565,7 +565,9 @@ function EquipmentConfig:GetMaterialGroup(itemName)
         or name:find("hoof", 1, true)
         or name:find("stinger", 1, true)
         or name:find("barb", 1, true)
-        or name:find("quill", 1, true) then
+        or name:find("quill", 1, true)
+        or name:find("venom", 1, true)
+        or name:find("sunfire", 1, true) then
         return "Offensive"
     end
 
