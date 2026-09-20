@@ -624,6 +624,94 @@ function Service:ApplyPetDot(pet, companion, spec, sourceName, onTick)
     return duration
 end
 
+function Service:RefreshEquipmentAuras(allSessions)
+    local sources = {}
+    local seen = {}
+
+    for _, session in pairs(allSessions or {}) do
+        if session
+            and session.pet
+            and not session.pet.Dead
+            and session.companion
+            and session.companion.Parent then
+            table.insert(sources, session)
+        end
+    end
+
+    local map = {
+        AllyPowerAura = "Power",
+        AllyDefenceAura = "Defence",
+        AllyHealthAura = "Health",
+        AllyAttackHasteAura = "AttackHaste",
+    }
+
+    for _, targetSession in ipairs(sources) do
+        local targetPet = targetSession.pet
+        local targetCompanion = targetSession.companion
+        local targetPosition = targetCompanion:GetPivot().Position
+        local best = {
+            Power = 0,
+            Defence = 0,
+            Health = 0,
+            AttackHaste = 0,
+        }
+
+        for _, sourceSession in ipairs(sources) do
+            local sourceCompanion = sourceSession.companion
+            local isSelf = sourceSession == targetSession
+            local inRange = isSelf
+                or (sourceCompanion:GetPivot().Position - targetPosition).Magnitude
+                    <= (tonumber(EquipmentConfig.AuraRadius) or 25)
+
+            if inRange then
+                local sourceBonuses = EquipmentConfig:GetBonuses(sourceSession.pet)
+                local scale = isSelf
+                    and math.clamp(tonumber(EquipmentConfig.SelfAuraScale) or 0.50, 0, 1)
+                    or 1
+
+                for sourceStat, targetStat in pairs(map) do
+                    best[targetStat] = math.max(
+                        best[targetStat] or 0,
+                        math.max(0, tonumber(sourceBonuses[sourceStat]) or 0) * scale
+                    )
+                end
+            end
+        end
+
+        EquipmentRuntime:SetAuraBonuses(targetPet, best)
+
+        local id = tostring(targetPet.Id or "")
+        if id ~= "" then
+            seen[id] = true
+        end
+
+        local stats = PetService:GetEffectiveStats(targetPet)
+        if targetCompanion and targetCompanion.Parent then
+            targetCompanion:SetAttribute("MaxHealth", stats.Health)
+            targetCompanion:SetAttribute("Health", targetPet.CurrentHealth)
+            targetCompanion:SetAttribute("EquipmentAuraPower", best.Power)
+            targetCompanion:SetAttribute("EquipmentAuraDefence", best.Defence)
+            targetCompanion:SetAttribute("EquipmentAuraHealth", best.Health)
+            targetCompanion:SetAttribute("EquipmentAuraAttackHaste", best.AttackHaste)
+        end
+    end
+
+    for id in pairs(equipmentAuraIds) do
+        if not seen[id] then
+            EquipmentRuntime:ClearId(id)
+        end
+    end
+    equipmentAuraIds = seen
+end
+
+function Service:ClearEquipmentAura(pet)
+    local id = pet and tostring(pet.Id or "") or ""
+    if id ~= "" then
+        EquipmentRuntime:ClearId(id)
+        equipmentAuraIds[id] = nil
+    end
+end
+
 function Service:GetPetAttackIntervalMultiplier(pet)
     local state = petState(pet)
     local equipment = EquipmentConfig:GetBonuses(pet)
@@ -948,7 +1036,10 @@ function Service:UseAbility(player, session, slot, allSessions)
                         damageScale = math.max(damageScale, tonumber(info.ExecuteDamageScale) or damageScale)
                     end
                 end
-                local raw = getBaseDamage(pet) * damageScale
+                local equipment = EquipmentConfig:GetBonuses(pet)
+                local raw = getBaseDamage(pet)
+                    * damageScale
+                    * (1 + math.max(0, tonumber(equipment.AbilityDamage) or 0))
 
                 local dealt
                 local function strike()
@@ -971,8 +1062,28 @@ function Service:UseAbility(player, session, slot, allSessions)
             end
 
             local appliedDebuffCount = 0
+            local equipment = EquipmentConfig:GetBonuses(pet)
+            local debuffPotency = math.max(0, tonumber(equipment.DebuffPotency) or 0)
+
             for _, spec in ipairs(info.Debuffs or {}) do
-                local appliedDuration = applyDebuff(target, spec, info.Name)
+                local appliedSpec = spec
+                if type(spec) == "table"
+                    and (
+                        spec.Type == "Sunder"
+                        or spec.Type == "Expose"
+                        or spec.Type == "Weaken"
+                        or spec.Type == "AttackSlow"
+                    )
+                    and debuffPotency > 0 then
+                    appliedSpec = {}
+                    for key, value in pairs(spec) do
+                        appliedSpec[key] = value
+                    end
+                    appliedSpec.Value = math.max(0, tonumber(spec.Value) or 0)
+                        * (1 + debuffPotency)
+                end
+
+                local appliedDuration = applyDebuff(target, appliedSpec, info.Name)
                 if appliedDuration > 0 then
                     appliedDebuffCount += 1
                 end
@@ -1009,8 +1120,11 @@ function Service:UseAbility(player, session, slot, allSessions)
         return false, "That ability failed to activate.", 0, false
     end
 
-    local cooldown = math.max(0.1, tonumber(info.Cooldown) or 10)
-    startCooldown(pet, slot, cooldown)
+    local cooldown = startCooldown(
+        pet,
+        slot,
+        math.max(0.1, tonumber(info.Cooldown) or 10)
+    )
 
     if totalDamage > 0 then
         table.insert(summary, tostring(math.floor(totalDamage + 0.5)) .. " damage")
@@ -1030,6 +1144,8 @@ function Service:PlayerRemoving(player)
         if id ~= "" then
             cooldowns[id] = nil
             petStates[id] = nil
+            EquipmentRuntime:ClearId(id)
+            equipmentAuraIds[id] = nil
         end
     end
 end
