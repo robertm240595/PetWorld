@@ -184,8 +184,8 @@ local function playBossAttack(boss, record, duration, onImpact)
         return
     end
 
-    local ok = pcall(function()
-        PetAnimator:PlayAttack(
+    local ok, played = pcall(function()
+        return PetAnimator:PlayAttack(
             boss,
             targetPart.Position,
             duration or 0.8,
@@ -194,7 +194,7 @@ local function playBossAttack(boss, record, duration, onImpact)
         )
     end)
 
-    if not ok and onImpact then
+    if (not ok or played ~= true) and onImpact then
         onImpact()
     end
 end
