@@ -126,25 +126,48 @@ local function showPouch(data)
     round(contents, 9)
 
     local rewards = {}
+
+    for _, material in ipairs(data.Materials or {}) do
+        if type(material) == "table" then
+            table.insert(
+                rewards,
+                tostring(material.Name or "Boss Material")
+                    .. "  ×"
+                    .. tostring(material.Quantity or 1)
+            )
+        end
+    end
+
     if data.PetReward then
-        table.insert(rewards, "ANCIENT PET  ·  " .. tostring(data.PetReward))
+        table.insert(
+            rewards,
+            "0.01% ANCIENT PET RELIC  ·  "
+                .. tostring(data.PetItemName or (tostring(data.PetReward) .. " Pet Relic"))
+        )
     end
+
     if data.MountReward then
-        table.insert(rewards, "ANCIENT MOUNT  ·  " .. tostring(data.MountReward))
+        table.insert(
+            rewards,
+            "0.01% ANCIENT MOUNT RELIC  ·  "
+                .. tostring(data.MountItemName or (tostring(data.MountReward) .. " Mount Relic"))
+        )
     end
+
     if #rewards == 0 then
-        table.insert(rewards, "No Ancient creature drop this time.")
+        table.insert(rewards, "No boss rewards were generated.")
     end
     contents.Text = table.concat(rewards, "\n")
 
     local note = Instance.new("TextLabel")
     note.BackgroundTransparency = 1
     note.Position = UDim2.fromOffset(20, 215)
-    note.Size = UDim2.fromOffset(430, 24)
+    note.Size = UDim2.fromOffset(430, 28)
     note.Font = Enum.Font.GothamMedium
     note.TextSize = 10
+    note.TextWrapped = true
     note.TextColor3 = Color3.fromRGB(163, 166, 172)
-    note.Text = "Ancient pet and Ancient mount rolls are independent."
+    note.Text = "Ancient pet/mount relics go into your inventory first. Trade the relic, or USE it to bind the creature to your collection."
     note.Parent = panel
 
     local collect = Instance.new("TextButton")
@@ -195,12 +218,32 @@ BossLootRemote.OnClientEvent:Connect(function(action, first, second)
             local result = type(second) == "table" and second or {}
             close()
             local rewards = {}
-            if result.PetReward then table.insert(rewards, "Ancient pet " .. tostring(result.PetReward)) end
-            if result.MountReward then table.insert(rewards, "Ancient mount " .. tostring(result.MountReward)) end
-            showToast(#rewards > 0 and ("Collected " .. table.concat(rewards, " + ")) or "Pouch collected. No Ancient creature drop this time.", true)
+            for _, material in ipairs(result.Materials or {}) do
+                if type(material) == "table" then
+                    table.insert(
+                        rewards,
+                        tostring(material.Quantity or 1) .. "x " .. tostring(material.Name or "boss material")
+                    )
+                end
+            end
+            if result.PetReward then
+                table.insert(rewards, tostring(result.PetItemName or result.PetReward .. " Pet Relic"))
+            end
+            if result.MountReward then
+                table.insert(rewards, tostring(result.MountItemName or result.MountReward .. " Mount Relic"))
+            end
+
+            showToast(
+                #rewards > 0
+                    and ("Stored in backpack: " .. table.concat(rewards, " + "))
+                    or "World-boss pouch collected.",
+                true
+            )
         else
             showToast(second or "Could not collect world-boss pouch.", false)
         end
+    elseif action == "UseResult" then
+        showToast(second or (first and "Creature relic used." or "Could not use that relic."), first == true)
     elseif action == "Error" then
         showToast(first or "That world-boss pouch is unavailable.", false)
     end
