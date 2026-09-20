@@ -39,6 +39,7 @@ local function newData()
             NextCaptureLuck = false
         },
         Pets = {},
+        Equipment = {},
         Mounts = {},
         MountCollection = {},
         PetCollection = {},
@@ -167,6 +168,9 @@ function Service:Load(player)
     data.LootInventory = {}
     if type(data.Pets) ~= "table" then
         data.Pets = {}
+    end
+    if type(data.Equipment) ~= "table" then
+        data.Equipment = {}
     end
     if type(data.Mounts) ~= "table" then
         data.Mounts = {}
