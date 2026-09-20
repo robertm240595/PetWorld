@@ -32,6 +32,7 @@ local QuestService = require(script.Parent.Services.QuestService)
 local BossTravelService = require(script.Parent.Services.BossTravelService)
 local LootService = require(script.Parent.Services.LootService)
 local LootTraderService = require(script.Parent.Services.LootTraderService)
+local WildforgeService = require(script.Parent.Services.WildforgeService)
 local WorldBossRewardService = require(script.Parent.Services.WorldBossRewardService)
 local TradeService = require(script.Parent.Services.TradeService)
 local TestCommandService = require(script.Parent.Services.TestCommandService)
@@ -39,6 +40,7 @@ MonsterService:Init()
 MountService:Init()
 LootService:Init()
 LootTraderService:Init()
+WildforgeService:Init()
 WorldBossRewardService:Init()
 TradeService:Init()
 QuestService:Init()
@@ -112,6 +114,7 @@ Players.PlayerRemoving:Connect(function(player)
     PetAbilityService:PlayerRemoving(player)
     BossCombatService:PlayerRemoving(player)
     WorldBossRewardService:PlayerRemoving(player)
+    WildforgeService:PlayerRemoving(player)
     TradeService:PlayerRemoving(player)
     BossTravelService:PlayerRemoving(player)
     QuestService:PlayerRemoving(player)
@@ -139,6 +142,8 @@ GetState.OnServerInvoke = function(player)
         Inventory = data.Inventory or {},
         InventoryCapacity = math.max(tonumber(Config.MaxInventory) or 25, tonumber(data.InventoryCapacity) or tonumber(Config.MaxInventory) or 25),
         BackpackName = data.BackpackName or "Starter Bag",
+        Equipment = WildforgeService:GetEquipment(player),
+        EquipmentCapacity = tonumber(Config.MaxEquipment) or 100,
         Pets = PetService:GetPets(player),
         Mounts = MountService:GetMounts(player),
         MountCollection = data.MountCollection or {},
