@@ -62,7 +62,7 @@ end
 local function assetKey(asset)
     if type(asset) ~= "table" then return "" end
     local kind = tostring(asset.Kind or "")
-    if kind == "Pet" or kind == "Mount" then
+    if kind == "Pet" or kind == "Mount" or kind == "Equipment" then
         return kind .. ":" .. tostring(asset.Id or "")
     elseif kind == "Inventory" then
         return kind
@@ -85,6 +85,11 @@ local function cloneAssetSummary(asset)
         "Species",
         "Rarity",
         "DisplayName",
+        "Quality",
+        "Slot",
+        "ItemLevel",
+        "WorldforgeLevel",
+        "BossUnique",
     }) do
         copy[key] = asset[key]
     end
@@ -116,6 +121,9 @@ local function validatePet(player, petId)
     end
     if data.DefencePetId == pet.Id then
         return nil, "Remove that pet from village defence before trading it."
+    end
+    if type(pet.Equipment) == "table" and next(pet.Equipment) ~= nil then
+        return nil, "Unequip all Wildforge equipment from that pet before trading it."
     end
 
     return {
@@ -177,6 +185,39 @@ local function validateInventory(player, itemType, name, quantity)
     }
 end
 
+local function validateEquipment(player, itemId)
+    local data = DataService:Get(player)
+    if not data then return nil, "Player data is unavailable." end
+
+    data.Equipment = type(data.Equipment) == "table" and data.Equipment or {}
+    for _, item in ipairs(data.Equipment) do
+        if type(item) == "table" and item.Id == tostring(itemId or "") then
+            if item.Tradeable == false then
+                return nil, "That equipment cannot be traded."
+            end
+            if item.Favourite then
+                return nil, "Favourite equipment cannot be traded."
+            end
+
+            return {
+                Kind = "Equipment",
+                Id = tostring(item.Id),
+                Name = tostring(item.Name or "Equipment"),
+                DisplayName = tostring(item.Name or "Equipment"),
+                Rarity = tostring(item.Tier or "Common"),
+                Quality = tostring(item.Quality or "Crude"),
+                Slot = tostring(item.Slot or ""),
+                ItemLevel = math.max(1, math.floor(tonumber(item.ItemLevel) or 1)),
+                WorldforgeLevel = math.max(0, math.floor(tonumber(item.WorldforgeLevel) or 0)),
+                BossUnique = item.BossUnique == true,
+                Quantity = 1,
+            }
+        end
+    end
+
+    return nil, "Unequipped equipment not found."
+end
+
 local function validateOffer(player, offer)
     if type(offer) ~= "table" then
         return nil, "Invalid trade offer."
@@ -205,6 +246,8 @@ local function validateOffer(player, offer)
                 requested.Name,
                 requested.Quantity
             )
+        elseif kind == "Equipment" then
+            asset, message = validateEquipment(player, requested.Id)
         else
             return nil, "Unknown trade asset."
         end
@@ -227,6 +270,7 @@ end
 local function offerCounts(offer)
     local pets = 0
     local mounts = 0
+    local equipment = 0
     local inventory = {}
 
     for _, asset in ipairs(offer or {}) do
@@ -234,6 +278,8 @@ local function offerCounts(offer)
             pets += 1
         elseif asset.Kind == "Mount" then
             mounts += 1
+        elseif asset.Kind == "Equipment" then
+            equipment += 1
         elseif asset.Kind == "Inventory" then
             inventory[inventoryKey(asset.Type, asset.Name)] = {
                 Type = asset.Type,
@@ -243,7 +289,7 @@ local function offerCounts(offer)
         end
     end
 
-    return pets, mounts, inventory
+    return pets, mounts, equipment, inventory
 end
 
 local function resultingInventorySlots(data, outgoing, incoming)
@@ -292,8 +338,8 @@ local function validateCapacity(playerA, offerA, playerB, offerB)
         return false, "Player data is unavailable."
     end
 
-    local petsA, mountsA, invA = offerCounts(offerA)
-    local petsB, mountsB, invB = offerCounts(offerB)
+    local petsA, mountsA, equipmentA, invA = offerCounts(offerA)
+    local petsB, mountsB, equipmentB, invB = offerCounts(offerB)
 
     local newPetsA = #(dataA.Pets or {}) - petsA + petsB
     local newPetsB = #(dataB.Pets or {}) - petsB + petsA
@@ -302,6 +348,15 @@ local function validateCapacity(playerA, offerA, playerB, offerB)
     end
     if newPetsB > (Config.MaxPets or 60) then
         return false, playerB.Name .. " does not have enough pet collection space."
+    end
+
+    local newEquipmentA = #(dataA.Equipment or {}) - equipmentA + equipmentB
+    local newEquipmentB = #(dataB.Equipment or {}) - equipmentB + equipmentA
+    if newEquipmentA > (Config.MaxEquipment or 100) then
+        return false, playerA.Name .. " does not have enough equipment storage."
+    end
+    if newEquipmentB > (Config.MaxEquipment or 100) then
+        return false, playerB.Name .. " does not have enough equipment storage."
     end
 
     local newMountsA = #(dataA.Mounts or {}) - mountsA + mountsB
@@ -341,6 +396,15 @@ local function removeMount(data, mountId)
     for index, mount in ipairs(data.Mounts or {}) do
         if type(mount) == "table" and mount.Id == mountId then
             return table.remove(data.Mounts, index)
+        end
+    end
+end
+
+local function removeEquipment(data, itemId)
+    data.Equipment = type(data.Equipment) == "table" and data.Equipment or {}
+    for index, item in ipairs(data.Equipment) do
+        if type(item) == "table" and item.Id == itemId then
+            return table.remove(data.Equipment, index)
         end
     end
 end
@@ -408,6 +472,16 @@ local function transferOffer(sourceData, targetData, offer)
                 and targetData.MountCollection
                 or {}
             targetData.MountCollection[mount.Species] = true
+
+        elseif asset.Kind == "Equipment" then
+            local item = removeEquipment(sourceData, asset.Id)
+            if not item then error("Equipment changed during trade.") end
+            item.Favourite = false
+            item.EquippedPetId = nil
+            targetData.Equipment = type(targetData.Equipment) == "table"
+                and targetData.Equipment
+                or {}
+            table.insert(targetData.Equipment, item)
 
         elseif asset.Kind == "Inventory" then
             local quantity = math.max(1, math.floor(tonumber(asset.Quantity) or 1))
@@ -521,6 +595,7 @@ local function completeTrade(session)
     local snapshotA = {
         Pets = deepClone(dataA.Pets),
         Mounts = deepClone(dataA.Mounts),
+        Equipment = deepClone(dataA.Equipment),
         Inventory = deepClone(dataA.Inventory),
         PetCollection = deepClone(dataA.PetCollection),
         MountCollection = deepClone(dataA.MountCollection),
@@ -528,6 +603,7 @@ local function completeTrade(session)
     local snapshotB = {
         Pets = deepClone(dataB.Pets),
         Mounts = deepClone(dataB.Mounts),
+        Equipment = deepClone(dataB.Equipment),
         Inventory = deepClone(dataB.Inventory),
         PetCollection = deepClone(dataB.PetCollection),
         MountCollection = deepClone(dataB.MountCollection),
@@ -541,12 +617,14 @@ local function completeTrade(session)
     if not ok then
         dataA.Pets = snapshotA.Pets
         dataA.Mounts = snapshotA.Mounts
+        dataA.Equipment = snapshotA.Equipment
         dataA.Inventory = snapshotA.Inventory
         dataA.PetCollection = snapshotA.PetCollection
         dataA.MountCollection = snapshotA.MountCollection
 
         dataB.Pets = snapshotB.Pets
         dataB.Mounts = snapshotB.Mounts
+        dataB.Equipment = snapshotB.Equipment
         dataB.Inventory = snapshotB.Inventory
         dataB.PetCollection = snapshotB.PetCollection
         dataB.MountCollection = snapshotB.MountCollection
