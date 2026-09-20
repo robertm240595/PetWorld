@@ -390,10 +390,14 @@ local function transferOffer(sourceData, targetData, offer)
             pet.Displayed = false
             pet.Favourite = false
             table.insert(targetData.Pets, pet)
-            targetData.PetCollection = type(targetData.PetCollection) == "table"
-                and targetData.PetCollection
-                or {}
-            targetData.PetCollection[pet.Species] = true
+
+            local info = Config.Pets[pet.Species]
+            if info and info.Legacy ~= true and info.SpawnMode ~= "Legacy" then
+                targetData.PetCollection = type(targetData.PetCollection) == "table"
+                    and targetData.PetCollection
+                    or {}
+                targetData.PetCollection[pet.Species] = true
+            end
 
         elseif asset.Kind == "Mount" then
             local mount = removeMount(sourceData, asset.Id)
@@ -481,6 +485,11 @@ local function completeTrade(session)
     if not offerB then
         session.Completing = false
         closeSession(session, messageB or "The second offer changed.", false)
+        return
+    end
+    if #offerA == 0 and #offerB == 0 then
+        session.Completing = false
+        closeSession(session, "A trade must contain at least one item, pet or mount.", false)
         return
     end
     if not playersClose(session.A, session.B) then
