@@ -184,6 +184,12 @@ function Service:GetContributionShare(boss, player)
     return (damage + support) / maximum
 end
 
+function Service:ResetBoss(boss)
+    if boss then
+        contributions[boss] = nil
+    end
+end
+
 function Service:ResolveBossDeath(boss)
     if not boss or boss:GetAttribute("WorldBoss") ~= true then return 0 end
     if boss:GetAttribute("BossPouchesResolved") == true then return 0 end
