@@ -588,6 +588,7 @@ local function eligiblePets(player, stage)
             and not pet.Dead
             and not pet.Favourite
             and not pet.Displayed
+            and (type(pet.Equipment) ~= "table" or next(pet.Equipment) == nil)
             and pet.Id ~= data.EquippedPetId
             and pet.Id ~= data.PodiumPetId
             and pet.Id ~= data.DefencePetId then
