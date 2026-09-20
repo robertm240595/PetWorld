@@ -420,6 +420,11 @@ function Service:Equip(player, petId, itemId)
         return false, "That equipment has an invalid slot."
     end
 
+    local beforeStats = PetService:GetEffectiveStats(pet)
+    local healthRatio = beforeStats.Health > 0
+        and math.clamp((tonumber(pet.CurrentHealth) or beforeStats.Health) / beforeStats.Health, 0, 1)
+        or 1
+
     local old = pet.Equipment[slot]
     table.remove(data.Equipment, index)
 
@@ -430,6 +435,11 @@ function Service:Equip(player, petId, itemId)
 
     item.EquippedPetId = pet.Id
     pet.Equipment[slot] = item
+
+    if not pet.Dead then
+        local afterStats = PetService:GetEffectiveStats(pet)
+        pet.CurrentHealth = math.max(1, math.floor(afterStats.Health * healthRatio + 0.5))
+    end
 
     return true,
         tostring(item.Name)
@@ -454,9 +464,19 @@ function Service:Unequip(player, petId, slotName)
     local item = pet.Equipment[slotName]
     if not item then return false, "Nothing is equipped in that slot." end
 
+    local beforeStats = PetService:GetEffectiveStats(pet)
+    local healthRatio = beforeStats.Health > 0
+        and math.clamp((tonumber(pet.CurrentHealth) or beforeStats.Health) / beforeStats.Health, 0, 1)
+        or 1
+
     item.EquippedPetId = nil
     pet.Equipment[slotName] = nil
     table.insert(ensureEquipmentList(data), item)
+
+    if not pet.Dead then
+        local afterStats = PetService:GetEffectiveStats(pet)
+        pet.CurrentHealth = math.max(1, math.floor(afterStats.Health * healthRatio + 0.5))
+    end
 
     return true, tostring(item.Name) .. " returned to equipment storage."
 end
@@ -1080,8 +1100,28 @@ function Service:Worldforge(player, itemId, bossSpecies)
         return false, "You no longer have enough Coins."
     end
 
+    local healthRatio
+    if equippedPet and not equippedPet.Dead then
+        local beforeStats = PetService:GetEffectiveStats(equippedPet)
+        healthRatio = beforeStats.Health > 0
+            and math.clamp(
+                (tonumber(equippedPet.CurrentHealth) or beforeStats.Health) / beforeStats.Health,
+                0,
+                1
+            )
+            or 1
+    end
+
     item.WorldforgeLevel = nextLevel
     item.WorldforgeSource = bossSpecies
+
+    if equippedPet and not equippedPet.Dead and healthRatio then
+        local afterStats = PetService:GetEffectiveStats(equippedPet)
+        equippedPet.CurrentHealth = math.max(
+            1,
+            math.floor(afterStats.Health * healthRatio + 0.5)
+        )
+    end
 
     return true,
         tostring(item.Name)
