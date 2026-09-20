@@ -755,6 +755,9 @@ local function createWyrm(parent, center, player)
     model:SetAttribute("QuestOwnerUserId", player.UserId)
     model:SetAttribute("ArenaOwnerUserId", player.UserId)
     model:SetAttribute("QuestStationary", true)
+    model:SetAttribute("BossAIManaged", true)
+    model:SetAttribute("BossPhase", "WOUNDED")
+    model:SetAttribute("RespawnSeconds", 0)
     model.Parent = parent
 
     local bodyColor = Color3.fromRGB(82, 55, 49)
@@ -969,7 +972,7 @@ local function createWyrm(parent, center, player)
     return model
 end
 
-local function createJormungdyrr(arena, center)
+local function createJormungdyrr(parent, center)
     local model = Instance.new("Model")
     model.Name = "Jormungdyrr"
     model:SetAttribute("BossType", "WorldBoss")
@@ -977,11 +980,31 @@ local function createJormungdyrr(arena, center)
     model:SetAttribute("DisplayName", "Jormungdyrr")
     -- Keep compatibility with the existing Ancient reward configuration.
     model:SetAttribute("Species", "Jörmungandr")
+    model:SetAttribute("Rarity", "Ancient")
+    model:SetAttribute("CreatureType", "Pet")
+    model:SetAttribute("Level", 100)
     model:SetAttribute("WorldBoss", true)
-    model:SetAttribute("CombatReady", false)
-    model:SetAttribute("BossVisualOnly", true)
+    model:SetAttribute("CombatReady", true)
+    model:SetAttribute("BossVisualOnly", false)
+    model:SetAttribute("BossAIManaged", true)
     model:SetAttribute("QuestNoCapture", true)
-    model.Parent = arena
+    model:SetAttribute("QuestNoRewards", true)
+    model:SetAttribute("Captured", false)
+    model:SetAttribute("BeingCaptured", false)
+    model:SetAttribute("Dead", false)
+    model:SetAttribute("InCombat", false)
+    model:SetAttribute("Health", 300000)
+    model:SetAttribute("MaxHealth", 300000)
+    model:SetAttribute("Power", 220)
+    model:SetAttribute("Defence", 110)
+    model:SetAttribute("PowerRating", math.ceil((300000 * 220 * 110) / 1000))
+    model:SetAttribute("RespawnSeconds", 180)
+    model:SetAttribute("BossPhase", "HUNTING")
+    model:SetAttribute("BossPowerMultiplier", 1)
+    model:SetAttribute("BossDamageReduction", 0)
+    model:SetAttribute("BossSoloWard", false)
+    model:SetAttribute("ActiveParticipants", 0)
+    model.Parent = parent
 
     local scaleColor = Color3.fromRGB(39, 61, 48)
     local deepColor = Color3.fromRGB(20, 35, 29)
@@ -1139,6 +1162,16 @@ local function createJormungdyrr(arena, center)
     pointLight(brow, runeColor, 1.2, 20)
 
     model.PrimaryPart = primary or head
+
+    for _, item in ipairs(model:GetDescendants()) do
+        if item:IsA("BasePart") then
+            item.Anchored = true
+            item.CanCollide = false
+            item.CanTouch = false
+            item.CanQuery = true
+        end
+    end
+
     bossLabel(head, "JORMUNGDYRR", "WORLD BOSS  ·  SHARED SERVER ENCOUNTER", Color3.fromRGB(158, 236, 132), 260)
 
     return model
@@ -1202,7 +1235,7 @@ local function buildWorldBossArena()
         true
     )
 
-    local boss = createJormungdyrr(arena, center + Vector3.new(0, 0, -18))
+    local boss = createJormungdyrr(wildMonsters, center + Vector3.new(0, 0, -18))
 
     local arrival = CFrame.lookAt(
         center + Vector3.new(0, 5, 132),
