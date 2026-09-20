@@ -626,7 +626,13 @@ end
 
 function Service:GetPetAttackIntervalMultiplier(pet)
     local state = petState(pet)
+    local equipment = EquipmentConfig:GetBonuses(pet)
+    local aura = EquipmentRuntime:GetAuraBonuses(pet)
+
     local haste = getTimedValue(state and state.Buffs, "AttackHaste")
+        + math.max(0, tonumber(equipment.AttackHaste) or 0)
+        + math.max(0, tonumber(aura.AttackHaste) or 0)
+
     local slow = math.clamp(getTimedValue(state and state.Harmful, "AttackSlow"), 0, 0.75)
     return (1 / math.max(1, 1 + haste)) * (1 / math.max(0.25, 1 - slow))
 end
@@ -678,6 +684,15 @@ function Service:ResolveIncomingPetDamage(pet, target, rawDamage)
     end
 
     local incoming = math.max(0, tonumber(rawDamage) or 0) * self:GetEnemyDamageMultiplier(target)
+    local equipment = EquipmentConfig:GetBonuses(pet)
+
+    if target and target:GetAttribute("WorldBoss") == true then
+        incoming *= 1 - math.clamp(
+            tonumber(equipment.BossDamageReduction) or 0,
+            0,
+            tonumber(EquipmentConfig.StatCaps.BossDamageReduction) or 0.20
+        )
+    end
 
     local reduction = getTimedValue(state.Buffs, "DamageReduction")
     local guard = state.Guard
@@ -724,7 +739,16 @@ end
 local function startCooldown(pet, slot, seconds)
     local petId = tostring(pet.Id)
     cooldowns[petId] = cooldowns[petId] or {}
-    cooldowns[petId][slot] = now() + math.max(0.1, tonumber(seconds) or 0.1)
+
+    local equipment = EquipmentConfig:GetBonuses(pet)
+    local reduction = math.clamp(
+        tonumber(equipment.CooldownReduction) or 0,
+        0,
+        tonumber(EquipmentConfig.StatCaps.CooldownReduction) or 0.25
+    )
+    local actual = math.max(0.1, (tonumber(seconds) or 0.1) * (1 - reduction))
+    cooldowns[petId][slot] = now() + actual
+    return actual
 end
 
 local function enemyAbilityRequiresTarget(info)
@@ -765,6 +789,8 @@ local function applyAura(casterSession, info, allSessions)
     local radius = math.max(1, tonumber(info.Radius) or 25)
     local count = 0
     local engagedCount = 0
+    local casterEquipment = EquipmentConfig:GetBonuses(casterSession.pet)
+    local buffPotency = math.max(0, tonumber(casterEquipment.BuffPotency) or 0)
 
     for allyPlayer, session in pairs(allSessions or {}) do
         if session.pet
@@ -777,6 +803,7 @@ local function applyAura(casterSession, info, allSessions)
                 local isSelf = session == casterSession
                 if not isSelf or info.IncludeSelf == true then
                     local scale = isSelf and math.clamp(tonumber(info.SelfScale) or 1, 0, 1) or 1
+                    scale *= 1 + buffPotency
                     applySelfEffects(session.pet, session.companion, info, scale)
                     count += 1
                     if not isSelf
@@ -808,8 +835,17 @@ local function healPet(session, info)
     if not pet or pet.Dead then return 0 end
 
     local stats = PetService:GetEffectiveStats(pet)
+    local equipment = EquipmentConfig:GetBonuses(pet)
     local current = math.max(0, tonumber(pet.CurrentHealth) or stats.Health)
-    local amount = math.max(1, math.floor(stats.Health * math.max(0, tonumber(info.HealPercent) or 0) + 0.5))
+    local amount = math.max(
+        1,
+        math.floor(
+            stats.Health
+                * math.max(0, tonumber(info.HealPercent) or 0)
+                * (1 + math.max(0, tonumber(equipment.HealingPotency) or 0))
+                + 0.5
+        )
+    )
     local healed = math.min(amount, math.max(0, stats.Health - current))
 
     pet.CurrentHealth = math.min(stats.Health, current + amount)
