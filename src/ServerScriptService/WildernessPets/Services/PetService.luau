@@ -167,6 +167,7 @@ function Service:Create(player, species, options)
         Species = species,
         Name = species,
         Rarity = template.Rarity,
+        AcquiredFrom = options.AcquiredFrom or "Capture",
         Level = 1,
         XP = 0,
         Imprint = imprint,
