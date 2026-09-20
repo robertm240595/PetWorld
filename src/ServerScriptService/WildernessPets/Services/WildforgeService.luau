@@ -757,7 +757,7 @@ local function forgeScore(session)
     local perfect = true
     for _, value in ipairs(values) do
         total += value
-        if value < 97 then perfect = false end
+        if value < 100 then perfect = false end
     end
 
     if perfect then return 100 end
