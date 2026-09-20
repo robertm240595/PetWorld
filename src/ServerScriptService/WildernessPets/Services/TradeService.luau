@@ -10,6 +10,7 @@ local DataService = require(script.Parent.PlayerDataService)
 local PetService = require(script.Parent.PetService)
 local MountService = require(script.Parent.MountService)
 local ShopService = require(script.Parent.ShopService)
+local WildforgeService = require(script.Parent.WildforgeService)
 
 local Service = {}
 local started = false
@@ -354,8 +355,8 @@ local function validateCapacity(playerA, offerA, playerB, offerB)
         return false, playerB.Name .. " does not have enough pet collection space."
     end
 
-    local newEquipmentA = #(dataA.Equipment or {}) - equipmentA + equipmentB
-    local newEquipmentB = #(dataB.Equipment or {}) - equipmentB + equipmentA
+    local newEquipmentA = WildforgeService:GetEquipmentCount(playerA) - equipmentA + equipmentB
+    local newEquipmentB = WildforgeService:GetEquipmentCount(playerB) - equipmentB + equipmentA
     if newEquipmentA > (Config.MaxEquipment or 100) then
         return false, playerA.Name .. " does not have enough equipment storage."
     end
