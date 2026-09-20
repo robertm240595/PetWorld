@@ -28,6 +28,10 @@ local PET_BUFF_ORDER = {
     "Shield",
     "Reflect",
     "Evade",
+    "ForgePowerAura",
+    "ForgeDefenceAura",
+    "ForgeHealthAura",
+    "ForgeHasteAura",
 }
 
 local PET_DEBUFF_ORDER = {
@@ -45,6 +49,10 @@ local SHORT_NAMES = {
     AttackSlow = "SLOW",
     Frostbite = "FROST",
     Dreamrot = "DREAMROT",
+    ForgePowerAura = "FORGE PWR AURA",
+    ForgeDefenceAura = "FORGE DEF AURA",
+    ForgeHealthAura = "FORGE HP AURA",
+    ForgeHasteAura = "FORGE HASTE AURA",
 }
 
 local function shortName(name)
@@ -78,7 +86,11 @@ local function statusText(model, prefix, order)
                 or name == "AttackHaste"
                 or name == "Power"
                 or name == "DamageReduction"
-                or name == "Reflect" then
+                or name == "Reflect"
+                or name == "ForgePowerAura"
+                or name == "ForgeDefenceAura"
+                or name == "ForgeHealthAura"
+                or name == "ForgeHasteAura" then
                 text ..= " " .. tostring(math.floor(value * 100 + 0.5)) .. "%"
             end
 
