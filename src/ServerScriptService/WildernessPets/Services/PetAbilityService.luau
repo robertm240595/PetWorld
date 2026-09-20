@@ -460,6 +460,65 @@ function Service:ApplyPetDebuff(pet, companion, spec, sourceName)
     return duration
 end
 
+function Service:ApplyPetDot(pet, companion, spec, sourceName, onTick)
+    if not pet or type(spec) ~= "table" or type(onTick) ~= "function" then return 0 end
+
+    local statusType = tostring(spec.Type or "Poison")
+    local perTick = math.max(0, tonumber(spec.PercentMaxHealth) or 0)
+    local ticks = math.max(1, math.floor(tonumber(spec.Ticks) or 1))
+    local interval = math.max(0.25, tonumber(spec.Interval) or 1)
+    if perTick <= 0 then return 0 end
+
+    local state = petState(pet)
+    if not state then return 0 end
+
+    local duration = ticks * interval
+    local current = state.Harmful[statusType]
+    local token
+
+    if activeTimed(current) then
+        current.Value = math.max(tonumber(current.Value) or 0, perTick)
+        current.ExpiresAt = math.max(tonumber(current.ExpiresAt) or 0, now() + duration)
+        current.Source = sourceName
+        current.Token = (tonumber(current.Token) or 0) + 1
+        token = current.Token
+    else
+        current = {
+            Value = perTick,
+            ExpiresAt = now() + duration,
+            Source = sourceName,
+            Token = 1,
+        }
+        state.Harmful[statusType] = current
+        token = 1
+    end
+
+    setPetStatusAttribute(companion, "PetDebuff", statusType, current.Value, duration, sourceName)
+
+    task.spawn(function()
+        for _ = 1, ticks do
+            task.wait(interval)
+
+            local liveState = petState(pet)
+            local entry = liveState and liveState.Harmful[statusType]
+            if not entry or entry.Token ~= token or not activeTimed(entry) then return end
+            if pet.Dead or (tonumber(pet.CurrentHealth) or 0) <= 0 then return end
+
+            onTick(math.max(0, tonumber(entry.Value) or perTick))
+
+            if pet.Dead or (tonumber(pet.CurrentHealth) or 0) <= 0 then return end
+        end
+
+        local liveState = petState(pet)
+        local entry = liveState and liveState.Harmful[statusType]
+        if entry and entry.Token == token then
+            liveState.Harmful[statusType] = nil
+        end
+    end)
+
+    return duration
+end
+
 function Service:GetPetAttackIntervalMultiplier(pet)
     local state = petState(pet)
     local haste = getTimedValue(state and state.Buffs, "AttackHaste")
