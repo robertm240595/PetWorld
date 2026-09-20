@@ -678,6 +678,15 @@ function Service:RefreshEquipmentAuras(allSessions)
             end
         end
 
+        local beforeStats = PetService:GetEffectiveStats(targetPet)
+        local healthRatio = beforeStats.Health > 0
+            and math.clamp(
+                (tonumber(targetPet.CurrentHealth) or beforeStats.Health) / beforeStats.Health,
+                0,
+                1
+            )
+            or 1
+
         EquipmentRuntime:SetAuraBonuses(targetPet, best)
 
         local id = tostring(targetPet.Id or "")
@@ -686,6 +695,13 @@ function Service:RefreshEquipmentAuras(allSessions)
         end
 
         local stats = PetService:GetEffectiveStats(targetPet)
+        if not targetPet.Dead then
+            targetPet.CurrentHealth = math.max(
+                1,
+                math.floor(stats.Health * healthRatio + 0.5)
+            )
+        end
+
         if targetCompanion and targetCompanion.Parent then
             targetCompanion:SetAttribute("MaxHealth", stats.Health)
             targetCompanion:SetAttribute("Health", targetPet.CurrentHealth)
