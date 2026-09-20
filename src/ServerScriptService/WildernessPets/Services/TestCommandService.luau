@@ -4,6 +4,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Root = ReplicatedStorage:WaitForChild("WildernessPets")
 local Config = require(Root.Shared.Config)
 local LootConfig = require(Root.Shared.LootConfig)
+local EquipmentConfig = require(Root.Shared.EquipmentConfig)
 local PetsRemote = Root.Remotes:WaitForChild("Pets")
 
 local DataService = require(script.Parent.PlayerDataService)
@@ -11,6 +12,7 @@ local ShopService = require(script.Parent.ShopService)
 local PetService = require(script.Parent.PetService)
 local MountService = require(script.Parent.MountService)
 local QuestService = require(script.Parent.QuestService)
+local WildforgeService = require(script.Parent.WildforgeService)
 
 local Service = {}
 local bound = setmetatable({}, {__mode = "k"})
@@ -237,8 +239,86 @@ local function setBag(player, raw)
     return true, message
 end
 
+local function giveForgeKit(player, raw)
+    local wanted = lower(raw)
+    local tier
+
+    for tierName in pairs(EquipmentConfig.Tiers) do
+        if lower(tierName) == wanted then
+            tier = tierName
+            break
+        end
+    end
+
+    if not tier then
+        return false, "Usage: ;forgekit Common|Uncommon|Rare|Epic|Legendary|Mythic|Limited"
+    end
+
+    local byGroup = {}
+    for species, drop in pairs(LootConfig.Drops or {}) do
+        local pet = Config.Pets[species]
+        if pet and pet.Rarity == tier and type(drop) == "table" then
+            for _, itemName in ipairs({drop.Primary, drop.Secondary}) do
+                if type(itemName) == "string" and itemName ~= "" then
+                    local group = EquipmentConfig:GetMaterialGroup(itemName)
+                    byGroup[group] = byGroup[group] or itemName
+                end
+            end
+        end
+    end
+
+    for _, group in ipairs({"Offensive", "Structural", "Arcane"}) do
+        local itemName = byGroup[group]
+        if not itemName then
+            return false, "No " .. tier .. " " .. group .. " test material is configured."
+        end
+        local added, message = ShopService:AddInventoryItem(
+            player,
+            "Loot",
+            itemName,
+            99
+        )
+        if not added then return false, message end
+    end
+
+    return true,
+        tier
+            .. " forge kit granted: 99 materials from each crafting group. "
+            .. "Use ;coins 100000 if you also need forge Coins."
+end
+
+local function giveBossEquipment(player, raw)
+    local requested = trim(raw)
+    local canonical
+
+    for bossSpecies in pairs(EquipmentConfig.BossUniques or {}) do
+        if lower(bossSpecies) == lower(requested) then
+            canonical = bossSpecies
+            break
+        end
+    end
+
+    if not canonical then
+        return false, "Usage: ;givebossgear Jörmungandr|Kraken|Fenrir|Gaia Titan"
+    end
+
+    local item = WildforgeService:CreateBossUnique(canonical)
+    if not item then
+        return false, "Could not roll boss equipment for " .. canonical .. "."
+    end
+
+    local added, result = WildforgeService:AddEquipment(player, item)
+    if not added then
+        return false, result or "Equipment storage is full."
+    end
+
+    return true,
+        tostring(item.Name)
+            .. " rolled and added to Wildforge equipment storage for testing."
+end
+
 local function helpText()
-    return ";speed 50 | ;speed reset | ;give Wolf Hide 5 | ;give XP Tonic 2 | ;give Hunter's Lasso | ;givepet Wolf 100 | ;givemount Trail Horse 100 | ;coins 5000 | ;gems 100 | ;bag Trail Pack"
+    return ";speed 50 | ;give Wolf Hide 5 | ;givepet Wolf 100 | ;givemount Trail Horse 100 | ;forgekit Common | ;givebossgear Jörmungandr | ;coins 100000 | ;gems 100 | ;bag Trail Pack"
 end
 
 function Service:Handle(player, message)
@@ -264,6 +344,10 @@ function Service:Handle(player, message)
         end
     elseif command == "givepet" or command == "pet" then
         ok, response = givePet(player, rest)
+    elseif command == "forgekit" then
+        ok, response = giveForgeKit(player, rest)
+    elseif command == "givebossgear" or command == "bossgear" then
+        ok, response = giveBossEquipment(player, rest)
     elseif command == "givemount" or command == "mount" then
         ok, response = giveMount(player, rest)
     elseif command == "coins" then
