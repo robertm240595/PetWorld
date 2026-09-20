@@ -16,6 +16,7 @@ local travelWorld
 local wildMonsters
 local gates = {}
 local touchDebounce = setmetatable({}, {__mode = "k"})
+local worldBossWarnings = setmetatable({}, {__mode = "k"})
 local personalWyrmArenas = setmetatable({}, {__mode = "k"})
 local freeWyrmSlots = {}
 local nextWyrmSlot = 1
@@ -1294,6 +1295,46 @@ local function canEnterWorldBoss(player)
     if not QuestService:IsQuestCompleted(player, "HollowfangWyrm") then
         return false, "Something seals the cave beyond the waterfall. Finish the Hollowfang Wyrm quest chain first."
     end
+
+    local boss = wildMonsters and wildMonsters:FindFirstChild("Jormungdyrr")
+    if not boss or not boss.Parent then
+        return false, "The cavern is quiet. Jormungdyrr is not available right now."
+    end
+
+    local health = math.max(0, tonumber(boss:GetAttribute("Health")) or 0)
+    local maximum = math.max(1, tonumber(boss:GetAttribute("MaxHealth")) or 1)
+    local dead = boss:GetAttribute("Dead") == true or health <= 0
+
+    if dead then
+        local respawnAt = tonumber(boss:GetAttribute("BossRespawnAt")) or 0
+        local remaining = math.max(0, math.ceil(respawnAt - workspace:GetServerTimeNow()))
+        return false,
+            remaining > 0
+                and ("Jormungdyrr has been defeated. The cavern will stir again in about "
+                    .. tostring(remaining)
+                    .. " seconds.")
+                or "Jormungdyrr has been defeated. The cavern is beginning to stir again."
+    end
+
+    local current = os.clock()
+    local warnedUntil = tonumber(worldBossWarnings[player]) or 0
+    if current > warnedUntil then
+        worldBossWarnings[player] = current + 8
+
+        local participants = math.max(0, tonumber(boss:GetAttribute("ActiveParticipants")) or 0)
+        local percent = math.floor((health / maximum) * 100 + 0.5)
+
+        return false,
+            "WORLD BOSS — Jormungdyrr is at "
+                .. tostring(percent)
+                .. "% HP"
+                .. (participants > 0
+                    and (" with " .. tostring(participants) .. " handler" .. (participants == 1 and "" or "s") .. " fighting.")
+                    or ".")
+                .. " Multiple handlers are required. Enter again within 8 seconds to proceed."
+    end
+
+    worldBossWarnings[player] = nil
     return true
 end
 
@@ -1401,6 +1442,7 @@ end
 
 function Service:PlayerRemoving(player)
     touchDebounce[player] = nil
+    worldBossWarnings[player] = nil
     cleanupPersonalWyrmArena(player)
 end
 
