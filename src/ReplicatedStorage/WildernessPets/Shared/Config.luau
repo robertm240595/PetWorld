@@ -282,18 +282,31 @@ Config.MountRarityWeights = {
 
 Config.WorldBossRewards = {
     MinimumDamageShare = 0.10,
-    AncientPetChance = 0.0001,
-    AncientMountChance = 0.0001,
+
+    -- Ancient creature drops are deliberately ultra-rare. These rolls create
+    -- TRADEABLE inventory items first; using the item adds the creature to the
+    -- owner's collection.
+    AncientPetChance = 0.0001,   -- 0.01%
+    AncientMountChance = 0.0001, -- 0.01%
+
     BossPetMap = {
         Kraken = "Kraken",
         ["Jörmungandr"] = "Jörmungandr",
         Fenrir = "Fenrir",
         ["Gaia Titan"] = "Gaia Titan",
     },
+
     AncientMountPool = {
         "Runebound Mammoth",
         "Abyssal Wyvern",
     },
+
+    PrimaryMaterialMin = 2,
+    PrimaryMaterialMax = 4,
+    SecondaryMaterialChance = 0.35,
+    SecondaryMaterialMin = 1,
+    SecondaryMaterialMax = 2,
+    PouchLifetimeSeconds = 180,
 }
 
 local function addMount(name, rarity, speedMultiplier, options)
@@ -307,6 +320,8 @@ local function addMount(name, rarity, speedMultiplier, options)
         TemplateSpecies = options.TemplateSpecies,
         Event = options.Event,
         WorldBoss = options.WorldBoss,
+        VendorSellable = false,
+        Tradeable = options.Tradeable ~= false,
         Visual = options.Visual,
     }
 end
@@ -357,6 +372,8 @@ local function addPet(name, rarity, health, power, defence, sellValue, options)
         Legacy = options.Legacy == true,
         Event = options.Event,
         WorldBoss = options.WorldBoss,
+        VendorSellable = options.VendorSellable ~= false,
+        Tradeable = options.Tradeable ~= false,
         Visual = options.Visual
     }
 end
@@ -411,10 +428,10 @@ addPet("Frostbell Reindeer", "Limited", 680, 150, 92, 650, {SpawnMode = "Event",
 addPet("Pumpkin Imp", "Limited", 620, 170, 82, 640, {SpawnMode = "Event", AnimationSpecies = "Fox", Event = "Halloween", Visual = {Archetype = "Imp", Color = Color3.fromRGB(116, 59, 38), Accent = Color3.fromRGB(255, 137, 48), Scale = 1.00, Feature = "horns"}})
 addPet("Bloom Jackalope", "Limited", 650, 155, 88, 645, {SpawnMode = "Event", AnimationSpecies = "Fox", Event = "Spring", Visual = {Archetype = "Quadruped", Color = Color3.fromRGB(187, 154, 139), Accent = Color3.fromRGB(244, 145, 186), Scale = 0.95, Feature = "antlers"}})
 addPet("Starfall Starling", "Limited", 640, 165, 80, 650, {SpawnMode = "Event", AnimationSpecies = "Starling", Event = "Starfall", Visual = {Archetype = "Bird", Color = Color3.fromRGB(76, 87, 143), Accent = Color3.fromRGB(198, 180, 255), Scale = 1.05, Feature = "glow"}})
-addPet("Kraken", "Ancient", 1350, 225, 160, 1000, {SpawnMode = "WorldBoss", AnimationSpecies = "Leviathan", WorldBoss = "Kraken", Visual = {Archetype = "Kraken", Color = Color3.fromRGB(46, 78, 98), Accent = Color3.fromRGB(89, 204, 226), Scale = 1.60, Feature = "crown"}})
-addPet("Jörmungandr", "Ancient", 1450, 235, 170, 1050, {SpawnMode = "WorldBoss", AnimationSpecies = "Leviathan", WorldBoss = "Jörmungandr", Visual = {Archetype = "Serpent", Color = Color3.fromRGB(55, 84, 68), Accent = Color3.fromRGB(172, 216, 115), Scale = 1.70, Feature = "crown"}})
-addPet("Fenrir", "Ancient", 1300, 240, 150, 1025, {SpawnMode = "WorldBoss", AnimationSpecies = "Wolf", WorldBoss = "Fenrir", Visual = {Archetype = "Quadruped", Color = Color3.fromRGB(75, 82, 95), Accent = Color3.fromRGB(175, 204, 255), Scale = 1.55, Feature = "mane"}})
-addPet("Gaia Titan", "Ancient", 1500, 210, 180, 1100, {SpawnMode = "WorldBoss", AnimationSpecies = "AncientTitan", WorldBoss = "Gaia Titan", Visual = {Archetype = "Titan", Color = Color3.fromRGB(91, 78, 58), Accent = Color3.fromRGB(137, 203, 112), Scale = 1.75, Feature = "crown"}})
+addPet("Kraken", "Ancient", 1350, 225, 160, 1000, {SpawnMode = "WorldBoss", AnimationSpecies = "Leviathan", WorldBoss = "Kraken", VendorSellable = false, Tradeable = true, Visual = {Archetype = "Kraken", Color = Color3.fromRGB(46, 78, 98), Accent = Color3.fromRGB(89, 204, 226), Scale = 1.60, Feature = "crown"}})
+addPet("Jörmungandr", "Ancient", 1450, 235, 170, 1050, {SpawnMode = "WorldBoss", AnimationSpecies = "Leviathan", WorldBoss = "Jörmungandr", VendorSellable = false, Tradeable = true, Visual = {Archetype = "Serpent", Color = Color3.fromRGB(55, 84, 68), Accent = Color3.fromRGB(172, 216, 115), Scale = 1.70, Feature = "crown"}})
+addPet("Fenrir", "Ancient", 1300, 240, 150, 1025, {SpawnMode = "WorldBoss", AnimationSpecies = "Wolf", WorldBoss = "Fenrir", VendorSellable = false, Tradeable = true, Visual = {Archetype = "Quadruped", Color = Color3.fromRGB(75, 82, 95), Accent = Color3.fromRGB(175, 204, 255), Scale = 1.55, Feature = "mane"}})
+addPet("Gaia Titan", "Ancient", 1500, 210, 180, 1100, {SpawnMode = "WorldBoss", AnimationSpecies = "AncientTitan", WorldBoss = "Gaia Titan", VendorSellable = false, Tradeable = true, Visual = {Archetype = "Titan", Color = Color3.fromRGB(91, 78, 58), Accent = Color3.fromRGB(137, 203, 112), Scale = 1.75, Feature = "crown"}})
 
 -- Preserve already-owned retired species without allowing them back into normal wild spawning.
 addPet("Dragon", "Legendary", 500, 100, 70, 300, {SpawnMode = "Legacy", AnimationSpecies = "Dragon", TemplateSpecies = "Dragon", Legacy = true})
