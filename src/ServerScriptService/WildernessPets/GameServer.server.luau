@@ -33,12 +33,14 @@ local BossTravelService = require(script.Parent.Services.BossTravelService)
 local LootService = require(script.Parent.Services.LootService)
 local LootTraderService = require(script.Parent.Services.LootTraderService)
 local WorldBossRewardService = require(script.Parent.Services.WorldBossRewardService)
+local TradeService = require(script.Parent.Services.TradeService)
 local TestCommandService = require(script.Parent.Services.TestCommandService)
 MonsterService:Init()
 MountService:Init()
 LootService:Init()
 LootTraderService:Init()
 WorldBossRewardService:Init()
+TradeService:Init()
 QuestService:Init()
 BossTravelService:Init()
 BeastTraderService:Init()
@@ -110,6 +112,7 @@ Players.PlayerRemoving:Connect(function(player)
     PetAbilityService:PlayerRemoving(player)
     BossCombatService:PlayerRemoving(player)
     WorldBossRewardService:PlayerRemoving(player)
+    TradeService:PlayerRemoving(player)
     BossTravelService:PlayerRemoving(player)
     QuestService:PlayerRemoving(player)
     PlotService:Release(player)
@@ -225,6 +228,14 @@ PetsRemote.OnServerEvent:Connect(function(player, action, ...)
 
     elseif action == "UnequipMount" then
         local success, message = MountService:Unequip(player)
+        PetsRemote:FireClient(player, "MountUpdated", success, message)
+
+    elseif action == "FavouriteMount" then
+        local success, message = MountService:SetFavourite(
+            player,
+            tostring(args[1] or ""),
+            args[2] == true
+        )
         PetsRemote:FireClient(player, "MountUpdated", success, message)
 
     elseif action == "ClaimCollectionReward" then
