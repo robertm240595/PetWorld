@@ -607,6 +607,18 @@ local PetAnimator = require(script.Parent.Systems.PetAnimator)
 combatSessions = setmetatable({}, {__mode="k"})
 local rewardGuard = setmetatable({}, {__mode="k"})
 
+task.spawn(function()
+    while true do
+        local ok, err = pcall(function()
+            PetAbilityService:RefreshEquipmentAuras(combatSessions)
+        end)
+        if not ok then
+            warn("[WildernessPets] Equipment aura refresh: " .. tostring(err))
+        end
+        task.wait(0.4)
+    end
+end)
+
 local function combatWorld()
     return workspace:FindFirstChild("WildernessPets")
 end
@@ -831,6 +843,9 @@ unequipCompanion = function(player, silent)
             end
         end
         session.followToken = (session.followToken or 0) + 1
+        if session.pet then
+            PetAbilityService:ClearEquipmentAura(session.pet)
+        end
         destroyCompanion(session)
         if wasAttacking then
             ActionLockService:End(player, "CompanionCombat")
@@ -1195,6 +1210,7 @@ local function attackTarget(player)
                             and not PetAbilityService:PetAttackMisses(session.pet) then
                             local damage = petBaseDamage(session.pet)
                             PetAbilityService:DamageEnemy(player, session.pet, target, damage)
+                            syncCompanionLabel(companion, session.pet)
                         end
                     end, .9)
                     session.basicAttackBusy = false
