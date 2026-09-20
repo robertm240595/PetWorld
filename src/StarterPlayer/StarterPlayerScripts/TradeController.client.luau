@@ -537,14 +537,16 @@ Unequip/unfavourite creatures or equipment, or collect tradeable materials.",
             empty.TextColor3 = Color3.fromRGB(149, 156, 166)
         else
             for _, asset in ipairs(offer or {}) do
+                local isEquipment = asset.Kind == "Equipment"
                 local row = makeText(
                     list,
                     "• " .. assetDescription(asset),
                     UDim2.new(),
-                    UDim2.fromOffset(376, 24),
-                    10
+                    UDim2.fromOffset(376, isEquipment and 46 or 24),
+                    isEquipment and 8 or 10
                 )
                 row.TextColor3 = Color3.fromRGB(211, 216, 222)
+                row.TextWrapped = true
             end
         end
     end
@@ -552,15 +554,43 @@ Unequip/unfavourite creatures or equipment, or collect tradeable materials.",
     offerBox("YOUR OFFER", update.YourOffer, 82, update.YourConfirmed)
     offerBox(tostring(update.PartnerName or currentPartnerName) .. "'S OFFER", update.PartnerOffer, 292, update.PartnerConfirmed)
 
+    local highValue = false
+    for _, offer in ipairs({update.YourOffer or {}, update.PartnerOffer or {}}) do
+        for _, asset in ipairs(offer) do
+            if asset.BossUnique == true
+                or asset.Rarity == "Ancient"
+                or asset.Type == "BossPetToken"
+                or asset.Type == "BossMountToken" then
+                highValue = true
+                break
+            end
+        end
+        if highValue then break end
+    end
+
+    if highValue then
+        local warning = makeText(
+            panel,
+            "⚠ HIGH-VALUE TRADE: Ancient relic / boss equipment detected. Check every rolled stat before confirming.",
+            UDim2.fromOffset(470, 506),
+            UDim2.fromOffset(412, 26),
+            9
+        )
+        warning.TextColor3 = Color3.fromRGB(246, 193, 105)
+        warning.TextXAlignment = Enum.TextXAlignment.Center
+    end
+
     local confirm = makeButton(
         panel,
-        update.YourConfirmed and "CONFIRMED — WAITING" or "CONFIRM FINAL TRADE",
+        update.YourConfirmed
+            and "CONFIRMED — WAITING"
+            or (highValue and "CONFIRM HIGH-VALUE TRADE" or "CONFIRM FINAL TRADE"),
         UDim2.fromOffset(590, 535),
         UDim2.fromOffset(292, 40)
     )
     confirm.BackgroundColor3 = update.YourConfirmed
         and Color3.fromRGB(55, 75, 61)
-        or Color3.fromRGB(73, 104, 76)
+        or (highValue and Color3.fromRGB(112, 76, 43) or Color3.fromRGB(73, 104, 76))
     confirm.Active = not update.YourConfirmed
     confirm.Activated:Connect(function()
         confirm.Active = false
