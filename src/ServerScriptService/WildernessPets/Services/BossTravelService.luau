@@ -1411,6 +1411,17 @@ function Service:Init()
     world = workspace:WaitForChild("WildernessPets")
     wildMonsters = world:WaitForChild("WildMonsters")
 
+    -- Rojo/Studio can restart this service without recreating Workspace.
+    -- Remove only boss models owned by this travel service so hot reloads do
+    -- not leave duplicate distant encounters behind.
+    for _, model in ipairs(wildMonsters:GetChildren()) do
+        local bossId = model:GetAttribute("BossId")
+        if model:GetAttribute("BossAIManaged") == true
+            and (bossId == "Jormungdyrr" or bossId == "HollowfangWyrm") then
+            model:Destroy()
+        end
+    end
+
     local old = world:FindFirstChild("BossTravelWorld")
     if old then old:Destroy() end
 
