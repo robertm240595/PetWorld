@@ -15,6 +15,13 @@ local function ensurePetDefaults(pet)
     if type(pet) ~= "table" then return pet end
 
     pet.Favourite = pet.Favourite == true
+
+    local template = Config.Pets[pet.Species]
+    pet.Tradeable = pet.Tradeable ~= false
+        and (not template or template.Tradeable ~= false)
+    pet.VendorSellable = pet.VendorSellable ~= false
+        and (not template or template.VendorSellable ~= false)
+
     pet.Dead = pet.Dead == true
     pet.HealReadyAt = tonumber(pet.HealReadyAt) or 0
     pet.RenameCount = math.max(0, tonumber(pet.RenameCount) or 0)
@@ -172,6 +179,8 @@ function Service:Create(player, species, options)
         Wins = 0,
         Displayed = false,
         Favourite = false,
+        Tradeable = template.Tradeable ~= false,
+        VendorSellable = template.VendorSellable ~= false,
         Dead = false,
         HealReadyAt = 0,
         RenameCount = 0,
