@@ -126,7 +126,7 @@ local function buildSmith()
         Vector3.new(2.15, 2.6, .28),
         CFrame.new(base + Vector3.new(0, 3.1, -.82)),
         Color3.fromRGB(61, 47, 38),
-        Enum.Material.Leather
+        Enum.Material.Fabric
     )
     apron.CanCollide = false
 
