@@ -15,6 +15,7 @@ local PetModelFactory = require(script.Parent.Systems.PetModelFactory)
 local DataService = require(script.Parent.Services.PlayerDataService)
 local PetService = require(script.Parent.Services.PetService)
 local PetAbilityService = require(script.Parent.Services.PetAbilityService)
+local BossCombatService = require(script.Parent.Services.BossCombatService)
 local MountService = require(script.Parent.Services.MountService)
 local PlotService = require(script.Parent.Services.PlotService)
 local ShopService = require(script.Parent.Services.ShopService)
@@ -107,6 +108,7 @@ Players.PlayerRemoving:Connect(function(player)
     MountService:PlayerRemoving(player)
     LootService:PlayerRemoving(player)
     PetAbilityService:PlayerRemoving(player)
+    BossCombatService:PlayerRemoving(player)
     WorldBossRewardService:PlayerRemoving(player)
     BossTravelService:PlayerRemoving(player)
     QuestService:PlayerRemoving(player)
@@ -931,8 +933,16 @@ local function rewardCombatKill(player, session, target)
     rewardGuard[target] = true
 
     if target:GetAttribute("WorldBoss") == true then
+        target:SetAttribute("Dead", true)
         WorldBossRewardService:ResolveBossDeath(target)
         combatTell(player, "Reward", 0, "World Boss")
+
+        local respawnSeconds = math.max(30, tonumber(target:GetAttribute("RespawnSeconds")) or 180)
+        task.delay(respawnSeconds + 1, function()
+            if target.Parent and target:GetAttribute("Dead") ~= true then
+                rewardGuard[target] = nil
+            end
+        end)
         return
     end
 
