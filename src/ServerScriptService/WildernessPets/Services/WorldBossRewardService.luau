@@ -10,6 +10,7 @@ local PetService = require(script.Parent.PetService)
 local MountService = require(script.Parent.MountService)
 local QuestService = require(script.Parent.QuestService)
 local ShopService = require(script.Parent.ShopService)
+local WildforgeService = require(script.Parent.WildforgeService)
 
 local Service = {}
 local started = false
@@ -66,6 +67,7 @@ local function payload(record)
         PetItemName = record.PetReward and tokenName(record.PetReward, "Pet") or nil,
         MountReward = record.MountReward,
         MountItemName = record.MountReward and tokenName(record.MountReward, "Mount") or nil,
+        EquipmentReward = record.EquipmentReward,
         Materials = record.Materials or {},
     }
 end
@@ -279,6 +281,7 @@ function Service:ResolveBossDeath(boss)
 
             local petReward
             local mountReward
+            local equipmentReward
 
             if chance(settings.AncientPetChance) then
                 local mapped = settings.BossPetMap and settings.BossPetMap[bossSpecies]
@@ -302,6 +305,10 @@ function Service:ResolveBossDeath(boss)
                 end
             end
 
+            if chance(settings.BossEquipmentChance or 0.01) then
+                equipmentReward = WildforgeService:CreateBossUnique(bossSpecies)
+            end
+
             local materials = rollMaterials(bossSpecies, settings)
             local origin = part and part.Position or Vector3.new()
             local angle = (angleIndex - 1) * 1.35
@@ -317,6 +324,7 @@ function Service:ResolveBossDeath(boss)
                 BossSpecies = bossSpecies,
                 PetReward = petReward,
                 MountReward = mountReward,
+                EquipmentReward = equipmentReward,
                 Materials = materials,
                 Model = model,
             }
@@ -422,10 +430,45 @@ function Service:Collect(player, pouchId)
     end
 
     local entries = rewardInventoryEntries(record)
+
+    if record.EquipmentReward and not WildforgeService:CanAddEquipment(player) then
+        BossLootRemote:FireClient(
+            player,
+            "CollectResult",
+            false,
+            "Your equipment storage is full. Free a slot before collecting this pouch."
+        )
+        return
+    end
+
     local success, message = ShopService:AddInventoryBatch(player, entries)
     if not success then
         BossLootRemote:FireClient(player, "CollectResult", false, message)
         return
+    end
+
+    if record.EquipmentReward then
+        local equipmentAdded, equipmentMessage = WildforgeService:AddEquipment(
+            player,
+            record.EquipmentReward
+        )
+        if not equipmentAdded then
+            for _, entry in ipairs(entries) do
+                ShopService:ConsumeInventoryItem(
+                    player,
+                    entry.Type,
+                    entry.Name,
+                    entry.Quantity
+                )
+            end
+            BossLootRemote:FireClient(
+                player,
+                "CollectResult",
+                false,
+                equipmentMessage or "The world-boss equipment could not be stored."
+            )
+            return
+        end
     end
 
     local result = payload(record)
