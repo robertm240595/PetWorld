@@ -1896,6 +1896,12 @@ function Service:TalkToNPC(player, npcId)
             elseif chain.Special == "Hollowfang" and stage.Id == "ReportRowan" then
                 body = "Mira is safe? Good. Tell me everything she saw inside Hollowfang."
                 buttonText = "REPORT MIRA'S FINDINGS"
+            elseif chain.Id == "HollowfangWyrm" and stage.Id == "Report" then
+                body = "You're back from the deepest chamber. Tell me what happened — and tell me about those wounds you found on the Wyrm."
+                buttonText = "REPORT THE WYRM'S WOUNDS"
+            elseif chain.Id == "WorldBossTrail" and stage.Id == "ReportVictory" then
+                body = "You made it back from behind the falls. The northeast watch felt the ground shake from here. Tell me exactly what you and the other handlers faced."
+                buttonText = "REPORT JORMUNGDYRR"
             else
                 body = "You've finished this part of the job. Give me your report and we'll close it properly."
                 buttonText = "REPORT BACK"
