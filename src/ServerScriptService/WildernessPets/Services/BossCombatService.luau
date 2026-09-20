@@ -149,6 +149,18 @@ local function clearTelegraph(boss)
     end
 end
 
+local function statusRemaining(boss, statusType)
+    return math.max(
+        0,
+        (tonumber(boss:GetAttribute("Status_" .. statusType .. "_Until")) or 0) - serverNow()
+    )
+end
+
+local function statusValue(boss, statusType)
+    if statusRemaining(boss, statusType) <= 0 then return 0 end
+    return math.max(0, tonumber(boss:GetAttribute("Status_" .. statusType .. "_Value")) or 0)
+end
+
 local function bossPowerMultiplier(boss)
     local multiplier = math.max(0.1, tonumber(boss:GetAttribute("BossPowerMultiplier")) or 1)
     if boss:GetAttribute("BossEnraged") == true then
@@ -157,8 +169,23 @@ local function bossPowerMultiplier(boss)
     return multiplier
 end
 
+local function bossAttackIntervalMultiplier(boss)
+    local slow = math.clamp(statusValue(boss, "AttackSlow"), 0, 0.75)
+    return 1 / math.max(0.25, 1 - slow)
+end
+
+local function bossAttackMisses(boss)
+    local blind = math.clamp(statusValue(boss, "Blind"), 0, 0.95)
+    return blind > 0 and rng:NextNumber() < blind
+end
+
 local function damageCompanion(record, boss, scale, attackName, effects)
     if not record or type(callbacks.DamageCompanion) ~= "function" then return false end
+
+    if bossAttackMisses(boss) then
+        boss:SetAttribute("BossLastMissAt", serverNow())
+        return false
+    end
 
     local adjustedScale = math.max(0, tonumber(scale) or 1) * bossPowerMultiplier(boss)
     local ok, result = pcall(
@@ -489,11 +516,22 @@ local function runBoss(boss)
             updateSoloWard(boss, active)
             updateEnrage(boss)
 
+            if statusRemaining(boss, "Stun") > 0 then
+                boss:SetAttribute("BossPhase", "STUNNED")
+                task.wait(0.12)
+                continue
+            elseif boss:GetAttribute("BossEnraged") == true then
+                boss:SetAttribute("BossPhase", "ENRAGED")
+            else
+                boss:SetAttribute("BossPhase", "HUNTING")
+            end
+
             local current = clockNow()
             local enraged = boss:GetAttribute("BossEnraged") == true
+            local intervalMultiplier = bossAttackIntervalMultiplier(boss)
 
             if current >= (nextSpecialAt[boss] or 0) then
-                nextSpecialAt[boss] = current + (enraged and 6.5 or 8.5)
+                nextSpecialAt[boss] = current + (enraged and 6.5 or 8.5) * intervalMultiplier
 
                 if boss:GetAttribute("BossId") == "Jormungdyrr" then
                     worldBossSpecial(boss, active)
@@ -504,7 +542,7 @@ local function runBoss(boss)
                 nextBasicAt[boss] = clockNow() + 1.2
 
             elseif current >= (nextBasicAt[boss] or 0) then
-                nextBasicAt[boss] = current + (enraged and 1.6 or 2.25)
+                nextBasicAt[boss] = current + (enraged and 1.6 or 2.25) * intervalMultiplier
                 basicAttack(boss, active)
             end
 
