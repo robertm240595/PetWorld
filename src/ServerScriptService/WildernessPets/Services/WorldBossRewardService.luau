@@ -8,6 +8,7 @@ local Config = require(Root.Shared.Config)
 local DataService = require(script.Parent.PlayerDataService)
 local PetService = require(script.Parent.PetService)
 local MountService = require(script.Parent.MountService)
+local QuestService = require(script.Parent.QuestService)
 
 local Service = {}
 local started = false
@@ -205,6 +206,16 @@ function Service:ResolveBossDeath(boss)
             and math.max(0, tonumber(record.Support) or 0)
             or 0
         local share = (dealt + support) / maximum
+
+        if player.Parent and share >= 0.01 then
+            QuestService:OnPlayerAction(player, "DefeatJormungdyrr", {
+                Target = boss,
+                BossId = boss:GetAttribute("BossId"),
+                Species = bossSpecies,
+                Damage = dealt,
+                Support = support,
+            })
+        end
 
         if player.Parent and share >= threshold then
             angleIndex += 1
