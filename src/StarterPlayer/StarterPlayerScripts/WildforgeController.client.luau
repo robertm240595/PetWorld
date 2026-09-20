@@ -31,6 +31,7 @@ local selectedInvestment = 1
 local selectedPetId = ""
 local selectedWorldBoss = "Jörmungandr"
 local activeForge
+local currentForgeInputAction
 local forgeScores = {}
 local forgeInput = {
     Heat = false,
@@ -1108,6 +1109,7 @@ local function showForge(session)
         end
     end
 
+    currentForgeInputAction = sendInput
     strike.Activated:Connect(sendInput)
 
     local connection
@@ -1185,6 +1187,7 @@ end
 
 local function showResult(item)
     activeForge = nil
+    currentForgeInputAction = nil
     closeForge()
     closeResult()
 
@@ -1272,11 +1275,8 @@ end
 
 UserInputService.InputBegan:Connect(function(input, processed)
     if processed or not activeForge then return end
-    if input.KeyCode == Enum.KeyCode.Space then
-        local buttonObject = forgePanel and forgePanel:FindFirstChild("StrikeButton")
-        if buttonObject and buttonObject.Active then
-            buttonObject:Activate()
-        end
+    if input.KeyCode == Enum.KeyCode.Space and currentForgeInputAction then
+        currentForgeInputAction()
     end
 end)
 
