@@ -693,6 +693,33 @@ function Service:RefreshEquipmentAuras(allSessions)
             targetCompanion:SetAttribute("EquipmentAuraDefence", best.Defence)
             targetCompanion:SetAttribute("EquipmentAuraHealth", best.Health)
             targetCompanion:SetAttribute("EquipmentAuraAttackHaste", best.AttackHaste)
+
+            local replicatedAuras = {
+                ForgePowerAura = best.Power,
+                ForgeDefenceAura = best.Defence,
+                ForgeHealthAura = best.Health,
+                ForgeHasteAura = best.AttackHaste,
+            }
+            for statusName, value in pairs(replicatedAuras) do
+                if value > 0 then
+                    targetCompanion:SetAttribute(
+                        "PetStatus_" .. statusName .. "_Until",
+                        workspace:GetServerTimeNow() + 0.8
+                    )
+                    targetCompanion:SetAttribute(
+                        "PetStatus_" .. statusName .. "_Value",
+                        value
+                    )
+                    targetCompanion:SetAttribute(
+                        "PetStatus_" .. statusName .. "_Source",
+                        "Wildforge Aura"
+                    )
+                else
+                    targetCompanion:SetAttribute("PetStatus_" .. statusName .. "_Until", nil)
+                    targetCompanion:SetAttribute("PetStatus_" .. statusName .. "_Value", nil)
+                    targetCompanion:SetAttribute("PetStatus_" .. statusName .. "_Source", nil)
+                end
+            end
         end
     end
 
