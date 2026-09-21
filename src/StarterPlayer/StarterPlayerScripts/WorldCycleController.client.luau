@@ -101,12 +101,13 @@ bar.BackgroundColor3=palette.bg bar.BorderSizePixel=0 bar.Parent=hud round(bar,1
 local layout=Instance.new("UIListLayout") layout.FillDirection=Enum.FillDirection.Horizontal
 layout.Padding=UDim.new(0,7) layout.HorizontalAlignment=Enum.HorizontalAlignment.Center layout.VerticalAlignment=Enum.VerticalAlignment.Center layout.SortOrder=Enum.SortOrder.LayoutOrder layout.Parent=bar
 local scale=Instance.new("UIScale") scale.Parent=bar
-local notice=label(hud,"Notice","",UDim2.new(.5,-250,1,-142),UDim2.fromOffset(500,40),15)
+local notice=label(hud,"Notice","",UDim2.new(.5,-250,0,72),UDim2.fromOffset(500,40),15)
 notice.TextWrapped=true
+notice.Visible=false
 local noticeToken=0
 local function message(value)
- noticeToken+=1 local token=noticeToken notice.Text=tostring(value or "")
- task.delay(4,function() if token==noticeToken then notice.Text="" end end)
+ noticeToken+=1 local token=noticeToken notice.Text=tostring(value or "") notice.Visible=true
+ task.delay(4,function() if token==noticeToken then notice.Text="" notice.Visible=false end end)
 end
 local homeButton=Instance.new("TextButton")
 homeButton.Name="HomeButton"

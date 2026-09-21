@@ -2,6 +2,8 @@ local HttpService = game:GetService("HttpService")
 local TextService = game:GetService("TextService")
 local RunService = game:GetService("RunService")
 local Config = require(game.ReplicatedStorage.WildernessPets.Shared.Config)
+local MasteryConfig = require(game.ReplicatedStorage.WildernessPets.Shared.MasteryConfig)
+local VillageConfig = require(game.ReplicatedStorage.WildernessPets.Shared.VillageConfig)
 local DataService = require(script.Parent.PlayerDataService)
 
 local Service = {}
@@ -28,6 +30,8 @@ local function ensurePetDefaults(pet)
     pet.Imprint = math.clamp(math.floor(tonumber(pet.Imprint) or 20), 20, 100)
     pet.Level = math.max(1, math.floor(tonumber(pet.Level) or 1))
     pet.XP = math.max(0, math.floor(tonumber(pet.XP) or 0))
+    pet.SelectedAura = tostring(pet.SelectedAura or "None")
+    if not MasteryConfig.IsUnlocked(pet.Level, pet.SelectedAura) then pet.SelectedAura = "None" end
     pet.Health = math.max(1, math.floor(tonumber(pet.Health) or 1))
     pet.Power = math.max(1, math.floor(tonumber(pet.Power) or 1))
     pet.Defence = math.max(0, math.floor(tonumber(pet.Defence) or 0))
@@ -170,6 +174,7 @@ function Service:Create(player, species, options)
         AcquiredFrom = options.AcquiredFrom or "Capture",
         Level = 1,
         XP = 0,
+        SelectedAura = "None",
         Imprint = imprint,
         Health = health,
         CurrentHealth = health,
@@ -228,10 +233,17 @@ function Service:IsHealingReady(pet)
         and pet.HealReadyAt <= nowUnix()
 end
 
-function Service:GetHealingSeconds(pet)
+function Service:GetHealingSeconds(player, pet)
     if not pet then return 0 end
     local rarity = Config.Rarities[pet.Rarity]
     local rank = rarity and tonumber(rarity.Rank) or 1
+    local speed = 1
+    local data = player and DataService:Get(player)
+    if data and type(data.VillageUpgrades) == "table" then
+        local level = math.floor(tonumber(data.VillageUpgrades.HealingBarn) or 1)
+        local upgrade = VillageConfig.GetHealing(level)
+        speed = math.max(1, tonumber(upgrade and upgrade.Speed) or 1)
+    end
 
     return math.max(
         1,
@@ -239,6 +251,7 @@ function Service:GetHealingSeconds(pet)
             (Config.HealingBaseSeconds or 30)
             * math.max(1, pet.Level or 1)
             * math.max(1, rank)
+            / speed
         )
     )
 end
@@ -259,7 +272,7 @@ function Service:StartHealing(player, petId, overrideSeconds)
     if overrideSeconds ~= nil then
         seconds = math.max(0, math.floor(tonumber(overrideSeconds) or 0))
     else
-        seconds = self:GetHealingSeconds(pet)
+        seconds = self:GetHealingSeconds(player, pet)
     end
 
     pet.HealReadyAt = nowUnix() + seconds
@@ -330,7 +343,7 @@ function Service:SetFavourite(player, petId, favourite)
     return true, pet.Favourite and "Pet favourited." or "Pet removed from favourites."
 end
 
-function Service:AddXP(player, petId, amount)
+function Service:AddXP(player, petId, amount, ignoreBoost)
     local pet = self:Find(player, petId)
     local data = DataService:Get(player)
     if not pet or not data or pet.Dead then return false end
@@ -338,7 +351,7 @@ function Service:AddXP(player, petId, amount)
     amount = math.max(0, math.floor(tonumber(amount) or 0))
 
     local effects = type(data.ActiveEffects) == "table" and data.ActiveEffects or {}
-    if (tonumber(effects.XPBoostUntil) or 0) > nowUnix() then
+    if ignoreBoost ~= true and (tonumber(effects.XPBoostUntil) or 0) > nowUnix() then
         amount = math.floor(
             amount
             * (1 + math.max(0, tonumber(effects.XPBoostPercent) or 0))
@@ -359,6 +372,23 @@ function Service:AddXP(player, petId, amount)
     return true, leveled, amount
 end
 
+function Service:GetUnlockedAuras(player, petId)
+    local pet = self:Find(player, petId)
+    if not pet then return {} end
+    return MasteryConfig.GetUnlocked(pet.Level)
+end
+
+function Service:SetAura(player, petId, auraId)
+    local pet = self:Find(player, petId)
+    if not pet then return false, "Pet not found." end
+    auraId = tostring(auraId or "None")
+    if not MasteryConfig.ById[auraId] then return false, "Unknown aura." end
+    if not MasteryConfig.IsUnlocked(pet.Level, auraId) then
+        return false, "That aura unlocks at a higher pet level."
+    end
+    pet.SelectedAura = auraId
+    return true, auraId == "None" and "Aura hidden." or (MasteryConfig.ById[auraId].Name .. " aura equipped.")
+end
 function Service:SetDisplayed(player, petId, displayed)
     local pet = self:Find(player, petId)
     if not pet then return false, "Pet not found." end

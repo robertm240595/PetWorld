@@ -89,10 +89,48 @@ local function buildTrader()
     local ground = terrainPoint(xz.X, xz.Y, settings.CaveFallbackY)
     local base = ground + Vector3.new(0, .1, 0)
 
-    local model = Instance.new("Model")
-    model.Name = "MaterialTraderNPC"
+    local model, root, torso
+    local storageRoot = game:GetService("ServerStorage"):FindFirstChild("WildernessPets")
+    local templates = storageRoot and storageRoot:FindFirstChild("NPCs")
+    local template = templates and templates:FindFirstChild("MaterialTrader")
 
-    local root = makePart(
+    if template and template:IsA("Model") then
+        model = template:Clone()
+        model.Name = "MaterialTraderNPC"
+        for _, item in ipairs(model:GetDescendants()) do
+            if item:IsA("PackageLink") then
+                item:Destroy()
+            elseif item:IsA("BasePart") then
+                item.Anchored = true
+                item.CanCollide = false
+                item.CanTouch = false
+                item.CanQuery = true
+            end
+        end
+
+        local body = model:FindFirstChild("body_geom", true)
+            or model:FindFirstChild("Torso", true)
+            or model:FindFirstChildWhichIsA("BasePart", true)
+        if body and body:IsA("BasePart") then
+            root = body
+            torso = body
+            model.PrimaryPart = body
+            local pivot = model:GetPivot()
+            local boundsCF, boundsSize = model:GetBoundingBox()
+            local pivotToBounds = pivot:ToObjectSpace(boundsCF)
+            local desiredBounds = CFrame.new(base + Vector3.new(0, boundsSize.Y * 0.5, 0))
+            model:PivotTo(desiredBounds * pivotToBounds:Inverse())
+        else
+            model:Destroy()
+            model = nil
+        end
+    end
+
+    if not model then
+        model = Instance.new("Model")
+        model.Name = "MaterialTraderNPC"
+
+        root = makePart(
         model,
         "HumanoidRootPart",
         Vector3.new(2, 2, 1),
@@ -103,7 +141,7 @@ local function buildTrader()
     root.Transparency = 1
     root.CanCollide = false
 
-    local torso = makePart(
+        torso = makePart(
         model,
         "Torso",
         Vector3.new(2.5, 3, 1.3),
@@ -154,6 +192,7 @@ local function buildTrader()
             Enum.Material.Fabric
         )
         leg.CanCollide = false
+    end
     end
 
     local stall = Instance.new("Model")

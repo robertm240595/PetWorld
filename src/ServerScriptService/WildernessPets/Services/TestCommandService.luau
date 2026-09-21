@@ -11,6 +11,7 @@ local ShopService = require(script.Parent.ShopService)
 local PetService = require(script.Parent.PetService)
 local MountService = require(script.Parent.MountService)
 local QuestService = require(script.Parent.QuestService)
+local VillageUpgradeService = require(script.Parent.VillageUpgradeService)
 
 local Service = {}
 local bound = setmetatable({}, {__mode = "k"})
@@ -237,8 +238,48 @@ local function setBag(player, raw)
     return true, message
 end
 
+local function addPetXP(player, raw)
+    local amount = math.max(1, math.floor(tonumber(trim(raw)) or 0))
+    if amount <= 0 then return false, "Usage: ;petxp <positive amount>" end
+    amount = math.min(amount, 10000000)
+
+    local data = DataService:Get(player)
+    if not data or type(data.Pets) ~= "table" or #data.Pets == 0 then
+        return false, "Give yourself a pet first."
+    end
+
+    local petId = type(data.EquippedPetId) == "string" and data.EquippedPetId or ""
+    if petId == "" then petId = tostring(data.Pets[1].Id or "") end
+    local pet = PetService:Find(player, petId)
+    if not pet then return false, "Could not find a test pet." end
+
+    local ok = PetService:AddXP(player, petId, amount, true)
+    if not ok then return false, "Could not add pet XP." end
+    return true, "+" .. tostring(amount) .. " XP to " .. tostring(pet.Name or pet.Species) .. " · Lv." .. tostring(pet.Level) .. "."
+end
+local function killTestPet(player)
+    local data = DataService:Get(player)
+    if not data or type(data.Pets) ~= "table" or #data.Pets == 0 then
+        return false, "Give yourself a pet first."
+    end
+    local petId = type(data.EquippedPetId) == "string" and data.EquippedPetId or ""
+    if petId == "" then petId = tostring(data.Pets[1].Id or "") end
+    local pet = PetService:Find(player, petId)
+    if not pet then return false, "Could not find a test pet." end
+    pet.Dead = true
+    pet.CurrentHealth = 0
+    pet.HealReadyAt = 0
+    return true, tostring(pet.Name or pet.Species) .. " marked defeated for Barn testing."
+end
+
+local function advanceTraining(player, raw)
+    local seconds = math.max(1, math.floor(tonumber(trim(raw)) or 900))
+    seconds = math.min(seconds, 86400)
+    return VillageUpgradeService:DebugAdvanceTraining(player, seconds)
+end
+
 local function helpText()
-    return ";speed 50 | ;speed reset | ;give Wolf Hide 5 | ;give XP Tonic 2 | ;give Hunter's Lasso | ;givepet Wolf 100 | ;givemount Trail Horse 100 | ;coins 5000 | ;gems 100 | ;bag Trail Pack"
+    return ";speed 50 | ;give Wolf Hide 5 | ;givepet Wolf 100 | ;petxp 5000 | ;killpet | ;traintick 900 | ;givemount Trail Horse 100 | ;coins 5000 | ;gems 100 | ;bag Trail Pack"
 end
 
 function Service:Handle(player, message)
@@ -266,6 +307,12 @@ function Service:Handle(player, message)
         ok, response = givePet(player, rest)
     elseif command == "givemount" or command == "mount" then
         ok, response = giveMount(player, rest)
+    elseif command == "petxp" or command == "xp" then
+        ok, response = addPetXP(player, rest)
+    elseif command == "killpet" then
+        ok, response = killTestPet(player)
+    elseif command == "traintick" then
+        ok, response = advanceTraining(player, rest)
     elseif command == "coins" then
         ok, response = addCurrency(player, "coins", rest)
     elseif command == "gems" then

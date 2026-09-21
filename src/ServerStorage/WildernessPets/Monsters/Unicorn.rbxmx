@@ -1,0 +1,1975 @@
+<roblox xmlns:xmime="http://www.w3.org/2005/05/xmlmime" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://www.roblox.com/roblox.xsd" version="4">
+	<External>null</External>
+	<External>nil</External>
+	<Item class="Model" referent="RBX1240D0A7F695446DA81B277B97CAA297">
+		<Properties>
+			<bool name="DefinesCapabilities">false</bool>
+			<UniqueId name="HistoryId">79a064e0ee56b9450ac1859e00010485</UniqueId>
+			<token name="LevelOfDetail">0</token>
+			<CoordinateFrame name="ModelMeshCFrame">
+				<X>0</X>
+				<Y>0</Y>
+				<Z>0</Z>
+				<R00>1</R00>
+				<R01>0</R01>
+				<R02>0</R02>
+				<R10>0</R10>
+				<R11>1</R11>
+				<R12>0</R12>
+				<R20>0</R20>
+				<R21>0</R21>
+				<R22>1</R22>
+			</CoordinateFrame>
+			<SharedString name="ModelMeshData">DldRwCblQ7Loqy6wYJnaoQ==</SharedString>
+			<Vector3 name="ModelMeshSize">
+				<X>0</X>
+				<Y>0</Y>
+				<Z>0</Z>
+			</Vector3>
+			<token name="ModelStreamingMode">0</token>
+			<string name="Name">Unicorn</string>
+			<bool name="NeedsPivotMigration">false</bool>
+			<Ref name="PrimaryPart">RBXABF2F09BCC3546FF8ED003FFC91769BF</Ref>
+			<float name="ScaleFactor">1</float>
+			<SharedString name="SlimHash">DldRwCblQ7Loqy6wYJnaoQ==</SharedString>
+			<int64 name="SourceAssetId">-1</int64>
+			<SharedString name="Tags">HsEDFRIw1c+A/9VLVZ58Yg==</SharedString>
+			<UniqueId name="UniqueId">79a064e0ee56b9450ac1859e000104b2</UniqueId>
+			<OptionalCoordinateFrame name="WorldPivotData">
+				<CFrame>
+					<X>677.177002</X>
+					<Y>13.7065821</Y>
+					<Z>194.033554</Z>
+					<R00>-0.22277081</R00>
+					<R01>-0</R01>
+					<R02>-0.97487092</R02>
+					<R10>0</R10>
+					<R11>1.00000012</R11>
+					<R12>0</R12>
+					<R20>0.97487092</R20>
+					<R21>0</R21>
+					<R22>-0.22277081</R22>
+				</CFrame>
+			</OptionalCoordinateFrame>
+		</Properties>
+		<Item class="Model" referent="RBXA6B9BCBAF579492687880CC7DDAB2C9A">
+			<Properties>
+				<bool name="DefinesCapabilities">false</bool>
+				<UniqueId name="HistoryId">79a064e0ee56b9450ac1859e00010486</UniqueId>
+				<token name="LevelOfDetail">0</token>
+				<CoordinateFrame name="ModelMeshCFrame">
+					<X>0</X>
+					<Y>0</Y>
+					<Z>0</Z>
+					<R00>1</R00>
+					<R01>0</R01>
+					<R02>0</R02>
+					<R10>0</R10>
+					<R11>1</R11>
+					<R12>0</R12>
+					<R20>0</R20>
+					<R21>0</R21>
+					<R22>1</R22>
+				</CoordinateFrame>
+				<SharedString name="ModelMeshData">DldRwCblQ7Loqy6wYJnaoQ==</SharedString>
+				<Vector3 name="ModelMeshSize">
+					<X>0</X>
+					<Y>0</Y>
+					<Z>0</Z>
+				</Vector3>
+				<token name="ModelStreamingMode">0</token>
+				<string name="Name">tail</string>
+				<bool name="NeedsPivotMigration">false</bool>
+				<float name="ScaleFactor">1</float>
+				<SharedString name="SlimHash">DldRwCblQ7Loqy6wYJnaoQ==</SharedString>
+				<int64 name="SourceAssetId">-1</int64>
+				<SharedString name="Tags">DldRwCblQ7Loqy6wYJnaoQ==</SharedString>
+				<UniqueId name="UniqueId">79a064e0ee56b9450ac1859e000104b3</UniqueId>
+				<OptionalCoordinateFrame name="WorldPivotData">
+					<CFrame>
+						<X>677.177002</X>
+						<Y>13.7065821</Y>
+						<Z>194.033554</Z>
+						<R00>-0.22277081</R00>
+						<R01>-0</R01>
+						<R02>-0.97487092</R02>
+						<R10>0</R10>
+						<R11>1.00000012</R11>
+						<R12>0</R12>
+						<R20>0.97487092</R20>
+						<R21>0</R21>
+						<R22>-0.22277081</R22>
+					</CFrame>
+				</OptionalCoordinateFrame>
+			</Properties>
+			<Item class="MeshPart" referent="RBXC04FB4C4AFB447BB85B3A74471D85A16">
+				<Properties>
+					<SharedString name="AeroMeshData">DldRwCblQ7Loqy6wYJnaoQ==</SharedString>
+					<bool name="Anchored">true</bool>
+					<bool name="AudioCanCollide">true</bool>
+					<float name="BackParamA">-0.5</float>
+					<float name="BackParamB">0.5</float>
+					<token name="BackSurface">0</token>
+					<token name="BackSurfaceInput">0</token>
+					<float name="BottomParamA">-0.5</float>
+					<float name="BottomParamB">0.5</float>
+					<token name="BottomSurface">0</token>
+					<token name="BottomSurfaceInput">0</token>
+					<CoordinateFrame name="CFrame">
+						<X>676.95105</X>
+						<Y>13.1267176</Y>
+						<Z>195.143539</Z>
+						<R00>-0.22277081</R00>
+						<R01>-0</R01>
+						<R02>-0.97487092</R02>
+						<R10>0</R10>
+						<R11>1.00000012</R11>
+						<R12>0</R12>
+						<R20>0.97487092</R20>
+						<R21>0</R21>
+						<R22>-0.22277081</R22>
+					</CoordinateFrame>
+					<bool name="CanCollide">false</bool>
+					<bool name="CanQuery">false</bool>
+					<bool name="CanTouch">false</bool>
+					<bool name="CastShadow">true</bool>
+					<string name="CollisionGroup">Default</string>
+					<int name="CollisionGroupId">0</int>
+					<Color3uint8 name="Color3uint8">4288914085</Color3uint8>
+					<bool name="DefinesCapabilities">false</bool>
+					<bool name="DoubleSided">false</bool>
+					<bool name="EnableFluidForces">true</bool>
+					<token name="FluidFidelityInternal">0</token>
+					<float name="FrontParamA">-0.5</float>
+					<float name="FrontParamB">0.5</float>
+					<token name="FrontSurface">0</token>
+					<token name="FrontSurfaceInput">0</token>
+					<bool name="HasJointOffset">false</bool>
+					<bool name="HasSkinnedMesh">false</bool>
+					<UniqueId name="HistoryId">79a064e0ee56b9450ac1859e00010487</UniqueId>
+					<bool name="InertiaMigrated">false</bool>
+					<Vector3 name="InitialSize">
+						<X>0.945027351</X>
+						<Y>1.46325874</Y>
+						<Z>0.339583725</Z>
+					</Vector3>
+					<Vector3 name="JointOffset">
+						<X>0</X>
+						<Y>0</Y>
+						<Z>0</Z>
+					</Vector3>
+					<float name="LeftParamA">-0.5</float>
+					<float name="LeftParamB">0.5</float>
+					<token name="LeftSurface">0</token>
+					<token name="LeftSurfaceInput">0</token>
+					<bool name="Locked">false</bool>
+					<bool name="Massless">true</bool>
+					<token name="Material">256</token>
+					<string name="MaterialVariantSerialized"></string>
+					<Content name="MeshId"><url>rbxassetid://119143170214598</url></Content>
+					<string name="Name">tail_geom</string>
+					<SharedString name="PhysicalConfigData">ih9M4Zzg1i163P7xKtVKdA==</SharedString>
+					<string name="PhysicsData"></string>
+					<CoordinateFrame name="PivotOffset">
+						<X>0</X>
+						<Y>0</Y>
+						<Z>0</Z>
+						<R00>1</R00>
+						<R01>0</R01>
+						<R02>0</R02>
+						<R10>0</R10>
+						<R11>1</R11>
+						<R12>0</R12>
+						<R20>0</R20>
+						<R21>0</R21>
+						<R22>1</R22>
+					</CoordinateFrame>
+					<float name="Reflectance">0</float>
+					<token name="RenderFidelity">0</token>
+					<float name="RightParamA">-0.5</float>
+					<float name="RightParamB">0.5</float>
+					<token name="RightSurface">0</token>
+					<token name="RightSurfaceInput">0</token>
+					<int name="RootPriority">0</int>
+					<Vector3 name="RotVelocity">
+						<X>0</X>
+						<Y>0</Y>
+						<Z>0</Z>
+					</Vector3>
+					<int64 name="SourceAssetId">-1</int64>
+					<SharedString name="Tags">DldRwCblQ7Loqy6wYJnaoQ==</SharedString>
+					<Content name="TextureID"><url>rbxassetid://99250839207685</url></Content>
+					<float name="TopParamA">-0.5</float>
+					<float name="TopParamB">0.5</float>
+					<token name="TopSurface">0</token>
+					<token name="TopSurfaceInput">0</token>
+					<float name="Transparency">0</float>
+					<UniqueId name="UniqueId">79a064e0ee56b9450ac1859e000104b4</UniqueId>
+					<Vector3 name="UnscaledCofm">
+						<X>0.051624503</X>
+						<Y>0.082067959</Y>
+						<Z>0.000307059614</Z>
+					</Vector3>
+					<Vector3 name="UnscaledVolInertiaDiags">
+						<X>0.0296812356</X>
+						<Y>0.00726911146</Y>
+						<Z>0.0349857323</Z>
+					</Vector3>
+					<Vector3 name="UnscaledVolInertiaOffDiags">
+						<X>0.00890163612</X>
+						<Y>2.04024377e-006</Y>
+						<Z>-1.33360263e-005</Z>
+					</Vector3>
+					<float name="UnscaledVolume">0.157708183</float>
+					<Vector3 name="Velocity">
+						<X>0</X>
+						<Y>0</Y>
+						<Z>0</Z>
+					</Vector3>
+					<int name="VertexCount">0</int>
+					<Vector3 name="size">
+						<X>0.945027351</X>
+						<Y>1.46325874</Y>
+						<Z>0.339583725</Z>
+					</Vector3>
+				</Properties>
+			</Item>
+		</Item>
+		<Item class="Model" referent="RBX35D53B5868F6437486C8966507E1F062">
+			<Properties>
+				<bool name="DefinesCapabilities">false</bool>
+				<UniqueId name="HistoryId">79a064e0ee56b9450ac1859e00010488</UniqueId>
+				<token name="LevelOfDetail">0</token>
+				<CoordinateFrame name="ModelMeshCFrame">
+					<X>0</X>
+					<Y>0</Y>
+					<Z>0</Z>
+					<R00>1</R00>
+					<R01>0</R01>
+					<R02>0</R02>
+					<R10>0</R10>
+					<R11>1</R11>
+					<R12>0</R12>
+					<R20>0</R20>
+					<R21>0</R21>
+					<R22>1</R22>
+				</CoordinateFrame>
+				<SharedString name="ModelMeshData">DldRwCblQ7Loqy6wYJnaoQ==</SharedString>
+				<Vector3 name="ModelMeshSize">
+					<X>0</X>
+					<Y>0</Y>
+					<Z>0</Z>
+				</Vector3>
+				<token name="ModelStreamingMode">0</token>
+				<string name="Name">rear right leg</string>
+				<bool name="NeedsPivotMigration">false</bool>
+				<float name="ScaleFactor">1</float>
+				<SharedString name="SlimHash">DldRwCblQ7Loqy6wYJnaoQ==</SharedString>
+				<int64 name="SourceAssetId">-1</int64>
+				<SharedString name="Tags">DldRwCblQ7Loqy6wYJnaoQ==</SharedString>
+				<UniqueId name="UniqueId">79a064e0ee56b9450ac1859e000104b5</UniqueId>
+				<OptionalCoordinateFrame name="WorldPivotData">
+					<CFrame>
+						<X>677.177002</X>
+						<Y>13.7065821</Y>
+						<Z>194.033554</Z>
+						<R00>-0.22277081</R00>
+						<R01>-0</R01>
+						<R02>-0.97487092</R02>
+						<R10>0</R10>
+						<R11>1.00000012</R11>
+						<R12>0</R12>
+						<R20>0.97487092</R20>
+						<R21>0</R21>
+						<R22>-0.22277081</R22>
+					</CFrame>
+				</OptionalCoordinateFrame>
+			</Properties>
+			<Item class="MeshPart" referent="RBXC33F8334A0364FF0B0A15029C7375322">
+				<Properties>
+					<SharedString name="AeroMeshData">DldRwCblQ7Loqy6wYJnaoQ==</SharedString>
+					<bool name="Anchored">true</bool>
+					<bool name="AudioCanCollide">true</bool>
+					<float name="BackParamA">-0.5</float>
+					<float name="BackParamB">0.5</float>
+					<token name="BackSurface">0</token>
+					<token name="BackSurfaceInput">0</token>
+					<float name="BottomParamA">-0.5</float>
+					<float name="BottomParamB">0.5</float>
+					<token name="BottomSurface">0</token>
+					<token name="BottomSurfaceInput">0</token>
+					<CoordinateFrame name="CFrame">
+						<X>676.998291</X>
+						<Y>12.251955</Y>
+						<Z>192.983673</Z>
+						<R00>-0.22277081</R00>
+						<R01>-0</R01>
+						<R02>-0.97487092</R02>
+						<R10>0</R10>
+						<R11>1.00000012</R11>
+						<R12>0</R12>
+						<R20>0.97487092</R20>
+						<R21>0</R21>
+						<R22>-0.22277081</R22>
+					</CoordinateFrame>
+					<bool name="CanCollide">false</bool>
+					<bool name="CanQuery">false</bool>
+					<bool name="CanTouch">false</bool>
+					<bool name="CastShadow">true</bool>
+					<string name="CollisionGroup">Default</string>
+					<int name="CollisionGroupId">0</int>
+					<Color3uint8 name="Color3uint8">4288914085</Color3uint8>
+					<bool name="DefinesCapabilities">false</bool>
+					<bool name="DoubleSided">false</bool>
+					<bool name="EnableFluidForces">true</bool>
+					<token name="FluidFidelityInternal">0</token>
+					<float name="FrontParamA">-0.5</float>
+					<float name="FrontParamB">0.5</float>
+					<token name="FrontSurface">0</token>
+					<token name="FrontSurfaceInput">0</token>
+					<bool name="HasJointOffset">false</bool>
+					<bool name="HasSkinnedMesh">false</bool>
+					<UniqueId name="HistoryId">79a064e0ee56b9450ac1859e00010489</UniqueId>
+					<bool name="InertiaMigrated">false</bool>
+					<Vector3 name="InitialSize">
+						<X>0.721354365</X>
+						<Y>1.65731478</Y>
+						<Z>0.682900369</Z>
+					</Vector3>
+					<Vector3 name="JointOffset">
+						<X>0</X>
+						<Y>0</Y>
+						<Z>0</Z>
+					</Vector3>
+					<float name="LeftParamA">-0.5</float>
+					<float name="LeftParamB">0.5</float>
+					<token name="LeftSurface">0</token>
+					<token name="LeftSurfaceInput">0</token>
+					<bool name="Locked">false</bool>
+					<bool name="Massless">true</bool>
+					<token name="Material">256</token>
+					<string name="MaterialVariantSerialized"></string>
+					<Content name="MeshId"><url>rbxassetid://90947781052255</url></Content>
+					<string name="Name">rear right leg_geom</string>
+					<SharedString name="PhysicalConfigData">LaVLC+4irXLVj47jMxJf3Q==</SharedString>
+					<string name="PhysicsData"></string>
+					<CoordinateFrame name="PivotOffset">
+						<X>0</X>
+						<Y>0</Y>
+						<Z>0</Z>
+						<R00>1</R00>
+						<R01>0</R01>
+						<R02>0</R02>
+						<R10>0</R10>
+						<R11>1</R11>
+						<R12>0</R12>
+						<R20>0</R20>
+						<R21>0</R21>
+						<R22>1</R22>
+					</CoordinateFrame>
+					<float name="Reflectance">0</float>
+					<token name="RenderFidelity">0</token>
+					<float name="RightParamA">-0.5</float>
+					<float name="RightParamB">0.5</float>
+					<token name="RightSurface">0</token>
+					<token name="RightSurfaceInput">0</token>
+					<int name="RootPriority">0</int>
+					<Vector3 name="RotVelocity">
+						<X>0</X>
+						<Y>0</Y>
+						<Z>0</Z>
+					</Vector3>
+					<int64 name="SourceAssetId">-1</int64>
+					<SharedString name="Tags">DldRwCblQ7Loqy6wYJnaoQ==</SharedString>
+					<Content name="TextureID"><url>rbxassetid://95170447222248</url></Content>
+					<float name="TopParamA">-0.5</float>
+					<float name="TopParamB">0.5</float>
+					<token name="TopSurface">0</token>
+					<token name="TopSurfaceInput">0</token>
+					<float name="Transparency">0</float>
+					<UniqueId name="UniqueId">79a064e0ee56b9450ac1859e000104b6</UniqueId>
+					<Vector3 name="UnscaledCofm">
+						<X>-0.000392550777</X>
+						<Y>-0.000771951221</Y>
+						<Z>0.00212442572</Z>
+					</Vector3>
+					<Vector3 name="UnscaledVolInertiaDiags">
+						<X>0.153197125</X>
+						<Y>0.0340245254</Y>
+						<Z>0.150248215</Z>
+					</Vector3>
+					<Vector3 name="UnscaledVolInertiaOffDiags">
+						<X>-4.03911181e-005</X>
+						<Y>-0.000339303369</Y>
+						<Z>-0.000152521927</Z>
+					</Vector3>
+					<float name="UnscaledVolume">0.591144681</float>
+					<Vector3 name="Velocity">
+						<X>0</X>
+						<Y>0</Y>
+						<Z>0</Z>
+					</Vector3>
+					<int name="VertexCount">0</int>
+					<Vector3 name="size">
+						<X>0.721354365</X>
+						<Y>1.65731478</Y>
+						<Z>0.682900369</Z>
+					</Vector3>
+				</Properties>
+			</Item>
+		</Item>
+		<Item class="Model" referent="RBX6434F1D39FED417A960E909B7D5AE1C8">
+			<Properties>
+				<bool name="DefinesCapabilities">false</bool>
+				<UniqueId name="HistoryId">79a064e0ee56b9450ac1859e0001048a</UniqueId>
+				<token name="LevelOfDetail">0</token>
+				<CoordinateFrame name="ModelMeshCFrame">
+					<X>0</X>
+					<Y>0</Y>
+					<Z>0</Z>
+					<R00>1</R00>
+					<R01>0</R01>
+					<R02>0</R02>
+					<R10>0</R10>
+					<R11>1</R11>
+					<R12>0</R12>
+					<R20>0</R20>
+					<R21>0</R21>
+					<R22>1</R22>
+				</CoordinateFrame>
+				<SharedString name="ModelMeshData">DldRwCblQ7Loqy6wYJnaoQ==</SharedString>
+				<Vector3 name="ModelMeshSize">
+					<X>0</X>
+					<Y>0</Y>
+					<Z>0</Z>
+				</Vector3>
+				<token name="ModelStreamingMode">0</token>
+				<string name="Name">rear left leg</string>
+				<bool name="NeedsPivotMigration">false</bool>
+				<float name="ScaleFactor">1</float>
+				<SharedString name="SlimHash">DldRwCblQ7Loqy6wYJnaoQ==</SharedString>
+				<int64 name="SourceAssetId">-1</int64>
+				<SharedString name="Tags">DldRwCblQ7Loqy6wYJnaoQ==</SharedString>
+				<UniqueId name="UniqueId">79a064e0ee56b9450ac1859e000104b7</UniqueId>
+				<OptionalCoordinateFrame name="WorldPivotData">
+					<CFrame>
+						<X>677.177002</X>
+						<Y>13.7065821</Y>
+						<Z>194.033554</Z>
+						<R00>-0.22277081</R00>
+						<R01>-0</R01>
+						<R02>-0.97487092</R02>
+						<R10>0</R10>
+						<R11>1.00000012</R11>
+						<R12>0</R12>
+						<R20>0.97487092</R20>
+						<R21>0</R21>
+						<R22>-0.22277081</R22>
+					</CFrame>
+				</OptionalCoordinateFrame>
+			</Properties>
+			<Item class="MeshPart" referent="RBX53D8FD5389F4411D9DC6AF7F32B99293">
+				<Properties>
+					<SharedString name="AeroMeshData">DldRwCblQ7Loqy6wYJnaoQ==</SharedString>
+					<bool name="Anchored">true</bool>
+					<bool name="AudioCanCollide">true</bool>
+					<float name="BackParamA">-0.5</float>
+					<float name="BackParamB">0.5</float>
+					<token name="BackSurface">0</token>
+					<token name="BackSurfaceInput">0</token>
+					<float name="BottomParamA">-0.5</float>
+					<float name="BottomParamB">0.5</float>
+					<token name="BottomSurface">0</token>
+					<token name="BottomSurfaceInput">0</token>
+					<CoordinateFrame name="CFrame">
+						<X>677.849304</X>
+						<Y>12.2524424</Y>
+						<Z>193.176788</Z>
+						<R00>-0.22277081</R00>
+						<R01>-0</R01>
+						<R02>-0.97487092</R02>
+						<R10>0</R10>
+						<R11>1.00000012</R11>
+						<R12>0</R12>
+						<R20>0.97487092</R20>
+						<R21>0</R21>
+						<R22>-0.22277081</R22>
+					</CoordinateFrame>
+					<bool name="CanCollide">false</bool>
+					<bool name="CanQuery">false</bool>
+					<bool name="CanTouch">false</bool>
+					<bool name="CastShadow">true</bool>
+					<string name="CollisionGroup">Default</string>
+					<int name="CollisionGroupId">0</int>
+					<Color3uint8 name="Color3uint8">4288914085</Color3uint8>
+					<bool name="DefinesCapabilities">false</bool>
+					<bool name="DoubleSided">false</bool>
+					<bool name="EnableFluidForces">true</bool>
+					<token name="FluidFidelityInternal">0</token>
+					<float name="FrontParamA">-0.5</float>
+					<float name="FrontParamB">0.5</float>
+					<token name="FrontSurface">0</token>
+					<token name="FrontSurfaceInput">0</token>
+					<bool name="HasJointOffset">false</bool>
+					<bool name="HasSkinnedMesh">false</bool>
+					<UniqueId name="HistoryId">79a064e0ee56b9450ac1859e0001048b</UniqueId>
+					<bool name="InertiaMigrated">false</bool>
+					<Vector3 name="InitialSize">
+						<X>0.721387208</X>
+						<Y>1.65700054</Y>
+						<Z>0.698173761</Z>
+					</Vector3>
+					<Vector3 name="JointOffset">
+						<X>0</X>
+						<Y>0</Y>
+						<Z>0</Z>
+					</Vector3>
+					<float name="LeftParamA">-0.5</float>
+					<float name="LeftParamB">0.5</float>
+					<token name="LeftSurface">0</token>
+					<token name="LeftSurfaceInput">0</token>
+					<bool name="Locked">false</bool>
+					<bool name="Massless">true</bool>
+					<token name="Material">256</token>
+					<string name="MaterialVariantSerialized"></string>
+					<Content name="MeshId"><url>rbxassetid://78447260408241</url></Content>
+					<string name="Name">rear left leg_geom</string>
+					<SharedString name="PhysicalConfigData">uYz9Uoy5ZG74ZBk5m2giSQ==</SharedString>
+					<string name="PhysicsData"></string>
+					<CoordinateFrame name="PivotOffset">
+						<X>0</X>
+						<Y>0</Y>
+						<Z>0</Z>
+						<R00>1</R00>
+						<R01>0</R01>
+						<R02>0</R02>
+						<R10>0</R10>
+						<R11>1</R11>
+						<R12>0</R12>
+						<R20>0</R20>
+						<R21>0</R21>
+						<R22>1</R22>
+					</CoordinateFrame>
+					<float name="Reflectance">0</float>
+					<token name="RenderFidelity">0</token>
+					<float name="RightParamA">-0.5</float>
+					<float name="RightParamB">0.5</float>
+					<token name="RightSurface">0</token>
+					<token name="RightSurfaceInput">0</token>
+					<int name="RootPriority">0</int>
+					<Vector3 name="RotVelocity">
+						<X>0</X>
+						<Y>0</Y>
+						<Z>0</Z>
+					</Vector3>
+					<int64 name="SourceAssetId">-1</int64>
+					<SharedString name="Tags">DldRwCblQ7Loqy6wYJnaoQ==</SharedString>
+					<Content name="TextureID"><url>rbxassetid://71853717480389</url></Content>
+					<float name="TopParamA">-0.5</float>
+					<float name="TopParamB">0.5</float>
+					<token name="TopSurface">0</token>
+					<token name="TopSurfaceInput">0</token>
+					<float name="Transparency">0</float>
+					<UniqueId name="UniqueId">79a064e0ee56b9450ac1859e000104b8</UniqueId>
+					<Vector3 name="UnscaledCofm">
+						<X>-0.00200141384</X>
+						<Y>-0.00243068789</Y>
+						<Z>-0.00112723233</Z>
+					</Vector3>
+					<Vector3 name="UnscaledVolInertiaDiags">
+						<X>0.157261938</X>
+						<Y>0.0357010216</Y>
+						<Z>0.153334603</Z>
+					</Vector3>
+					<Vector3 name="UnscaledVolInertiaOffDiags">
+						<X>0.000120083001</X>
+						<Y>4.62229909e-005</Y>
+						<Z>-3.96946343e-005</Z>
+					</Vector3>
+					<float name="UnscaledVolume">0.604938269</float>
+					<Vector3 name="Velocity">
+						<X>0</X>
+						<Y>0</Y>
+						<Z>0</Z>
+					</Vector3>
+					<int name="VertexCount">0</int>
+					<Vector3 name="size">
+						<X>0.721387208</X>
+						<Y>1.65700054</Y>
+						<Z>0.698173761</Z>
+					</Vector3>
+				</Properties>
+			</Item>
+		</Item>
+		<Item class="Model" referent="RBXC2E16FF1E3F24FEEAC267CEC8940D364">
+			<Properties>
+				<bool name="DefinesCapabilities">false</bool>
+				<UniqueId name="HistoryId">79a064e0ee56b9450ac1859e0001048c</UniqueId>
+				<token name="LevelOfDetail">0</token>
+				<CoordinateFrame name="ModelMeshCFrame">
+					<X>0</X>
+					<Y>0</Y>
+					<Z>0</Z>
+					<R00>1</R00>
+					<R01>0</R01>
+					<R02>0</R02>
+					<R10>0</R10>
+					<R11>1</R11>
+					<R12>0</R12>
+					<R20>0</R20>
+					<R21>0</R21>
+					<R22>1</R22>
+				</CoordinateFrame>
+				<SharedString name="ModelMeshData">DldRwCblQ7Loqy6wYJnaoQ==</SharedString>
+				<Vector3 name="ModelMeshSize">
+					<X>0</X>
+					<Y>0</Y>
+					<Z>0</Z>
+				</Vector3>
+				<token name="ModelStreamingMode">0</token>
+				<string name="Name">front right leg</string>
+				<bool name="NeedsPivotMigration">false</bool>
+				<float name="ScaleFactor">1</float>
+				<SharedString name="SlimHash">DldRwCblQ7Loqy6wYJnaoQ==</SharedString>
+				<int64 name="SourceAssetId">-1</int64>
+				<SharedString name="Tags">DldRwCblQ7Loqy6wYJnaoQ==</SharedString>
+				<UniqueId name="UniqueId">79a064e0ee56b9450ac1859e000104b9</UniqueId>
+				<OptionalCoordinateFrame name="WorldPivotData">
+					<CFrame>
+						<X>677.177002</X>
+						<Y>13.7065821</Y>
+						<Z>194.033554</Z>
+						<R00>-0.22277081</R00>
+						<R01>-0</R01>
+						<R02>-0.97487092</R02>
+						<R10>0</R10>
+						<R11>1.00000012</R11>
+						<R12>0</R12>
+						<R20>0.97487092</R20>
+						<R21>0</R21>
+						<R22>-0.22277081</R22>
+					</CFrame>
+				</OptionalCoordinateFrame>
+			</Properties>
+			<Item class="MeshPart" referent="RBX1EF7159EECF642FD83061F1B53E52D8B">
+				<Properties>
+					<SharedString name="AeroMeshData">DldRwCblQ7Loqy6wYJnaoQ==</SharedString>
+					<bool name="Anchored">true</bool>
+					<bool name="AudioCanCollide">true</bool>
+					<float name="BackParamA">-0.5</float>
+					<float name="BackParamB">0.5</float>
+					<token name="BackSurface">0</token>
+					<token name="BackSurfaceInput">0</token>
+					<float name="BottomParamA">-0.5</float>
+					<float name="BottomParamB">0.5</float>
+					<token name="BottomSurface">0</token>
+					<token name="BottomSurfaceInput">0</token>
+					<CoordinateFrame name="CFrame">
+						<X>676.700378</X>
+						<Y>12.2514324</Y>
+						<Z>194.293274</Z>
+						<R00>-0.22277081</R00>
+						<R01>-0</R01>
+						<R02>-0.97487092</R02>
+						<R10>0</R10>
+						<R11>1.00000012</R11>
+						<R12>0</R12>
+						<R20>0.97487092</R20>
+						<R21>0</R21>
+						<R22>-0.22277081</R22>
+					</CoordinateFrame>
+					<bool name="CanCollide">false</bool>
+					<bool name="CanQuery">false</bool>
+					<bool name="CanTouch">false</bool>
+					<bool name="CastShadow">true</bool>
+					<string name="CollisionGroup">Default</string>
+					<int name="CollisionGroupId">0</int>
+					<Color3uint8 name="Color3uint8">4288914085</Color3uint8>
+					<bool name="DefinesCapabilities">false</bool>
+					<bool name="DoubleSided">false</bool>
+					<bool name="EnableFluidForces">true</bool>
+					<token name="FluidFidelityInternal">0</token>
+					<float name="FrontParamA">-0.5</float>
+					<float name="FrontParamB">0.5</float>
+					<token name="FrontSurface">0</token>
+					<token name="FrontSurfaceInput">0</token>
+					<bool name="HasJointOffset">false</bool>
+					<bool name="HasSkinnedMesh">false</bool>
+					<UniqueId name="HistoryId">79a064e0ee56b9450ac1859e0001048d</UniqueId>
+					<bool name="InertiaMigrated">false</bool>
+					<Vector3 name="InitialSize">
+						<X>0.796181917</X>
+						<Y>1.65716219</Y>
+						<Z>0.683215261</Z>
+					</Vector3>
+					<Vector3 name="JointOffset">
+						<X>0</X>
+						<Y>0</Y>
+						<Z>0</Z>
+					</Vector3>
+					<float name="LeftParamA">-0.5</float>
+					<float name="LeftParamB">0.5</float>
+					<token name="LeftSurface">0</token>
+					<token name="LeftSurfaceInput">0</token>
+					<bool name="Locked">false</bool>
+					<bool name="Massless">true</bool>
+					<token name="Material">256</token>
+					<string name="MaterialVariantSerialized"></string>
+					<Content name="MeshId"><url>rbxassetid://81990361187118</url></Content>
+					<string name="Name">front right leg_geom</string>
+					<SharedString name="PhysicalConfigData">/OOjWGv9a6gUHrNUi2+jQg==</SharedString>
+					<string name="PhysicsData"></string>
+					<CoordinateFrame name="PivotOffset">
+						<X>0</X>
+						<Y>0</Y>
+						<Z>0</Z>
+						<R00>1</R00>
+						<R01>0</R01>
+						<R02>0</R02>
+						<R10>0</R10>
+						<R11>1</R11>
+						<R12>0</R12>
+						<R20>0</R20>
+						<R21>0</R21>
+						<R22>1</R22>
+					</CoordinateFrame>
+					<float name="Reflectance">0</float>
+					<token name="RenderFidelity">0</token>
+					<float name="RightParamA">-0.5</float>
+					<float name="RightParamB">0.5</float>
+					<token name="RightSurface">0</token>
+					<token name="RightSurfaceInput">0</token>
+					<int name="RootPriority">0</int>
+					<Vector3 name="RotVelocity">
+						<X>0</X>
+						<Y>0</Y>
+						<Z>0</Z>
+					</Vector3>
+					<int64 name="SourceAssetId">-1</int64>
+					<SharedString name="Tags">DldRwCblQ7Loqy6wYJnaoQ==</SharedString>
+					<Content name="TextureID"><url>rbxassetid://113448841557053</url></Content>
+					<float name="TopParamA">-0.5</float>
+					<float name="TopParamB">0.5</float>
+					<token name="TopSurface">0</token>
+					<token name="TopSurfaceInput">0</token>
+					<float name="Transparency">0</float>
+					<UniqueId name="UniqueId">79a064e0ee56b9450ac1859e000104ba</UniqueId>
+					<Vector3 name="UnscaledCofm">
+						<X>-2.81433186e-005</X>
+						<Y>-0.000762211916</Y>
+						<Z>0.00204918766</Z>
+					</Vector3>
+					<Vector3 name="UnscaledVolInertiaDiags">
+						<X>0.171975493</X>
+						<Y>0.0424849689</Y>
+						<Z>0.172509775</Z>
+					</Vector3>
+					<Vector3 name="UnscaledVolInertiaOffDiags">
+						<X>-0.000130491564</X>
+						<Y>-0.000171315653</Y>
+						<Z>1.50468359e-005</Z>
+					</Vector3>
+					<float name="UnscaledVolume">0.662068486</float>
+					<Vector3 name="Velocity">
+						<X>0</X>
+						<Y>0</Y>
+						<Z>0</Z>
+					</Vector3>
+					<int name="VertexCount">0</int>
+					<Vector3 name="size">
+						<X>0.796181917</X>
+						<Y>1.65716219</Y>
+						<Z>0.683215261</Z>
+					</Vector3>
+				</Properties>
+			</Item>
+		</Item>
+		<Item class="Model" referent="RBX29F57B1AD3E148EF8014888411DE14CC">
+			<Properties>
+				<bool name="DefinesCapabilities">false</bool>
+				<UniqueId name="HistoryId">79a064e0ee56b9450ac1859e0001048e</UniqueId>
+				<token name="LevelOfDetail">0</token>
+				<CoordinateFrame name="ModelMeshCFrame">
+					<X>0</X>
+					<Y>0</Y>
+					<Z>0</Z>
+					<R00>1</R00>
+					<R01>0</R01>
+					<R02>0</R02>
+					<R10>0</R10>
+					<R11>1</R11>
+					<R12>0</R12>
+					<R20>0</R20>
+					<R21>0</R21>
+					<R22>1</R22>
+				</CoordinateFrame>
+				<SharedString name="ModelMeshData">DldRwCblQ7Loqy6wYJnaoQ==</SharedString>
+				<Vector3 name="ModelMeshSize">
+					<X>0</X>
+					<Y>0</Y>
+					<Z>0</Z>
+				</Vector3>
+				<token name="ModelStreamingMode">0</token>
+				<string name="Name">front left leg</string>
+				<bool name="NeedsPivotMigration">false</bool>
+				<float name="ScaleFactor">1</float>
+				<SharedString name="SlimHash">DldRwCblQ7Loqy6wYJnaoQ==</SharedString>
+				<int64 name="SourceAssetId">-1</int64>
+				<SharedString name="Tags">DldRwCblQ7Loqy6wYJnaoQ==</SharedString>
+				<UniqueId name="UniqueId">79a064e0ee56b9450ac1859e000104bb</UniqueId>
+				<OptionalCoordinateFrame name="WorldPivotData">
+					<CFrame>
+						<X>677.177002</X>
+						<Y>13.7065821</Y>
+						<Z>194.033554</Z>
+						<R00>-0.22277081</R00>
+						<R01>-0</R01>
+						<R02>-0.97487092</R02>
+						<R10>0</R10>
+						<R11>1.00000012</R11>
+						<R12>0</R12>
+						<R20>0.97487092</R20>
+						<R21>0</R21>
+						<R22>-0.22277081</R22>
+					</CFrame>
+				</OptionalCoordinateFrame>
+			</Properties>
+			<Item class="MeshPart" referent="RBXE639DAE939244559AF52E87AB39DEE28">
+				<Properties>
+					<SharedString name="AeroMeshData">DldRwCblQ7Loqy6wYJnaoQ==</SharedString>
+					<bool name="Anchored">true</bool>
+					<bool name="AudioCanCollide">true</bool>
+					<float name="BackParamA">-0.5</float>
+					<float name="BackParamB">0.5</float>
+					<token name="BackSurface">0</token>
+					<token name="BackSurfaceInput">0</token>
+					<float name="BottomParamA">-0.5</float>
+					<float name="BottomParamB">0.5</float>
+					<token name="BottomSurface">0</token>
+					<token name="BottomSurfaceInput">0</token>
+					<CoordinateFrame name="CFrame">
+						<X>677.549011</X>
+						<Y>12.2520313</Y>
+						<Z>194.488495</Z>
+						<R00>-0.22277081</R00>
+						<R01>-0</R01>
+						<R02>-0.97487092</R02>
+						<R10>0</R10>
+						<R11>1.00000012</R11>
+						<R12>0</R12>
+						<R20>0.97487092</R20>
+						<R21>0</R21>
+						<R22>-0.22277081</R22>
+					</CoordinateFrame>
+					<bool name="CanCollide">false</bool>
+					<bool name="CanQuery">false</bool>
+					<bool name="CanTouch">false</bool>
+					<bool name="CastShadow">true</bool>
+					<string name="CollisionGroup">Default</string>
+					<int name="CollisionGroupId">0</int>
+					<Color3uint8 name="Color3uint8">4288914085</Color3uint8>
+					<bool name="DefinesCapabilities">false</bool>
+					<bool name="DoubleSided">false</bool>
+					<bool name="EnableFluidForces">true</bool>
+					<token name="FluidFidelityInternal">0</token>
+					<float name="FrontParamA">-0.5</float>
+					<float name="FrontParamB">0.5</float>
+					<token name="FrontSurface">0</token>
+					<token name="FrontSurfaceInput">0</token>
+					<bool name="HasJointOffset">false</bool>
+					<bool name="HasSkinnedMesh">false</bool>
+					<UniqueId name="HistoryId">79a064e0ee56b9450ac1859e0001048f</UniqueId>
+					<bool name="InertiaMigrated">false</bool>
+					<Vector3 name="InitialSize">
+						<X>0.793635607</X>
+						<Y>1.65699983</Y>
+						<Z>0.699312985</Z>
+					</Vector3>
+					<Vector3 name="JointOffset">
+						<X>0</X>
+						<Y>0</Y>
+						<Z>0</Z>
+					</Vector3>
+					<float name="LeftParamA">-0.5</float>
+					<float name="LeftParamB">0.5</float>
+					<token name="LeftSurface">0</token>
+					<token name="LeftSurfaceInput">0</token>
+					<bool name="Locked">false</bool>
+					<bool name="Massless">true</bool>
+					<token name="Material">256</token>
+					<string name="MaterialVariantSerialized"></string>
+					<Content name="MeshId"><url>rbxassetid://131527068452131</url></Content>
+					<string name="Name">front left leg_geom</string>
+					<SharedString name="PhysicalConfigData">nruslITMTy/sXLJDq5H9xg==</SharedString>
+					<string name="PhysicsData"></string>
+					<CoordinateFrame name="PivotOffset">
+						<X>0</X>
+						<Y>0</Y>
+						<Z>0</Z>
+						<R00>1</R00>
+						<R01>0</R01>
+						<R02>0</R02>
+						<R10>0</R10>
+						<R11>1</R11>
+						<R12>0</R12>
+						<R20>0</R20>
+						<R21>0</R21>
+						<R22>1</R22>
+					</CoordinateFrame>
+					<float name="Reflectance">0</float>
+					<token name="RenderFidelity">0</token>
+					<float name="RightParamA">-0.5</float>
+					<float name="RightParamB">0.5</float>
+					<token name="RightSurface">0</token>
+					<token name="RightSurfaceInput">0</token>
+					<int name="RootPriority">0</int>
+					<Vector3 name="RotVelocity">
+						<X>0</X>
+						<Y>0</Y>
+						<Z>0</Z>
+					</Vector3>
+					<int64 name="SourceAssetId">-1</int64>
+					<SharedString name="Tags">DldRwCblQ7Loqy6wYJnaoQ==</SharedString>
+					<Content name="TextureID"><url>rbxassetid://130067288940666</url></Content>
+					<float name="TopParamA">-0.5</float>
+					<float name="TopParamB">0.5</float>
+					<token name="TopSurface">0</token>
+					<token name="TopSurfaceInput">0</token>
+					<float name="Transparency">0</float>
+					<UniqueId name="UniqueId">79a064e0ee56b9450ac1859e000104bc</UniqueId>
+					<Vector3 name="UnscaledCofm">
+						<X>-0.0019688583</X>
+						<Y>-0.000776703644</Y>
+						<Z>-0.00133147044</Z>
+					</Vector3>
+					<Vector3 name="UnscaledVolInertiaDiags">
+						<X>0.175768897</X>
+						<Y>0.0440488793</Y>
+						<Z>0.175266564</Z>
+					</Vector3>
+					<Vector3 name="UnscaledVolInertiaOffDiags">
+						<X>-0.0002334944</X>
+						<Y>5.66818744e-005</Y>
+						<Z>9.36537035e-005</Z>
+					</Vector3>
+					<float name="UnscaledVolume">0.67422682</float>
+					<Vector3 name="Velocity">
+						<X>0</X>
+						<Y>0</Y>
+						<Z>0</Z>
+					</Vector3>
+					<int name="VertexCount">0</int>
+					<Vector3 name="size">
+						<X>0.793635607</X>
+						<Y>1.65699983</Y>
+						<Z>0.699312985</Z>
+					</Vector3>
+				</Properties>
+			</Item>
+		</Item>
+		<Item class="Model" referent="RBXA8588831043F40679FAE03F4F9BD345C">
+			<Properties>
+				<bool name="DefinesCapabilities">false</bool>
+				<UniqueId name="HistoryId">79a064e0ee56b9450ac1859e00010490</UniqueId>
+				<token name="LevelOfDetail">0</token>
+				<CoordinateFrame name="ModelMeshCFrame">
+					<X>0</X>
+					<Y>0</Y>
+					<Z>0</Z>
+					<R00>1</R00>
+					<R01>0</R01>
+					<R02>0</R02>
+					<R10>0</R10>
+					<R11>1</R11>
+					<R12>0</R12>
+					<R20>0</R20>
+					<R21>0</R21>
+					<R22>1</R22>
+				</CoordinateFrame>
+				<SharedString name="ModelMeshData">DldRwCblQ7Loqy6wYJnaoQ==</SharedString>
+				<Vector3 name="ModelMeshSize">
+					<X>0</X>
+					<Y>0</Y>
+					<Z>0</Z>
+				</Vector3>
+				<token name="ModelStreamingMode">0</token>
+				<string name="Name">head</string>
+				<bool name="NeedsPivotMigration">false</bool>
+				<float name="ScaleFactor">1</float>
+				<SharedString name="SlimHash">DldRwCblQ7Loqy6wYJnaoQ==</SharedString>
+				<int64 name="SourceAssetId">-1</int64>
+				<SharedString name="Tags">DldRwCblQ7Loqy6wYJnaoQ==</SharedString>
+				<UniqueId name="UniqueId">79a064e0ee56b9450ac1859e000104bd</UniqueId>
+				<OptionalCoordinateFrame name="WorldPivotData">
+					<CFrame>
+						<X>677.177002</X>
+						<Y>13.7065821</Y>
+						<Z>194.033554</Z>
+						<R00>-0.22277081</R00>
+						<R01>-0</R01>
+						<R02>-0.97487092</R02>
+						<R10>0</R10>
+						<R11>1.00000012</R11>
+						<R12>0</R12>
+						<R20>0.97487092</R20>
+						<R21>0</R21>
+						<R22>-0.22277081</R22>
+					</CFrame>
+				</OptionalCoordinateFrame>
+			</Properties>
+			<Item class="MeshPart" referent="RBXC056E6F820A049DDB72BEC5BFC86BA2A">
+				<Properties>
+					<SharedString name="AeroMeshData">DldRwCblQ7Loqy6wYJnaoQ==</SharedString>
+					<bool name="Anchored">true</bool>
+					<bool name="AudioCanCollide">true</bool>
+					<float name="BackParamA">-0.5</float>
+					<float name="BackParamB">0.5</float>
+					<token name="BackSurface">0</token>
+					<token name="BackSurfaceInput">0</token>
+					<float name="BottomParamA">-0.5</float>
+					<float name="BottomParamB">0.5</float>
+					<token name="BottomSurface">0</token>
+					<token name="BottomSurfaceInput">0</token>
+					<CoordinateFrame name="CFrame">
+						<X>677.364807</X>
+						<Y>14.8100414</Y>
+						<Z>193.239487</Z>
+						<R00>-0.22277081</R00>
+						<R01>-0</R01>
+						<R02>-0.97487092</R02>
+						<R10>0</R10>
+						<R11>1.00000012</R11>
+						<R12>0</R12>
+						<R20>0.97487092</R20>
+						<R21>0</R21>
+						<R22>-0.22277081</R22>
+					</CoordinateFrame>
+					<bool name="CanCollide">false</bool>
+					<bool name="CanQuery">false</bool>
+					<bool name="CanTouch">false</bool>
+					<bool name="CastShadow">true</bool>
+					<string name="CollisionGroup">Default</string>
+					<int name="CollisionGroupId">0</int>
+					<Color3uint8 name="Color3uint8">4288914085</Color3uint8>
+					<bool name="DefinesCapabilities">false</bool>
+					<bool name="DoubleSided">false</bool>
+					<bool name="EnableFluidForces">true</bool>
+					<token name="FluidFidelityInternal">0</token>
+					<float name="FrontParamA">-0.5</float>
+					<float name="FrontParamB">0.5</float>
+					<token name="FrontSurface">0</token>
+					<token name="FrontSurfaceInput">0</token>
+					<bool name="HasJointOffset">false</bool>
+					<bool name="HasSkinnedMesh">false</bool>
+					<UniqueId name="HistoryId">79a064e0ee56b9450ac1859e00010491</UniqueId>
+					<bool name="InertiaMigrated">false</bool>
+					<Vector3 name="InitialSize">
+						<X>1.59394276</X>
+						<Y>2.32585478</Y>
+						<Z>2.38435268</Z>
+					</Vector3>
+					<Vector3 name="JointOffset">
+						<X>0</X>
+						<Y>0</Y>
+						<Z>0</Z>
+					</Vector3>
+					<float name="LeftParamA">-0.5</float>
+					<float name="LeftParamB">0.5</float>
+					<token name="LeftSurface">0</token>
+					<token name="LeftSurfaceInput">0</token>
+					<bool name="Locked">false</bool>
+					<bool name="Massless">true</bool>
+					<token name="Material">256</token>
+					<string name="MaterialVariantSerialized"></string>
+					<Content name="MeshId"><url>rbxassetid://101932748152789</url></Content>
+					<string name="Name">head_geom</string>
+					<SharedString name="PhysicalConfigData">Cj1gEdWn7mmGnDogtsZ01Q==</SharedString>
+					<string name="PhysicsData"></string>
+					<CoordinateFrame name="PivotOffset">
+						<X>0</X>
+						<Y>0</Y>
+						<Z>0</Z>
+						<R00>1</R00>
+						<R01>0</R01>
+						<R02>0</R02>
+						<R10>0</R10>
+						<R11>1</R11>
+						<R12>0</R12>
+						<R20>0</R20>
+						<R21>0</R21>
+						<R22>1</R22>
+					</CoordinateFrame>
+					<float name="Reflectance">0</float>
+					<token name="RenderFidelity">0</token>
+					<float name="RightParamA">-0.5</float>
+					<float name="RightParamB">0.5</float>
+					<token name="RightSurface">0</token>
+					<token name="RightSurfaceInput">0</token>
+					<int name="RootPriority">0</int>
+					<Vector3 name="RotVelocity">
+						<X>0</X>
+						<Y>0</Y>
+						<Z>0</Z>
+					</Vector3>
+					<int64 name="SourceAssetId">-1</int64>
+					<SharedString name="Tags">DldRwCblQ7Loqy6wYJnaoQ==</SharedString>
+					<Content name="TextureID"><url>rbxassetid://105388461859810</url></Content>
+					<float name="TopParamA">-0.5</float>
+					<float name="TopParamB">0.5</float>
+					<token name="TopSurface">0</token>
+					<token name="TopSurfaceInput">0</token>
+					<float name="Transparency">0</float>
+					<UniqueId name="UniqueId">79a064e0ee56b9450ac1859e000104be</UniqueId>
+					<Vector3 name="UnscaledCofm">
+						<X>0.0534509271</X>
+						<Y>-0.267555088</Y>
+						<Z>0.0394676402</Z>
+					</Vector3>
+					<Vector3 name="UnscaledVolInertiaDiags">
+						<X>1.08036852</X>
+						<Y>0.90235424</Y>
+						<Z>0.731573164</Z>
+					</Vector3>
+					<Vector3 name="UnscaledVolInertiaOffDiags">
+						<X>-0.00466211606</X>
+						<Y>-0.00423866184</Y>
+						<Z>-0.0980126634</Z>
+					</Vector3>
+					<float name="UnscaledVolume">2.4825747</float>
+					<Vector3 name="Velocity">
+						<X>0</X>
+						<Y>0</Y>
+						<Z>0</Z>
+					</Vector3>
+					<int name="VertexCount">0</int>
+					<Vector3 name="size">
+						<X>1.59394276</X>
+						<Y>2.32585478</Y>
+						<Z>2.38435268</Z>
+					</Vector3>
+				</Properties>
+			</Item>
+		</Item>
+		<Item class="Model" referent="RBX137E4FCC6CB84F4DBD38D476000F5A71">
+			<Properties>
+				<bool name="DefinesCapabilities">false</bool>
+				<UniqueId name="HistoryId">79a064e0ee56b9450ac1859e00010492</UniqueId>
+				<token name="LevelOfDetail">0</token>
+				<CoordinateFrame name="ModelMeshCFrame">
+					<X>0</X>
+					<Y>0</Y>
+					<Z>0</Z>
+					<R00>1</R00>
+					<R01>0</R01>
+					<R02>0</R02>
+					<R10>0</R10>
+					<R11>1</R11>
+					<R12>0</R12>
+					<R20>0</R20>
+					<R21>0</R21>
+					<R22>1</R22>
+				</CoordinateFrame>
+				<SharedString name="ModelMeshData">DldRwCblQ7Loqy6wYJnaoQ==</SharedString>
+				<Vector3 name="ModelMeshSize">
+					<X>0</X>
+					<Y>0</Y>
+					<Z>0</Z>
+				</Vector3>
+				<token name="ModelStreamingMode">0</token>
+				<string name="Name">body</string>
+				<bool name="NeedsPivotMigration">false</bool>
+				<float name="ScaleFactor">1</float>
+				<SharedString name="SlimHash">DldRwCblQ7Loqy6wYJnaoQ==</SharedString>
+				<int64 name="SourceAssetId">-1</int64>
+				<SharedString name="Tags">DldRwCblQ7Loqy6wYJnaoQ==</SharedString>
+				<UniqueId name="UniqueId">79a064e0ee56b9450ac1859e000104bf</UniqueId>
+				<OptionalCoordinateFrame name="WorldPivotData">
+					<CFrame>
+						<X>677.177002</X>
+						<Y>13.7065821</Y>
+						<Z>194.033554</Z>
+						<R00>-0.22277081</R00>
+						<R01>-0</R01>
+						<R02>-0.97487092</R02>
+						<R10>0</R10>
+						<R11>1.00000012</R11>
+						<R12>0</R12>
+						<R20>0.97487092</R20>
+						<R21>0</R21>
+						<R22>-0.22277081</R22>
+					</CFrame>
+				</OptionalCoordinateFrame>
+			</Properties>
+			<Item class="MeshPart" referent="RBXABF2F09BCC3546FF8ED003FFC91769BF">
+				<Properties>
+					<SharedString name="AeroMeshData">DldRwCblQ7Loqy6wYJnaoQ==</SharedString>
+					<bool name="Anchored">true</bool>
+					<bool name="AudioCanCollide">true</bool>
+					<float name="BackParamA">-0.5</float>
+					<float name="BackParamB">0.5</float>
+					<token name="BackSurface">0</token>
+					<token name="BackSurfaceInput">0</token>
+					<float name="BottomParamA">-0.5</float>
+					<float name="BottomParamB">0.5</float>
+					<token name="BottomSurface">0</token>
+					<token name="BottomSurfaceInput">0</token>
+					<CoordinateFrame name="CFrame">
+						<X>677.291504</X>
+						<Y>13.8593016</Y>
+						<Z>193.700012</Z>
+						<R00>-0.22277081</R00>
+						<R01>-0</R01>
+						<R02>-0.97487092</R02>
+						<R10>0</R10>
+						<R11>1.00000012</R11>
+						<R12>0</R12>
+						<R20>0.97487092</R20>
+						<R21>0</R21>
+						<R22>-0.22277081</R22>
+					</CoordinateFrame>
+					<bool name="CanCollide">false</bool>
+					<bool name="CanQuery">false</bool>
+					<bool name="CanTouch">false</bool>
+					<bool name="CastShadow">true</bool>
+					<string name="CollisionGroup">Default</string>
+					<int name="CollisionGroupId">0</int>
+					<Color3uint8 name="Color3uint8">4288914085</Color3uint8>
+					<bool name="DefinesCapabilities">false</bool>
+					<bool name="DoubleSided">false</bool>
+					<bool name="EnableFluidForces">true</bool>
+					<token name="FluidFidelityInternal">0</token>
+					<float name="FrontParamA">-0.5</float>
+					<float name="FrontParamB">0.5</float>
+					<token name="FrontSurface">0</token>
+					<token name="FrontSurfaceInput">0</token>
+					<bool name="HasJointOffset">false</bool>
+					<bool name="HasSkinnedMesh">false</bool>
+					<UniqueId name="HistoryId">79a064e0ee56b9450ac1859e00010493</UniqueId>
+					<bool name="InertiaMigrated">false</bool>
+					<Vector3 name="InitialSize">
+						<X>2.52877712</X>
+						<Y>2.48324394</Y>
+						<Z>1.49521744</Z>
+					</Vector3>
+					<Vector3 name="JointOffset">
+						<X>0</X>
+						<Y>0</Y>
+						<Z>0</Z>
+					</Vector3>
+					<float name="LeftParamA">-0.5</float>
+					<float name="LeftParamB">0.5</float>
+					<token name="LeftSurface">0</token>
+					<token name="LeftSurfaceInput">0</token>
+					<bool name="Locked">false</bool>
+					<bool name="Massless">true</bool>
+					<token name="Material">256</token>
+					<string name="MaterialVariantSerialized"></string>
+					<Content name="MeshId"><url>rbxassetid://118125326558542</url></Content>
+					<string name="Name">body_geom</string>
+					<SharedString name="PhysicalConfigData">vQ8hRCGuI6Kx45AYiEgeGg==</SharedString>
+					<string name="PhysicsData"></string>
+					<CoordinateFrame name="PivotOffset">
+						<X>0</X>
+						<Y>0</Y>
+						<Z>0</Z>
+						<R00>1</R00>
+						<R01>0</R01>
+						<R02>0</R02>
+						<R10>0</R10>
+						<R11>1</R11>
+						<R12>0</R12>
+						<R20>0</R20>
+						<R21>0</R21>
+						<R22>1</R22>
+					</CoordinateFrame>
+					<float name="Reflectance">0</float>
+					<token name="RenderFidelity">0</token>
+					<float name="RightParamA">-0.5</float>
+					<float name="RightParamB">0.5</float>
+					<token name="RightSurface">0</token>
+					<token name="RightSurfaceInput">0</token>
+					<int name="RootPriority">0</int>
+					<Vector3 name="RotVelocity">
+						<X>0</X>
+						<Y>0</Y>
+						<Z>0</Z>
+					</Vector3>
+					<int64 name="SourceAssetId">-1</int64>
+					<SharedString name="Tags">DldRwCblQ7Loqy6wYJnaoQ==</SharedString>
+					<Content name="TextureID"><url>rbxassetid://140559392439140</url></Content>
+					<float name="TopParamA">-0.5</float>
+					<float name="TopParamB">0.5</float>
+					<token name="TopSurface">0</token>
+					<token name="TopSurfaceInput">0</token>
+					<float name="Transparency">0</float>
+					<UniqueId name="UniqueId">79a064e0ee56b9450ac1859e000104c0</UniqueId>
+					<Vector3 name="UnscaledCofm">
+						<X>-0.0387111306</X>
+						<Y>-0.367484778</Y>
+						<Z>0.0025088843</Z>
+					</Vector3>
+					<Vector3 name="UnscaledVolInertiaDiags">
+						<X>1.88947248</X>
+						<Y>2.69630766</Y>
+						<Z>3.49654961</Z>
+					</Vector3>
+					<Vector3 name="UnscaledVolInertiaOffDiags">
+						<X>0.557159841</X>
+						<Y>0.000848972355</Y>
+						<Z>-0.0254702941</Z>
+					</Vector3>
+					<float name="UnscaledVolume">4.59686613</float>
+					<Vector3 name="Velocity">
+						<X>0</X>
+						<Y>0</Y>
+						<Z>0</Z>
+					</Vector3>
+					<int name="VertexCount">0</int>
+					<Vector3 name="size">
+						<X>2.52877712</X>
+						<Y>2.48324394</Y>
+						<Z>1.49521744</Z>
+					</Vector3>
+				</Properties>
+			</Item>
+		</Item>
+	</Item>
+	<SharedStrings>
+		<SharedString md5="Cj1gEdWn7mmGnDogtsZ01Q==">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</SharedString>
+		<SharedString md5="DldRwCblQ7Loqy6wYJnaoQ=="></SharedString>
+		<SharedString md5="HsEDFRIw1c+A/9VLVZ58Yg==">QXNzaXN0YW50QUlHZW5lcmF0ZWRBc3NldABBc3Npc3RhbnQtNGYxNzBlMjMtN2ZkMi00MDUx
+LWJhYTgtMGYxNGY5NGZiOTRj</SharedString>
+		<SharedString md5="LaVLC+4irXLVj47jMxJf3Q==">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
+Gq4Gp7ugiisHPADTbQCBCgc=</SharedString>
+		<SharedString md5="ih9M4Zzg1i163P7xKtVKdA==">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
+Ag==</SharedString>
+		<SharedString md5="nruslITMTy/sXLJDq5H9xg==">Q1NHUEhTCAAAAAIAKLUv/WDAAh0aACYwv0dQHJoOHZDD8iD6pKGHXQCpGLrpMOkewQWcu0JY
+bsAyFGqzmaxQUBkvxAsKl0eAUEcODz63YbI34IcE2GWwTN930efNl1afDKwArgCrAMYvblGg
+nkXnpTVkV4phaBtZq1LdHFu0dGMzyrXWLFHUgMB5dsrAMYGZY9++jHxw/gQz9Yy3ihO4rHAy
+Kj/X58Xsw83DSyABXyVO3OwkYsXlaUC2VkTZ7S0/SNxEC1/9Q9a00bpAXNeJUEnZbDpBsbhZ
+Gx4GSKIMtm1TLExVBpuQUAUdhOXbHRBm9lh5mq/qtzvgZvZcfdqvidY6FQAQ6CKt9Y/WOqq1
+NtJa7wSyW8+npAHgXhHUYGaPVdmRL0nvlUQOluHKXFgj6bc7IJyk0j3xS43HXj3Z4JVhfuP6
+4dyvlxkFdcufnE15mq+qKPVBDE4OtZy7ReNhWQvgpHOFg3gz+3VOy4dIeFwrQggnp0mewxw1
+jnXwhJVvxid6cjETmKLBcpkZL4Vpy191dIGXTLxPjF74sKY5pBPYvz55kTDwXmuM8x7ERHjt
+cAfKjh+Bzw7w4Rg5bzXLcmhHEmw/DTwojNNT17i2nMzyJpXUdUkUNlPBBxcCpMKVtIFAvhA6
+WPbHjns+31TiZFycrt0JS3NUGxkuz+2DGqRaa/1Dvld/bYKA5PO+9ige++Lp9zDmwmdjOHdc
+3XIOP1feekNpy0RyT0T+PpuDacddc/7IjHdmcuLYMZTz035NZiIjjS2PofkpW9pmOFWuFQbT
+WYJ8AF4KkOBcNKEH2ZCClXJQx5Kimo9CYuC+3QF3TBbEi9Qo14IhibLDuhyLRDOu0OJgajB2
+/BXzENnnF3tAx7542qln05mFEx57hHeJc3108y4Lii2b6OBnPphuRfBbfsLiwjdQfm36bqXS
+TvbX9VlNKX9kxuvYMnWMEgT96fZ8jijhWR3BP2rpkBUhmwkWkaHtZaP1YF7qqelWBSg7w3Wi
+yvy+VggDCpUU18fS2Q3XQL3VbE5rrd2BAD1YXIsdK4s8JygQLQwXjgEQQPzPx8ZzSO331gbP
+jBZsNqb5gUMHgpzTuld4vng8pM1vFFzsVfuGHM5oGAwNORwGNB/u2HO1GdIkYwc=</SharedString>
+		<SharedString md5="uYz9Uoy5ZG74ZBk5m2giSQ==">Q1NHUEhTCAAAAAIAKLUv/WAkA8UcAFZ0zkdQmlYHb0PgXm428vnkezsfJXIXZMoMBLOcv40Q
+MTuumKI9sUaItjrc8BVd3tm/JTx/E+Rimbq84YClMjBwZSSQhUi9DGyKHb8AugC9AHbzz1Rb
+jGQ/3tqDABKFs362xVyeLEmcV6G921JKhZDaALecVqLyIdmX08wEdGlE2LFIMcQKVT7raDmy
+Cf3njAdaghRRZ8w0xcE3Ld81wFWb0KAXW31tnut34uctCKYxLP653DCo791zK4J66wJ/Fyn1
+tJmRtgyGvSdseMGwzibCx5V7Y4GzByclTcvBSeKERrVV4KTAXlRp1Z7c5J7PpCkATo+9G7f3
+tNdsO4Om343Tg+GaOiQYBmAkTpkwDAcIzSVLXyxT+6uPJ3EzCsuFC2z+etzypCvUnxsoUN5M
+yXLjXWxELWssNpLRxd2QHDkasD+f20EmmW6w4mPdjtMWvsnnXpc32Ujj9JaDX50MxDKTQCdS
+45ZEgD70BeFYQDiWsUD98Gv2mS8vdiDn9UxCU78OibFM5MhDUCL1gjESIpbXmvzcWd9f1fpi
+GevzS2HxFwFy4njQHs9UhB+L4VgMYffYb4lYptu+MM2Npy1E42Vxigdrqc/OKYUBfkhfDeKz
+kYiguPTK3U0/sFfWUiXRGJKrUYcklxTptrILezmbG6+eld1tilF7GOKwD+xwfpd54Z9TWTCo
+NT/PCegGim044/ohjiE/Q2H3Fd/2GUwAeysF5HbWQF8psKc2gxuzm1x+Hkul+lcvPlsuAOSb
+bmzrEXkKNlNK9Hu8uD9HF5pfVwypa3zwEctiiK5d03IlJ17xMmjNaew8RYkog2MZz821XVlu
+jVAV3IDn1TJpcROM1hN5fL46wCkOnhWSt62+Nv7gB89nKq4tO+k5BLQxp2cA2cxAHg+22OHZ
+MFpb1mF+0ZR2rLJ+YgYHTkOp0KUhkJ0mCg1fNFBKP/S1YflL5vzAoD0SVDv3H3enw1t13CG/
+4J+rpm6MKqmfVbA2UwmozrkyZl+RmfoWavQ5FtvNZZsTFS3tpmN/wVHUr0lftjwl9k5kHnwe
+sh7ZevyHGoYWfPpsFT66sM7KY2PA4hXb0y6ieFGQwPoskN2WhyT4UTIo4CwgTdQBYJAf4vAG
+JmPm3byJrXrgeLZ382nCH8wFZc8/3FF7177GFWk/aL2PZG/GPCPwx7J5XjOxMp+Nnt4YP8hh
+MBtMhiY4vAY0H7tGsGkBMLtK432cKfAN</SharedString>
+		<SharedString md5="vQ8hRCGuI6Kx45AYiEgeGg==">Q1NHUEhTCAAAAAIAKLUv/WBIINXIAHp19Vg4EBBtSwd/mg4pRLhjF1uLR2JL4BIaYdJgAgrm
+ra4yQ/KwQrdaHGaL2sEBk2yEgDLFX9W0XUDWCxKHBYUFdwWjW55HVmtOMQqATxPavFQXqfRg
+ykbQQ2PDGnhD+IIuYWXuEz3P9Hm37YzwJYmj010lQeU/RR19ZeMPSFasG9GIiG1kSpWGTjF9
+ieYuQa6lB6mz1wNapAuzs9lY2RATpblutYqQEZ05rwD5iiSknpwUa1Ki46FKzH0v1HgbknXZ
+QT7J85bU0P6aMmaGtEOhI1sUboYKls5VsjAoo8qyzaSTk24E2kHzCOHUrJoD5kZNLsyzaMSv
+uMNClxhz8YgMQD1shaQL+TI8oWeeh1nw8NnGu2uVhHz7tJB5lJm29/qVajEAZL3bo8uT0Kqh
+g1hRoGsdHV/Rp8tdzFC6NQfpexRWaknCDC8oA0wr8FJ4xCLbxxMcv1nKOF8xPOZhKhQ0GR5J
+v3jFyV1Q2KLLd0YebAfBkRIDdasGPTKeSh6cYIs+IzbwiWluePiC5aFmDEmtfT3S4xrTldGu
+JS9JmqdsUgeLFObaHTabUtQdvF9U7ESdrRkHytS2FSI22zTp+o2CRQ9DpXEPHtCeqW6Fh3OM
+cS9X618NFnrYTYoPYRB6NENKDxtWaVpOGs+3QNTDWh90bA7f89lw8fEJrlmFZRQ6H//QQnw+
+AhJmF3/x6gY93ASMIpdWR3TMMAv6GKKgDCwf8nF1VXdE4dSXJB8Lc8TOtIDsy1hhyr1jVzOO
+CDr35jVqsB7i3gpKBpPsuRfHQnjQ60whxGCo3RNi5ktGbJDFOROFP6wKPn/teBxWNx9fqHSm
+b99/+CT7uMzQfyx8+BpxZR/DjR4iMvoY8o1HDsUnDlQ+HiDVmQ4hd2UPsI+l4DgFDoZPXpWQ
+b0afNBQ2sHfikvlQBwZ1BTyxzQoj88FdUN4Tp/jdO6636vx0NcLAHTaF7gt51HoYye0+ssT0
+AQPBPBxjzGZVEOP7ip5sWVsRrzfp+aPH4dMqrHkYEMf/jADyZTQQfZzV9xz+MJ8KAB8e5nF5
+9hjwPr+JBdA/YYjg4Sq1nw+EPgEvj4fBPD9qMHNvcbLq4SCe/2Ud79UmnXoujdA7lITPwRn6
+nlErel3iy07Tk+bb1+Vxyxe4YgLSDCIF+vZBnatOsSUeiqoDrK3sJxI1CUO5+opwalmS0Hhw
+nWsPxhEPTjMAlvHjQ4E4to5t6wwzG/s1hfcXuci6i59vec92yytaNfHw4hDMRDru86CTUR4S
+gfMRGxU3D9vvC15RsQmAzPs9VTQ+plLbtGR6fyfXpaHQ9quWZn3sleSjxKR+ToM0Pl4h5buY
+C8xuv2vrNLbC8U12kB4+u/2nmWdOUYPtn4pAfAvYKvqmy7MsEFMp/It2BDyH+Zi4qLXSEYM4
+4QXgYc4LihIMuHhmRVwSw8d9aoeIM3xMhPWfOhDwMZMOlzu/AcXtNiR79fFf2DEyO3/wrIxb
+Q2INNbPIIiNhZFsRLzAiVipQnIIhDONWjp1yu/jmTsyqqdrIWakQQeV1ASyJXNoXbuWPD7ZV
+uEfQxHFXWHI5EGOX5kNVRx2KIj8EmBJH2nplksZq1sCI9FlDYXvK3cFheZqaxArTh4ATAVxe
+Akm1POuzSStnmao5YLmYFqp2eca1ZMvJaQDjZ1XN5GRYK5FGw6urjJcIU1WvNBVp3BxMEra0
+NVNFQtEOq1wtxxo1i0RCTtWoHTYQEYILVuKswiUsqJehqg6uHEtH1Mgz1BoUXhlUd5YpsMi5
+axuqSPsRAj6hpIrBao3Shi7JgA5mVnNEhIlyJoBbAJwrqvpyMuSZyk1qXqJtMEv4xJzI6bHh
+cLnilOvNrIA7oaKFFS/LQhhgSaaUSoRgRCXn1DyBuWQ9ECeC0jINCNolhhBel1NKDkZzECGS
+hIu0s8Ddx1RwvLvIekYxcD9GdeNyJTjhcms+cLk7C7g2vlxuTg+Xa+PI5XIVBI4TqkPpXG5j
+ggQIEGRd+yP5xZCGS8/OiOI4KqlSUVYmZ5277sSRME50uEFC++nxzGdeJ7rcZUqDZ2zNgXmM
+urRpT4P3Tuc/KJhacogFPXYSneVul+gePUR1480W3aZ3xYW2rrTel0BNdvKhs3DMNFiURL03
+hIUbSONquwLOaMCjP7cZktRzTld6b8Se/wQa0XVOp+1+RnhRgk9d5+OKrnPs8qKnOV3hKFPb
+7UjgEKyImkmyORGaYqYZ0hVAsCupNEq6xC6s72iBrpBMwllDG60Xz1yF4cMjVgxt2XX0akBE
+ZyZpIkLJpvZLonMFhSd0G5iI1hu98SEnJLpGBCfdR5vlCTYeVIE7sg6SehNIMVQArWkiEIxA
+N4kwOveVkPWk9FkxT2vqoCJDRazW7LKaNSCi5pwSO4M2QR1NUJ2vUFbqSTIaoXKGOc8AeYiU
+xFx3wBdpicRs1uJ1BluDA4RhQsqGCrrEFH3f0b9YIUd2Zg1guiYczFUzoB6jlmjLpVUvpRc6
+89JLBJQjvbmAiK4aI3YGSuzKYBkbvmhklOpMNTS9wZUMlIZsaz2hQfb4+pAjc++ckAc3994w
+2D66bJBvnFzNGi4vvDnHGO1cmNGXWXKyhWMSrNmLlexFB5DmTFcKe9O52QN1QqPpo9osJXXC
+ISMk8HOry6Km/iAGWZn2ChcfumnbOW+hX9fCUkda4LXDhhK/fKlTzpQAyg/GAIbc4MG50mPU
+Rqvrfr8MmfJuWOuuA3cJ4k37cguWOinUYRNqzJJDDJhzdGjdkXMA3axa599OLraZSs3s4b4r
+egUg6Gx4odXDLUxoR0sYs1cVxyEzjRsoFUfTksEtOGXRR4Yd1ZwopmMPHmbDUwKW5eMVR0hc
++FiOx3eKLNmsSUSAj91u6LEjI2YdJID4uMunIVnsmBtkMfRwFCm6VbNs82cAJA+X/bSXuTOa
+HkY3pnZys8eLRhNoYTNKDyZOi8dyNxXLj21nWfSJ1AOzJWXaLg68G2a56xaL3KiU7E0TkrYf
+06GHFx34kuUUFl1nojDhaoozYQ2Ok+Tce4AtPHjGvRY8BzGZuJcFrZEoEMywxlQfV25JwboW
++XjSgy57FtlEOhLrY/KUBrNJuhnbKuTjKEl9hm9M2UAcp4cTFTgDJWLl0TKRHg5T8CPIMvvp
+BRYPh25fwitvwMgkH4fY4gicTJW/zcvHDIqcglKPKBDHULuZ+NiRaAeJ4vOWCZ3th5M5z91h
+uZuQGptGCsIZEQaPdw2Qpqw3WDaL4nl6mAOIMurqdyZ1FLvRaNVmqLdnrjJq9yG0bp6Uy/Bl
+2jlD0qHZxUmYCd0QQwUTfIOA0e0wZ5CbFdywEOhILdN5WHBg6LKc11Tqc3KYO5VFm1RWJZ27
+cWDdTq5YSnUJw+rhsp2tiSUkFTpE7OMQc5twTJh5dvvaW1Mb5sOuYxkxjHVO4kLMxxuGdndM
+9jGS1yJFAn0sV0FJ16mPxTxNiTR6mM3CrMrj9fpj0xyXMFrQd9FcwYL7JiEQWxDMqIfPFjxT
+Bqet90PMAZN7QwFf3GjCEy3bSQST09jx9T5fWT598cL9pED/QBe28hAdQx5Wmtq1ZVbKFmql
+eDjGzU7DhVPG4UUAH6N43IwMvHzJemXkD1ypWDBiH1Omak4S4F4a8Bu+znAu+G6meBuqGKD7
+47kBCwDxsdrtcwiDtvEqHPEweL8PZIiy64wmD3uFfoZIxX2j8tHHUFOvtDS0eajO+RjU+zt8
+T8qWazV4ZStPJB8orudRszBnLRn4mpqI/SaioP0FOZ6fZpHeyTDJ/qOh861FUfRPE858C9js
++Scn75yChZPvMAWLY7n4TBNubL2x2YTbx71h9vsIcrCV6Xo+7dxuZsIvm1BGqG9jDlmYsu4m
+hZuMkmRA1FLL3CAI9oQNZRc5JHUaM5VlMeMoB0fkPWF2zPMYEGP+wkCmrGpyCI1atgCLUTsy
+EJPu77NM5mQdxITZknhUTkQlbteZfX4P98R/h5b14TSTs56X9vGOlD7jjkK9sC2/CLaHJwX2
+YaC+OzCDD59J1qkVvjirMkmM+WJX0wdN5F5MZSzh0+/FWPYXcEfpC/mY/vjI4hdNFvnppMz8
+WNSMXnsgwPPlwHpCoxjaEYzwA/2MnkeYVJ3kbcf7UPL2e5F6+vSm/Iif47cTkcINXKb4H51a
+vmxMDSeglfqMr38/o8phmOmVCNTcuP7W5Td8O+Q7mxZoiuCbRo0M1Wc+eoQbuwHtrdMyFCXr
+VxZOcVvIOIG0K2hqYy+qldxGfAo/TGx7kgOoD4Kt8V9FumhWuSpvCMXL2/X0eYHRmv8RAu3Z
+UMv4jtmR/4FC7NFObfxJystrRfBgW8r6inMBs1byfpF8RQbN6INFDGoxTUw8WJPBzORx9cGH
+UlJPZOzQ4mJBvME6swkLhkuAgYzyXRfMBXlT9guovq6q1WNAO3Myw/VTO1s9q2MWEkC4l/P7
+s9+G72LrelMRgydBpvhdJN6fcnQeBAvU36ICkvohDKh8Iyxe76C55LVA136rbYS29ZxdsGSJ
+hg3gRiRWV3N5UmBP8HugXYGMhvjgJEfNP6DC0WfWsF5RtHZz4TnStUmGr6hmSWaJ64MV6OjW
+obMH6wxVQJqLqwKdoA3kwK6HlMg2yvsC3W7YWii6KFBh7vBakCcBALpJefwGhNomLKGY21q1
+90QM6JQHa1YhIwv2YC1WPTtlyC+Sm/gTlZbXkoBC21KRfUWpRxtRBH9IQHSHaf30mUepV+Ru
+zLpSrnsQMz8UixBSbWOP5MOLFYpdWxl6p/M5XTI2EBIfTuCnpnwXhW7BXnm/yBrTXS3yGNZU
+nQwo81M/YKAYkF9EjdcbUYHgHlo5X6vAAO+T6sC/FiofC0z3EaDOuR6z91k2nPsLjC+f27b8
+CFoFO7atxzfJMCyHuUH2XzTi3hsG841AqT4AFzI2bIedXwxT5XOgvW4zA8A9OMjx4w6LvgkJ
+3n81b/9rCdEXHQDiZwC2+DEnbR/BTvHhAsh5MS6O/8SFeijy3j4ieuQ9APr9Cdmvd5L72rYN
+ZN8rKsx7E0xuBFVs/yW4+RxqiewJOqmbJig5fwnB6/6pAlo+Mxf73Ruk8iWN2P/qzr6GB4dl
+P1bxhxWl+SUCkpRpX198GI0gZbMKr4/HQ+jBbxTKOFyKXs8T/OCrzt3lK/Z/WKJ+nN4Bm0xS
+4TPuvH3ct21bERL+h4umf0OSsLNYjngwHVMYyji4DXsL9okS0Di9zj2UBx4oJD7I84UUng/C
+USlFnvIFsHSWrFL3iSUgG2zsbQhdjUpEqRvBEWEGop9yAWxOlLLM2DoXeDYlx8QfdIHIphjX
+qY8AwatDReiFuOBtF+SzH4rhOEam+ggmLLRo4vdBSxde2CJ4Gx9Y2gxHw2lQRBgnvXgVQpIj
+z4tfm+raDF8cQvYOjPRhMwt4Um4fDqrTW9Hzi2FbuJ2/VQRQzPNJtKS7jNMJtyQZpD6J6B78
+we2BCHQNqTwYDWteQiaIF31d6bVPClLeLU7f8Ur7um6BghJL0X1lcKS+NEx5TxfEbIEx7Hsr
+xIk7EISaXx9Z50cvDzLKq5nVARMvAuBM+73gmtFwwXEGtDY04SGkrrkQ5UVhUA0omkG3/Qh5
+EembrquFoOMQ4ZzIQfeG2ZkfJUXQbUnOzGK89PhRkBHabs1pHuAs1ItqVrUJIG/zkx+ZPygb
+MUMxU/bte1LFGxxVznbj0y+ZQqn7JIrNUhuIfAGtylwBHdy3zBDMOenArRNojXEA7FezXBda
+GDu7J8vyb4+qfFWlxhdhsP1Yj5ByLF6iJ+oYfD5f1Yh5JVxxrsbvSMvTMhQE/qFqzZNu5oYz
+CvxilNsMCNfphK9K/kcKKbPWGUQnjCU/o6J3brpx6oN/4cN+eJsDnw/3Q4x9wDGl/aDTixeG
+Zj5g5ow9tHXrhrJr/6eDt3+WjDjiiC/P462wvGUyAE+kDPs5MH8eLsNwOpgMxVe9kDLz7LX5
+D8UyL9VpOWdR3XKkFh80AJFCzhii+3MWCDrK3RkOcbT6VMXXEV+/P1fihi5iOoAnUuHwetw/
+zZOH5YZLhPzhFuls4wTYB8MiPgz0ZfZqueFrE8RejNZjBqBxag/y3fpSFajfOzOza5RJc7hY
+Fd8HXtyOJux+p0W+h5PSFnFo5Tkya61A25wuKcdDTRO3s3Kza3DIzsdHV9aCk3XBQLnvlAMt
+HNHzBRYlWxpmW9dVZ0T1EVXC6YGo47kfGVV/3p05YuWNGzsV7gMC58M4FHOcGwrug2jzZ2x6
+alLV7YhGEb7OT4E+3TPihi56vq5qR3sxyEGlYeW+IZQDWonP5pG6zkayPH72tQ3TRXX7lvk6
+HZuqvc0O1Dbxkg/CwAgjwdxHOOHUAgrkD6n9jFm+vg+QHqp9zmUtIpBg1QW/Vt7sya3jwBC7
+4IjPV8tydAJsX2hrTN6jpY+FhCj6dcadaw/9IMuNMxqBfB/CGjMtbJYvll/8Aa8jutByzBf9
+xJ/DxE5THfjgjEiGPAOiH/3p44YjRn7QUS7MOKOYj+0oFGekEocFdckZty5YNSFzum6Shwq0
+blclyq5BYMD5+sTKWlk4XNCww3eK6gxH7MQwX7ppT6SDep23DrrxNsoVFdztA3pYakOgC15H
+hMS2DKFCF+bdupuNke0YAUt/8jlxRCRRb/QkSotqLbkf5RGpXw7nIovVnxJMOOJlhxxbBCIT
+z/GQUGC6uF0N69aiw8K2EDZ1uzrfqljffcTVw+nkoGxTxzANNqb2Y/7RZWuHYLcyPcMtitih
+9BusXfmTLNakbDaABP2xzX15i87NMDsH65a7MNBis1IG2W1bWtxs9ttSnmjtQNcjx2qT3ZQc
+zOwqzgoeF/pinypZ2ZI2QtTFQdhHhrjxwU3uyB45ToRlbdP9OKBtQXf8gkegYWGwRU7JaS6o
+QvaEH5XadexYDmE1NXMXVDoOFBvKP0634XICAYVO1wJdfTNQifVsVJkDdhiLmNBpUhcgNJcm
+qaScMDTrbAoraMpowQ9lVsNTWq6HEAFZBnWaWggt67Vj5vx0rl6gFCAI53apMlXTXFpp7f7S
+HMJpY9whESf6cVPjQoHQKyBluJAaoYbYVSegxcSWEzGyUOEyU3l77LjNzRU8lCZwqzQUNCmc
+p36bFfvcBNMz0t7ES5XaLEgCJyrbwazj5GqwHUo/QODQZTK2gIV80FSzWuUiEnR2AVkKtFuN
+2b1l6uu5oD26ARadP6DhgA0pgdAZrNl4ICSwezzIJaqRuMd2ow8qZzeQIHe/oJG8iRw+Spnz
+2ZQDrAWx3NmUS1iSBbyb8gyjoVhklwtIFFRoMQviNW5OyiDPQMer1GrrgtC375QO54EzX3MA
+SGXPBcrTQ6dOniSR0VM+DEHGcfqPDSsbiBLnG5GZhUCECoXyfRrP3sivUIzNl2ZyYm6XUHp7
+nynW+e6JB6jM05w05kTQqkJvGdbsLlP9QrAbXDh+P4IRB53PxQ/CALsppvOxnCSGou6Khu3U
+wQhzlm0sUIEq32Cv8Qu2nNIUF2kuqJInOXU24MWOj9PRvKTKRIaY70Tl7DS2wH1EkofP7HRT
+GmBF5kH2oVvCjQUIoF5CQFAPBhjzEJ0xW6ivC9QcJ3ePTdXKfzaC9BXd2VmnJiHcaYIDqMIQ
+EoQIWGBRRESCCUZkhLQ6AqSEGeWoPHmCEK1b2JbGSxq2JTRjWKpd9+n/Avs/c2Fmims2rwg3
++fxqO/p/BSFSAGSm3YPih4lNpbr5liJ8Xt6Q8PgIHBCL2Wu0eDKPXH7867P/Ul8EFLO+nt9F
+mvm03envmGvg+QrruSjf9vc+Lw0OPw1vq/D+nF/jHpv43sN1odsn+r0vt+Q8pz/ePyUPLFof
+fXeJuns4hRKgfXB6HCPHYLAlbFLCMzHHXQRLY7uNl/SX+4fvsxnqMN7fCOW5TV4+yDXpFRU1
+Bg9mrqJy63zew+pq/CVD/fyfh/gk8r2Yeh9xvrEv5VxwW7raOllOx4dXEzKYjn2mCqIlr3Tz
+A/LFrGoWknrmb1fX9SPwG+VVBL6fHEBf3d+q+EPNlEU+E2cSCxX0hQ2SZJ0ZKbkbaEGhorQr
+1iUPKbKt0tk77atk9Wm/Cz7k2OtuLCLuLNoyEVhYNPUznvb+sdoP321T6IM45/TcjIaZoB9m
+w6dF54MB2BFIb3QQ5a9NXYvMff/OF7Mz6NNG97qwh/yEB186I8HdkE+UvV/3saiK01BundZh
+7A03LBT1+Tgo4jlefc5P/XYhXInWGnxBgkvmWgxOAKxL0B5u3Je2C2plhTlyQR/IJcjPbBOO
+eAajYz7wwmwvu6t6rWPgVyMizV7uMU7AZfn/8k1YXiDECy0FtWxFUCmf6S/kgA0dGG6H9ZBF
+sPBEcaPMtjOMhv1C48FmTnFOtix8edOCq8hGTcL8vfKbpofbEOTrO+drTHxyniUfu3mhCd53
+uIDGRy8IP8XyeUTeHJvtosVfgdLYUvxjyIH9ix2LslmkHIhGifw6ZLR/H4I8a+j+X+3RN0h/
+HibOXFz5p6TlvHB233RFqwSPBfIzYpQk+sxSi/lMt/bctMB+adbs0MEkQ0liukdxBQCgQQJD
+OCZ+XE3yoyl+FYxL2SpEwBkExfO8WA==</SharedString>
+		<SharedString md5="/OOjWGv9a6gUHrNUi2+jQg==">Q1NHUEhTCAAAAAIAKLUv/WBkAYUSABQjAQAAACwAAABUpxgQAgAAlNLLvuQdVL8y566+lNLL
+PuQdVD80564+pZRSFC2qnBRptdTJ/WRVOdZNrVZ3AAAAZ+JCvkITVL8r8qO+6KBQv6IfrTsr
+3Ey+bstQv4OYqb58gjg+5GpRv2ytrL5dyTm+SxlNvxGhrr5foUi+G3hOPzivq76/oMm+WgpS
+P6NKaDz5OUq+0PZPv8LAqz4fNMO+Up5Tv3Duqjyd61S+86hTvyAEmj4dVL/0j6S++TlKPhMM
+UL8ZnKe+RS48Pomrq74Jd62+lkAvPifNTj/lzK6+yU45vuS3Tj8y566+E4w5vkp/Uj/wKay+
+f31AvuQdVD8gZKS+2hTEvl7zUz+kkJU86N9GviNKUj+AA6k+PllJvl6NTj/5Iqs+DW44vszA
+UL/jN64+4ek2vmIpU7/VR6o+NNQ4PhE/qj4w2MI+2MiESDyh58o+cgFQv6WyszvITcs+GytR
+P64JwzsC50s+vYJOPzCHpL5uIz0+HhQuPrjHrL4ADz0+0KlSP5O7qb6nmjI+oQhUPwSzpL4J
+csJ2ZNI5lYk9vkITVD/dQqM+oug4vp0fUj/2vqw+fhE5PvRCTtcZPD6li1C/t2OuPlapXD5u
+y1C/3BObPmm7vz5SnlO/3V76PA/8yj61FlC/ZASVPJTSyz7IilE/Voi/Pl7zUz88vhQ97CU5
+PnG0Uj/CwKs+O8pIPsnXTj+l3qk+NtaUPhf1UT+eED8+XsqnPg+JUz/8A/I9CwDoAm6W3jug
+NQD64xWCXuEO8JUVAGAuCAigcY8=</SharedString>
+	</SharedStrings>
+</roblox>

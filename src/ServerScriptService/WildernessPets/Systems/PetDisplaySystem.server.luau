@@ -3,6 +3,7 @@ local DataService=require(script.Parent.Parent.Services.PlayerDataService)
 local PetService=require(script.Parent.Parent.Services.PetService)
 local Animator=require(script.Parent.PetAnimator)
 local ModelFactory=require(script.Parent.PetModelFactory)
+local PetAuraService=require(script.Parent.PetAuraService)
 local plots=workspace:WaitForChild("WildernessPets"):WaitForChild("Plots")
 local refresh=script.Parent:FindFirstChild("PetDisplayRefresh")
 if not refresh then refresh=Instance.new("BindableEvent") refresh.Name="PetDisplayRefresh" refresh.Parent=script.Parent end
@@ -44,6 +45,7 @@ local function make(pet,plot,surface,limit,name,position)
  local label=Instance.new("TextLabel") label.BackgroundTransparency=1 label.Size=UDim2.fromScale(1,1) label.Font=Enum.Font.GothamSemibold label.TextSize=14 label.TextStrokeTransparency=.35 label.TextColor3=Color3.fromRGB(247,235,185)
  label.Text=pet.Name.."  Lv."..tostring(pet.Level) label.Parent=gui
  Animator:PlayIdle(m)
+ PetAuraService:Apply(m,pet)
  return m
 end
 
@@ -71,7 +73,7 @@ local function roam(m,area,podium)
 end
 
 local function signature(p)
- return p and table.concat({p.Id,p.Name,p.Species,tostring(p.Level),tostring(p.XP),tostring(p.Rarity),tostring(p.Displayed),tostring(p.Dead),tostring(p.Imprint)},":") or ""
+ return p and table.concat({p.Id,p.Name,p.Species,tostring(p.Level),tostring(p.XP),tostring(p.Rarity),tostring(p.Displayed),tostring(p.Dead),tostring(p.Imprint),tostring(p.SelectedAura or "None")},":") or ""
 end
 
 local function update(player)

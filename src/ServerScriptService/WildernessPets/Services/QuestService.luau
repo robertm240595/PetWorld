@@ -111,8 +111,100 @@ local function billboard(part, title, subtitle, color)
     subLabel.Parent = gui
 end
 
+local function questNpcTemplate(id)
+    local storageRoot = game:GetService("ServerStorage"):FindFirstChild("WildernessPets")
+    local templates = storageRoot and storageRoot:FindFirstChild("NPCs")
+    if not templates then return nil end
+    return templates:FindFirstChild(id) or templates:FindFirstChild("QuestNPC_" .. id)
+end
+
+local function cloneNpcTemplateAt(templateName, modelName, position)
+    local template = questNpcTemplate(templateName)
+    if not template or not template:IsA("Model") then return nil, nil end
+
+    local model = template:Clone()
+    model.Name = modelName
+
+    for _, item in ipairs(model:GetDescendants()) do
+        if item:IsA("PackageLink") then
+            item:Destroy()
+        elseif item:IsA("BasePart") then
+            item.Anchored = true
+            item.CanCollide = false
+            item.CanTouch = false
+            item.CanQuery = true
+        end
+    end
+
+    local body = model:FindFirstChild("body_geom", true)
+        or model:FindFirstChild("Torso", true)
+        or model:FindFirstChildWhichIsA("BasePart", true)
+    if not body or not body:IsA("BasePart") then
+        model:Destroy()
+        return nil, nil
+    end
+
+    model.PrimaryPart = body
+    local pivot = model:GetPivot()
+    local boundsCF, boundsSize = model:GetBoundingBox()
+    local pivotToBounds = pivot:ToObjectSpace(boundsCF)
+    local desiredBounds = CFrame.new(position + Vector3.new(0, boundsSize.Y * 0.5, 0))
+    model:PivotTo(desiredBounds * pivotToBounds:Inverse())
+    return model, body
+end
+
 local function makeNPC(parent, id, spec)
     local position = terrainPoint(spec.XZ.X, spec.XZ.Y, QuestConfig.World.CaveFallbackY)
+    local template = questNpcTemplate(id)
+
+    if template and template:IsA("Model") then
+        local model = template:Clone()
+        model.Name = "QuestNPC_" .. id
+        model:SetAttribute("QuestNpcId", id)
+        model:SetAttribute("QuestNPC", spec.Name)
+
+        for _, item in ipairs(model:GetDescendants()) do
+            if item:IsA("BasePart") then
+                item.Anchored = true
+                item.CanCollide = false
+                item.CanTouch = false
+                item.CanQuery = true
+            end
+        end
+
+        local body = model:FindFirstChild("body_geom", true)
+            or model:FindFirstChild("Torso", true)
+            or model:FindFirstChildWhichIsA("BasePart", true)
+        if body and body:IsA("BasePart") then
+            model.PrimaryPart = body
+            local pivot = model:GetPivot()
+            local boundsCF, boundsSize = model:GetBoundingBox()
+            local pivotToBounds = pivot:ToObjectSpace(boundsCF)
+            local desiredBounds = CFrame.new(position + Vector3.new(0, boundsSize.Y * 0.5, 0))
+            model:PivotTo(desiredBounds * pivotToBounds:Inverse())
+            model.Parent = parent
+
+            billboard(body, spec.Name, "QUEST GIVER", Color3.fromRGB(245, 210, 110))
+
+            local prompt = Instance.new("ProximityPrompt")
+            prompt.Name = "QuestPrompt"
+            prompt.ActionText = "Talk"
+            prompt.ObjectText = id
+            prompt.MaxActivationDistance = 12
+            prompt.HoldDuration = 0
+            prompt.RequiresLineOfSight = false
+            prompt.Parent = body
+            prompt.Triggered:Connect(function(player)
+                Service:TalkToNPC(player, id)
+            end)
+
+            npcModels[id] = model
+            return model
+        end
+
+        model:Destroy()
+    end
+
     local model = Instance.new("Model")
     model.Name = "QuestNPC_" .. id
     model:SetAttribute("QuestNpcId", id)
@@ -167,7 +259,7 @@ local function makeNPC(parent, id, spec)
     local prompt = Instance.new("ProximityPrompt")
     prompt.Name = "QuestPrompt"
     prompt.ActionText = "Talk"
-    prompt.ObjectText = spec.Name
+    prompt.ObjectText = id
     prompt.MaxActivationDistance = 12
     prompt.HoldDuration = 0
     prompt.RequiresLineOfSight = false
@@ -897,6 +989,26 @@ local function createMira(player, outside)
         Accent = Color3.fromRGB(136, 162, 112),
     }
 
+    local meshModel, meshBody = cloneNpcTemplateAt("ScoutMira", "ScoutMira_" .. tostring(player.UserId), position)
+    if meshModel and meshBody then
+        meshModel:SetAttribute("QuestOwnerUserId", player.UserId)
+        meshModel:SetAttribute("QuestNPC", "Scout Mira")
+        meshModel:SetAttribute("QuestMira", true)
+        meshModel.Parent = questWorld
+
+        billboard(meshBody, "Scout Mira", outside and "RESCUED SCOUT" or "TRAPPED SCOUT", Color3.fromRGB(170,228,160))
+        local prompt = addPrompt(meshBody, "Scout Mira")
+        prompt.Enabled = outside
+        prompt.Triggered:Connect(function(triggeringPlayer)
+            if triggeringPlayer == player then
+                Service:TalkToMira(player)
+            end
+        end)
+
+        state.Mira = meshModel
+        return meshModel
+    end
+
     local model = Instance.new("Model")
     model.Name = "ScoutMira_" .. tostring(player.UserId)
     model:SetAttribute("QuestOwnerUserId", player.UserId)
@@ -938,10 +1050,10 @@ local function moveMiraOutside(player)
     end
 
     state.Mira:PivotTo(CFrame.new(caveEntrance + Vector3.new(0, 2.7, 7)))
-    local torso = state.Mira:FindFirstChild("Torso")
-    local prompt = torso and torso:FindFirstChild("QuestPrompt")
+    local prompt = state.Mira:FindFirstChild("QuestPrompt", true)
     if prompt then prompt.Enabled = true end
-    local gui = torso and torso:FindFirstChild("QuestNPCLabel")
+    local labelRoot = prompt and prompt.Parent
+    local gui = labelRoot and labelRoot:FindFirstChild("QuestNPCLabel")
     local subtitle = gui and gui:FindFirstChild("Subtitle")
     if subtitle then subtitle.Text = "RESCUED SCOUT" end
 end
@@ -2455,11 +2567,33 @@ local function buildLeatherTraderArea()
         hanging.CanCollide=false
     end
 
+    local seated = leatherTraderPosition + Vector3.new(0,0,4)
+    local meshModel, meshBody = cloneNpcTemplateAt("LeatherTrader", "LeatherTrader", seated)
+    if meshModel and meshBody then
+        meshModel:SetAttribute("LeatherTrader", true)
+        meshModel.Parent = area
+        billboard(meshBody,"Leather Trader Corvin","LEATHERWORKER",Color3.fromRGB(228,190,116))
+
+        local prompt=Instance.new("ProximityPrompt")
+        prompt.Name="LeatherTraderPrompt"
+        prompt.ActionText="Talk"
+        prompt.ObjectText="Leather Trader Corvin"
+        prompt.MaxActivationDistance=12
+        prompt.HoldDuration=.1
+        prompt.RequiresLineOfSight=false
+        prompt.Parent=meshBody
+        prompt.Triggered:Connect(function(player)
+            Service:TalkToLeatherTrader(player)
+        end)
+
+        leatherTraderModel=meshModel
+        return
+    end
+
     local model = Instance.new("Model")
     model.Name = "LeatherTrader"
     model:SetAttribute("LeatherTrader", true)
 
-    local seated = leatherTraderPosition + Vector3.new(0,0,4)
     local root = makePart(model,"HumanoidRootPart",Vector3.new(2,2,1),CFrame.new(seated+Vector3.new(0,2,0)),Color3.new(),Enum.Material.SmoothPlastic)
     root.Transparency=1 root.CanCollide=false
     local torso=makePart(model,"Torso",Vector3.new(2.3,2.8,1.2),CFrame.new(seated+Vector3.new(0,2.7,0)),Color3.fromRGB(100,72,52),Enum.Material.Fabric)

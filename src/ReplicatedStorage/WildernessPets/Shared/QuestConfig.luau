@@ -526,6 +526,59 @@ QuestConfig.Chains = {
             {Id="ReportVictory", Type="Talk", Objective="Return to Warden Rowan after defeating Jormungdyrr.", Detail="Tell Rowan what was hiding beyond the waterfall and what happened in the cavern."},
         },
     },
+    SteelTempered = {
+        Id = "SteelTempered",
+        Name = "Tempered in Steel",
+        NPC = "Rook",
+        RequiredStrength = 70,
+        RequiredLasso = "Steel Lasso",
+        Priority = 42,
+        Prerequisite = "ChampionWildsRare",
+        Intro = "A Steel Lasso opens the dangerous reaches, but I want proof your companion is ready to follow. Hunt six Rare creatures and two Epic creatures, then report back.",
+        CompleteText = "That's a veteran field team. Steel no longer marks the limit of what you can handle.",
+        Reward = {Coins = 30000, Gems = 30},
+        Stages = {
+            {Id="RareTrial", Type="Kill", Rarity="Rare", Required=6, Objective="Defeat 6 Rare wild pets with your companion."},
+            {Id="EpicTrial", Type="Kill", Rarity="Epic", Required=2, Objective="Defeat 2 Epic wild pets with your companion."},
+            {Id="Report", Type="Talk", Objective="Return to Captain Rook after completing the Steel trials."},
+        },
+    },
+
+    MysticResonance = {
+        Id = "MysticResonance",
+        Name = "Mystic Resonance",
+        NPC = "Orin",
+        RequiredStrength = 100,
+        RequiredLasso = "Mystic Lasso",
+        Priority = 43,
+        Prerequisite = "SteelTempered",
+        Intro = "A Mystic Lasso does more than hold a beast; it responds to exceptional bonds. Bring me a Legendary companion and then a Mythic one so I can compare that resonance.",
+        CompleteText = "The resonance is unmistakable. You are handling creatures most hunters only know from stories.",
+        Reward = {Coins = 80000, Gems = 75},
+        Stages = {
+            {Id="LegendaryBond", Type="InspectPet", Rarity="Legendary", Required=1, Objective="Show Sage Orin any Legendary pet."},
+            {Id="MythicBond", Type="InspectPet", Rarity="Mythic", Required=1, Objective="Show Sage Orin any Mythic pet."},
+            {Id="Report", Type="Talk", Objective="Speak with Sage Orin after both resonance studies."},
+        },
+    },
+
+    AncientOath = {
+        Id = "AncientOath",
+        Name = "The Ancient Handler's Oath",
+        NPC = "Vale",
+        RequiredStrength = 135,
+        RequiredLasso = "Ancient Lasso",
+        Priority = 44,
+        Prerequisite = "MysticResonance",
+        Intro = "That Ancient Lasso belongs in the archive as much as any creature. Prove you have earned it: show me a Limited creature, defeat three Mythic wild beasts, and return to record your oath.",
+        CompleteText = "Recorded. From this day forward the archive recognises you as an Ancient Handler.",
+        Reward = {Coins = 150000, Gems = 175},
+        Stages = {
+            {Id="LimitedRecord", Type="InspectPet", Rarity="Limited", Required=1, Objective="Show Historian Vale any Limited pet."},
+            {Id="MythicTrial", Type="Kill", Rarity="Mythic", Required=3, Objective="Defeat 3 Mythic wild pets with your companion."},
+            {Id="Oath", Type="Talk", Objective="Return to Historian Vale to record the Ancient Handler's Oath."},
+        },
+    },
 }
 
 QuestConfig.NPCOrder = {"Rowan","Bram","Anya","Elara","Holt","Orin","Rook","Vale","Maeve"}

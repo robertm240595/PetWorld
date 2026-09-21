@@ -11,6 +11,7 @@ local GetState = Remotes:WaitForChild("GetState")
 local GameRemote = Remotes:WaitForChild("Game")
 local Config = require(Root.Shared.Config)
 local PetModelFactory = require(script.Parent.Systems.PetModelFactory)
+local PetAuraService = require(script.Parent.Systems.PetAuraService)
 
 local DataService = require(script.Parent.Services.PlayerDataService)
 local PetService = require(script.Parent.Services.PetService)
@@ -35,12 +36,18 @@ local LootTraderService = require(script.Parent.Services.LootTraderService)
 local WorldBossRewardService = require(script.Parent.Services.WorldBossRewardService)
 local TradeService = require(script.Parent.Services.TradeService)
 local TestCommandService = require(script.Parent.Services.TestCommandService)
+local AchievementService = require(script.Parent.Services.AchievementService)
+local VillageUpgradeService = require(script.Parent.Services.VillageUpgradeService)
+local AuctionService = require(script.Parent.Services.AuctionService)
 MonsterService:Init()
 MountService:Init()
 LootService:Init()
 LootTraderService:Init()
 WorldBossRewardService:Init()
 TradeService:Init()
+AchievementService:Init()
+VillageUpgradeService:Init()
+AuctionService:Init()
 QuestService:Init()
 BossTravelService:Init()
 BeastTraderService:Init()
@@ -80,6 +87,9 @@ local function setupPlayer(player)
     PetService:RefreshHealing(player)
     ActionLockService:Initialize(player)
     QuestService:PlayerReady(player)
+    AchievementService:PlayerReady(player)
+    VillageUpgradeService:PlayerReady(player)
+    AuctionService:PlayerReady(player)
     TestCommandService:BindPlayer(player)
 
     player.CharacterAdded:Connect(function(character)
@@ -113,6 +123,8 @@ Players.PlayerRemoving:Connect(function(player)
     BossCombatService:PlayerRemoving(player)
     WorldBossRewardService:PlayerRemoving(player)
     TradeService:PlayerRemoving(player)
+    VillageUpgradeService:PlayerRemoving(player)
+    AuctionService:PlayerRemoving(player)
     BossTravelService:PlayerRemoving(player)
     QuestService:PlayerRemoving(player)
     PlotService:Release(player)
@@ -154,7 +166,9 @@ GetState.OnServerInvoke = function(player)
         PodiumPetId = data.PodiumPetId,
         ArenaRating = data.ArenaRating,
         ArenaWins = data.ArenaWins,
-        ArenaLosses = data.ArenaLosses
+        ArenaLosses = data.ArenaLosses,
+        Achievements = AchievementService:GetState(player),
+        VillageProgression = VillageUpgradeService:GetState(player)
     }
 end
 
@@ -193,6 +207,17 @@ PetsRemote.OnServerEvent:Connect(function(player, action, ...)
 
     elseif action == "Favourite" then
         local success, message = PetService:SetFavourite(player, args[1], args[2] == true)
+        PetsRemote:FireClient(player, "Updated", success, message)
+
+    elseif action == "SetAura" then
+        local petId, auraId = args[1], args[2]
+        local success, message = PetService:SetAura(player, petId, auraId)
+        local session = combatSessions and combatSessions[player]
+        if success and session and session.petId == petId and session.companion then
+            PetAuraService:Apply(session.companion, session.pet)
+        end
+        local refresh = script.Parent.Systems:FindFirstChild("PetDisplayRefresh")
+        if success and refresh then refresh:Fire(player) end
         PetsRemote:FireClient(player, "Updated", success, message)
 
     elseif action == "Display" or action == "Hide" then
@@ -616,6 +641,7 @@ local function companionsFolder()
     end
     return folder
 end
+companionsFolder()
 local function combatTell(player, action, ...)
     GameRemote:FireClient(player, "Combat", action, ...)
 end
@@ -760,6 +786,7 @@ local function createCompanion(player, pet)
     PetAnimator:Stop(model)
     PetAnimator:PlayIdle(model)
     syncCompanionLabel(model, pet)
+    PetAuraService:Apply(model, pet)
     return model
 end
 local function getPetSpeedMultiplier(player)

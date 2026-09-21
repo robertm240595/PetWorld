@@ -23,7 +23,7 @@ local palette = {
 local gui = Instance.new("ScreenGui")
 gui.Name = "QuestHUD"
 gui.ResetOnSpawn = false
-gui.IgnoreGuiInset = true
+gui.IgnoreGuiInset = false
 gui.DisplayOrder = 100
 gui.Parent = playerGui
 
@@ -664,7 +664,9 @@ end)
 ------------------------------------------------------------
 
 RunService.RenderStepped:Connect(function()
-    gui.Enabled = player:GetAttribute("VillageReady") == true
+    local mainUI = playerGui:FindFirstChild("WildernessPetsUI")
+    local menuOpen = mainUI and mainUI:GetAttribute("InventoryOpen") == true
+    gui.Enabled = player:GetAttribute("VillageReady") == true and not menuOpen
     if not gui.Enabled then return end
 
     local heading = cameraHeading()

@@ -33,6 +33,7 @@ local showPetMerchant
 local showLootTrader
 local showBarn
 local showLeatherTrader
+local showHUD
 local backpackTab = "Pets"
 local beastTraderTab = "Sell"
 local lassoKeeperTab = "Buy"
@@ -1486,8 +1487,7 @@ showLootTrader = function()
     if #lootItems==0 then
         local empty=text(
             list,
-            "Your backpack has no sellable wild loot.
-Defeat wild creatures, open their loot bags, then bring the materials here.",
+            "Your backpack has no sellable wild loot.\nDefeat wild creatures, open their loot bags, then bring the materials here.",
             UDim2.new(),
             UDim2.fromOffset(690,84)
         )
@@ -1987,7 +1987,7 @@ end
 -- HUD
 --------------------------------------------------------------
 
-function showHUD()
+showHUD = function()
     clear()
 
     state = GetState:InvokeServer()

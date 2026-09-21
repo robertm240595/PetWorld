@@ -13,7 +13,7 @@ local GetState = Remotes:WaitForChild("GetState")
 local gui = Instance.new("ScreenGui")
 gui.Name = "PlayerTradeUI"
 gui.ResetOnSpawn = false
-gui.IgnoreGuiInset = true
+gui.IgnoreGuiInset = false
 gui.DisplayOrder = 120
 gui.Parent = playerGui
 
@@ -106,7 +106,7 @@ local renderSession
 local launcher = makeButton(
     gui,
     "TRADE  [T]",
-    UDim2.new(1, -132, 0, 76),
+    UDim2.new(0, 12, 0, 76),
     UDim2.fromOffset(112, 34)
 )
 launcher.Name = "TradeLauncher"
@@ -212,8 +212,7 @@ openBrowser = function()
     if found == 0 then
         local empty = makeText(
             list,
-            "No players are within 35 studs.
-Move closer to another handler to trade.",
+            "No players are within 35 studs.\nMove closer to another handler to trade.",
             UDim2.new(),
             UDim2.fromOffset(450, 72),
             14
@@ -430,8 +429,7 @@ renderSession = function(update)
     if #assets == 0 then
         local empty = makeText(
             available,
-            "Nothing currently tradeable.
-Unequip/unfavourite creatures or collect tradeable materials.",
+            "Nothing currently tradeable.\nUnequip/unfavourite creatures or collect tradeable materials.",
             UDim2.new(),
             UDim2.fromOffset(410, 70),
             12

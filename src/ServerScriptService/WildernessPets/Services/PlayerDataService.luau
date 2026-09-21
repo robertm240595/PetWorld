@@ -44,6 +44,12 @@ local function newData()
         PetCollection = {},
         CollectionRewardsClaimed = {},
         QuestProgress = {},
+        Achievements = {},
+        AuctionListings = {},
+        AuctionStats = {Listed = 0, Sold = 0, Bought = 0, FeesPaid = 0},
+        AuctionMailClaims = {},
+        VillageUpgrades = {HealingBarn = 1, TrainingArea = 1, TrainingSlots = 1},
+        TrainingAssignments = {},
         SelectedPlot = 0,
         DefencePetId = "",
         EquippedPetId = "",
@@ -192,6 +198,20 @@ function Service:Load(player)
     if type(data.ActiveEffects) ~= "table" then
         data.ActiveEffects = {}
     end
+    if type(data.Achievements) ~= "table" then data.Achievements = {} end
+    if type(data.AuctionListings) ~= "table" then data.AuctionListings = {} end
+    if type(data.AuctionStats) ~= "table" then data.AuctionStats = {} end
+    if type(data.AuctionMailClaims) ~= "table" then data.AuctionMailClaims = {} end
+    if type(data.VillageUpgrades) ~= "table" then data.VillageUpgrades = {} end
+    if type(data.TrainingAssignments) ~= "table" then data.TrainingAssignments = {} end
+
+    data.AuctionStats.Listed = math.max(0, math.floor(tonumber(data.AuctionStats.Listed) or 0))
+    data.AuctionStats.Sold = math.max(0, math.floor(tonumber(data.AuctionStats.Sold) or 0))
+    data.AuctionStats.Bought = math.max(0, math.floor(tonumber(data.AuctionStats.Bought) or 0))
+    data.AuctionStats.FeesPaid = math.max(0, math.floor(tonumber(data.AuctionStats.FeesPaid) or 0))
+    data.VillageUpgrades.HealingBarn = math.clamp(math.floor(tonumber(data.VillageUpgrades.HealingBarn) or 1), 1, 5)
+    data.VillageUpgrades.TrainingArea = math.clamp(math.floor(tonumber(data.VillageUpgrades.TrainingArea) or 1), 1, 5)
+    data.VillageUpgrades.TrainingSlots = math.clamp(math.floor(tonumber(data.VillageUpgrades.TrainingSlots) or 1), 1, 5)
 
     data.Coins = math.max(0, math.floor(tonumber(data.Coins) or tonumber(Config.StartCoins) or 0))
     data.Gems = math.max(0, math.floor(tonumber(data.Gems) or tonumber(Config.StartGems) or 0))
