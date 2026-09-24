@@ -1049,35 +1049,14 @@ local function moveMiraOutside(player)
         createMira(player, true)
         return
     end
-    local mira = state.Mira
-    local prompt = mira:FindFirstChild("QuestPrompt", true)
-    if prompt then prompt.Enabled = false end
-    task.spawn(function()
-        -- Follow the already-carved cave mouth; no terrain raycasts that can snap Mira onto the hill above.
-        local points = {
-            mira:GetPivot().Position,
-            Vector3.new(388, 16.5, -414),
-            Vector3.new(389, 19, -405),
-            Vector3.new(390, 22.7, -396),
-            Vector3.new(390, 22.7, -389),
-        }
-        for segment=1,#points-1 do
-            local from,to = points[segment],points[segment+1]
-            local steps = math.max(5, math.ceil((to-from).Magnitude / 1.2))
-            for i=1,steps do
-                if not mira.Parent then return end
-                local p = from:Lerp(to,i/steps)
-                local dir = to-p
-                mira:PivotTo(dir.Magnitude > .05 and CFrame.lookAt(p,p+Vector3.new(dir.X,0,dir.Z)) or CFrame.new(p))
-                task.wait(.05)
-            end
-        end
-        if prompt and prompt.Parent then prompt.Enabled = true end
-        local labelRoot = prompt and prompt.Parent
-        local gui = labelRoot and labelRoot:FindFirstChild("QuestNPCLabel")
-        local subtitle = gui and gui:FindFirstChild("Subtitle")
-        if subtitle then subtitle.Text = "RESCUED SCOUT" end
-    end)
+
+    state.Mira:PivotTo(CFrame.new(caveEntrance + Vector3.new(0, 2.7, 7)))
+    local prompt = state.Mira:FindFirstChild("QuestPrompt", true)
+    if prompt then prompt.Enabled = true end
+    local labelRoot = prompt and prompt.Parent
+    local gui = labelRoot and labelRoot:FindFirstChild("QuestNPCLabel")
+    local subtitle = gui and gui:FindFirstChild("Subtitle")
+    if subtitle then subtitle.Text = "RESCUED SCOUT" end
 end
 
 local function spawnBearObjective(player)
@@ -1806,54 +1785,7 @@ function Service:DebugFinishQuest(player, requestedQuest)
     return true, questId
 end
 
-function Service:DebugFinishAllQuests(player)
-    if not RunService:IsStudio() then return false, "This test command only works in Roblox Studio." end
-    local root = select(1, questData(player))
-    if not root then return false, "Quest data is not ready yet." end
-
-    local completed = {}
-    local safety = 0
-    while safety < 250 do
-        safety += 1
-        local _, _, entries = activeChainEntries(player)
-        if #entries == 0 then break end
-        table.sort(entries,function(a,b)
-            local pa=tonumber(a.Chain.Priority) or math.huge; local pb=tonumber(b.Chain.Priority) or math.huge
-            if pa==pb then return tostring(a.Chain.Id)<tostring(b.Chain.Id) end
-            return pa<pb
-        end)
-        local progressed=false
-        for _,entry in ipairs(entries) do
-            if entry.Chain and entry.Chain.Id then
-                completeQuest(player,entry.Chain)
-                table.insert(completed,entry.Chain.Id)
-                progressed=true
-            end
-        end
-        if not progressed then break end
-    end
-    QuestRemote:FireClient(player,"Toast","[STUDIO TEST] Finished "..tostring(#completed).." offered quest(s).")
-    return true, completed
-end
-
-local function installStudioFinishAllQuestsCommand()
-    if not RunService:IsStudio() then return end
-    if TextChatService:FindFirstChild("FinishAllQuestsStudioCommand") then return end
-    local command=Instance.new("TextChatCommand")
-    command.Name="FinishAllQuestsStudioCommand"
-    command.PrimaryAlias="/finishallquests"
-    command.SecondaryAlias="/faq"
-    command.Parent=TextChatService
-    command.Triggered:Connect(function(textSource)
-        local player=textSource and Players:GetPlayerByUserId(textSource.UserId)
-        if not player then return end
-        local success,result=Service:DebugFinishAllQuests(player)
-        if not success then QuestRemote:FireClient(player,"Toast","[STUDIO TEST] "..tostring(result or "Could not finish all quests.")) end
-    end)
-end
-
 local function installStudioFinishQuestCommand()
-    installStudioFinishAllQuestsCommand()
     if not RunService:IsStudio() then return end
     if TextChatService:FindFirstChild("FinishQuestStudioCommand") then return end
 
@@ -2573,8 +2505,10 @@ function Service:PlayerRemoving(player)
 end
 
 local function buildCave()
-    caveEntrance = Vector3.new(390, 22, -396)
-    caveInner = Vector3.new(388, 16, -421)
+    local settings = QuestConfig.World
+    local baseGround = terrainPoint(settings.CaveXZ.X, settings.CaveXZ.Y, settings.CaveFallbackY)
+    caveEntrance = baseGround + Vector3.new(0, .15, 0)
+    caveInner = caveEntrance + Vector3.new(0, 0, -18)
 
     -- The original block-built Hollowfang cave has been retired. Quest logic
     -- still uses the same entrance/inner coordinates, while the actual cave
@@ -2584,4 +2518,190 @@ local function buildCave()
 end
 
 local function buildLeatherTraderArea()
-    local settings = QuestConfig.World... (truncated)
+    local settings = QuestConfig.World
+    local ground = terrainPoint(settings.LeatherTraderXZ.X, settings.LeatherTraderXZ.Y, settings.CaveFallbackY)
+    leatherTraderPosition = ground + Vector3.new(0, .15, 0)
+
+    local area = Instance.new("Model")
+    area.Name = "LeatherTraderCamp"
+    area.Parent = questWorld
+
+    local wood = Color3.fromRGB(92, 66, 43)
+    local darkWood = Color3.fromRGB(65, 47, 34)
+    local hide = Color3.fromRGB(149, 112, 75)
+
+    local hutCenter = leatherTraderPosition + Vector3.new(0, 0, -12)
+    makePart(area, "HutFloor", Vector3.new(18,1,14), CFrame.new(hutCenter + Vector3.new(0,.3,0)), darkWood, Enum.Material.WoodPlanks)
+    makePart(area, "HutBack", Vector3.new(18,10,1), CFrame.new(hutCenter + Vector3.new(0,5,-6.5)), wood, Enum.Material.WoodPlanks)
+    makePart(area, "HutLeft", Vector3.new(1,10,14), CFrame.new(hutCenter + Vector3.new(-8.5,5,0)), wood, Enum.Material.WoodPlanks)
+    makePart(area, "HutRight", Vector3.new(1,10,14), CFrame.new(hutCenter + Vector3.new(8.5,5,0)), wood, Enum.Material.WoodPlanks)
+    makePart(area, "HutRoof", Vector3.new(20,1.2,16), CFrame.new(hutCenter + Vector3.new(0,10.2,0)) * CFrame.Angles(0,0,math.rad(4)), darkWood, Enum.Material.WoodPlanks)
+
+    local fireCenter = leatherTraderPosition + Vector3.new(-5, .5, 5)
+    for i=1,3 do
+        local log = makePart(
+            area,
+            "FireLog"..tostring(i),
+            Vector3.new(5,.55,.65),
+            CFrame.new(fireCenter) * CFrame.Angles(0, math.rad((i-1)*60), math.rad(90)),
+            darkWood,
+            Enum.Material.Wood
+        )
+        log.CanCollide = false
+    end
+    local flame = makePart(area,"CampFlame",Vector3.new(1.5,2.8,1.5),CFrame.new(fireCenter+Vector3.new(0,1.5,0)),Color3.fromRGB(255,132,44),Enum.Material.Neon,Enum.PartType.Ball)
+    flame.CanCollide=false
+    flame.CanQuery=false
+    local light=Instance.new("PointLight")
+    light.Color=Color3.fromRGB(255,170,80)
+    light.Brightness=2
+    light.Range=18
+    light.Parent=flame
+
+    for rackIndex, xOffset in ipairs({7, 12}) do
+        local base = leatherTraderPosition + Vector3.new(xOffset,0,2)
+        local left = makePart(area,"Rack"..rackIndex.."Left",Vector3.new(.5,6,.5),CFrame.new(base+Vector3.new(-2,3,0)),wood,Enum.Material.Wood)
+        local right = makePart(area,"Rack"..rackIndex.."Right",Vector3.new(.5,6,.5),CFrame.new(base+Vector3.new(2,3,0)),wood,Enum.Material.Wood)
+        local top = makePart(area,"Rack"..rackIndex.."Top",Vector3.new(4.5,.45,.45),CFrame.new(base+Vector3.new(0,5.6,0)),wood,Enum.Material.Wood)
+        left.CanCollide=false right.CanCollide=false top.CanCollide=false
+        local hanging = makePart(area,"Rack"..rackIndex.."Hide",Vector3.new(3.1,3.8,.25),CFrame.new(base+Vector3.new(0,3.3,0)),hide,Enum.Material.Fabric)
+        hanging.CanCollide=false
+    end
+
+    local seated = leatherTraderPosition + Vector3.new(0,0,4)
+    local meshModel, meshBody = cloneNpcTemplateAt("LeatherTrader", "LeatherTrader", seated)
+    if meshModel and meshBody then
+        meshModel:SetAttribute("LeatherTrader", true)
+        meshModel.Parent = area
+        billboard(meshBody,"Leather Trader Corvin","LEATHERWORKER",Color3.fromRGB(228,190,116))
+
+        local prompt=Instance.new("ProximityPrompt")
+        prompt.Name="LeatherTraderPrompt"
+        prompt.ActionText="Talk"
+        prompt.ObjectText="Leather Trader Corvin"
+        prompt.MaxActivationDistance=12
+        prompt.HoldDuration=.1
+        prompt.RequiresLineOfSight=false
+        prompt.Parent=meshBody
+        prompt.Triggered:Connect(function(player)
+            Service:TalkToLeatherTrader(player)
+        end)
+
+        leatherTraderModel=meshModel
+        return
+    end
+
+    local model = Instance.new("Model")
+    model.Name = "LeatherTrader"
+    model:SetAttribute("LeatherTrader", true)
+
+    local root = makePart(model,"HumanoidRootPart",Vector3.new(2,2,1),CFrame.new(seated+Vector3.new(0,2,0)),Color3.new(),Enum.Material.SmoothPlastic)
+    root.Transparency=1 root.CanCollide=false
+    local torso=makePart(model,"Torso",Vector3.new(2.3,2.8,1.2),CFrame.new(seated+Vector3.new(0,2.7,0)),Color3.fromRGB(100,72,52),Enum.Material.Fabric)
+    torso.CanCollide=false
+    local head=makePart(model,"Head",Vector3.new(1.8,1.8,1.8),CFrame.new(seated+Vector3.new(0,4.8,0)),Color3.fromRGB(207,164,127),Enum.Material.SmoothPlastic,Enum.PartType.Ball)
+    head.CanCollide=false
+    local leg1=makePart(model,"LeftLeg",Vector3.new(.75,2.2,.8),CFrame.new(seated+Vector3.new(-.65,1.1,1.0))*CFrame.Angles(math.rad(55),0,0),Color3.fromRGB(61,57,52),Enum.Material.Fabric)
+    local leg2=makePart(model,"RightLeg",Vector3.new(.75,2.2,.8),CFrame.new(seated+Vector3.new(.65,1.1,1.0))*CFrame.Angles(math.rad(55),0,0),Color3.fromRGB(61,57,52),Enum.Material.Fabric)
+    leg1.CanCollide=false leg2.CanCollide=false
+    model.PrimaryPart=root
+    model.Parent=area
+    billboard(torso,"Leather Trader Corvin","LEATHERWORKER",Color3.fromRGB(228,190,116))
+
+    local prompt=Instance.new("ProximityPrompt")
+    prompt.Name="LeatherTraderPrompt"
+    prompt.ActionText="Talk"
+    prompt.ObjectText="Leather Trader Corvin"
+    prompt.MaxActivationDistance=12
+    prompt.HoldDuration=.1
+    prompt.RequiresLineOfSight=false
+    prompt.Parent=torso
+    prompt.Triggered:Connect(function(player)
+        Service:TalkToLeatherTrader(player)
+    end)
+
+    leatherTraderModel=model
+end
+
+local function buildNPCs()
+    for _, npcId in ipairs(QuestConfig.NPCOrder) do
+        local spec = QuestConfig.World.NPCs[npcId]
+        if spec then
+            makeNPC(questWorld, npcId, spec)
+        end
+    end
+
+    -- Maeve arrives with a visibly tethered Trail Horse. Parenting the horse
+    -- beneath her NPC model means the existing per-player NPC visibility gate
+    -- hides both together until Hunter's Lasso progression is unlocked.
+    local maeve = npcModels.Maeve
+    if maeve then
+        local horse = ModelFactory:Create("Trail Horse")
+        local npcRoot = maeve.PrimaryPart
+        if horse and horse.PrimaryPart and npcRoot then
+            horse.Name = "MaeveTetheredHorse"
+            for _, item in ipairs(horse:GetDescendants()) do
+                if item:IsA("BillboardGui") then
+                    item:Destroy()
+                elseif item:IsA("BasePart") then
+                    item.Anchored = true
+                    item.CanCollide = false
+                    item.CanTouch = false
+                    item.CanQuery = false
+                end
+            end
+            horse.Parent = maeve
+            horse:PivotTo(npcRoot.CFrame * CFrame.new(4.8, -1.6, 1.8) * CFrame.Angles(0, math.rad(-25), 0))
+
+            local horseAttachment = Instance.new("Attachment")
+            horseAttachment.Name = "TetherHorse"
+            horseAttachment.Parent = horse.PrimaryPart
+
+            local hand = maeve:FindFirstChild("RightArm") or maeve:FindFirstChild("Torso") or npcRoot
+            local handAttachment = Instance.new("Attachment")
+            handAttachment.Name = "TetherHandler"
+            handAttachment.Parent = hand
+
+            local rope = Instance.new("Beam")
+            rope.Name = "HorseLasso"
+            rope.Attachment0 = handAttachment
+            rope.Attachment1 = horseAttachment
+            rope.Width0 = .12
+            rope.Width1 = .09
+            rope.Color = ColorSequence.new(Color3.fromRGB(170,126,78))
+            rope.FaceCamera = true
+            rope.Parent = hand
+        elseif horse then
+            horse:Destroy()
+        end
+    end
+end
+
+function Service:Init()
+    if started then return end
+    started = true
+
+    installStudioFinishQuestCommand()
+
+    world = workspace:WaitForChild("WildernessPets")
+    local old = world:FindFirstChild("QuestWorld")
+    if old then old:Destroy() end
+
+    questWorld = Instance.new("Folder")
+    questWorld.Name = "QuestWorld"
+    questWorld.Parent = world
+
+    buildCave()
+    buildLeatherTraderArea()
+    buildNPCs()
+
+    QuestRemote.OnServerEvent:Connect(function(player, action, value)
+        if action == "RequestState" then
+            Service:PushState(player)
+        elseif action == "Action" and type(value) == "string" then
+            Service:HandleAction(player, value)
+        end
+    end)
+end
+
+return Service
