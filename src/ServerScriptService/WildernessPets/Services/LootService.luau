@@ -1,3 +1,4 @@
+local RemoteGuard = require(game.ServerScriptService.WildernessPets.Services.RemoteGuard)
 local HttpService = game:GetService("HttpService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -8,6 +9,7 @@ local LootConfig = require(Root.Shared.LootConfig)
 
 local DataService = require(script.Parent.PlayerDataService)
 local ShopService = require(script.Parent.ShopService)
+local PartyService = require(script.Parent.PartyService)
 
 local Service = {}
 local started = false
@@ -170,7 +172,7 @@ local function removeBag(record)
     end
 end
 
-function Service:SpawnBag(player, target, baseCoins)
+function Service:SpawnBag(player, target, baseCoins, partyKey)
     if not player or not target then return nil end
 
     local species = tostring(target:GetAttribute("Species") or "")
@@ -187,12 +189,14 @@ function Service:SpawnBag(player, target, baseCoins)
     model.Name = "LootBag_" .. id
     model:SetAttribute("LootBagId", id)
     model:SetAttribute("LootOwnerUserId", player.UserId)
+    model:SetAttribute("LootPartyKey", partyKey)
     model:SetAttribute("LootSpecies", species)
     model:SetAttribute("LootRarity", rarity)
 
     local record = {
         Id = id,
         OwnerUserId = player.UserId,
+        PartyKey = partyKey,
         Player = player,
         Species = species,
         Rarity = rarity,
@@ -205,8 +209,10 @@ function Service:SpawnBag(player, target, baseCoins)
 
     prompt.ObjectText = species .. " Loot"
     prompt.Triggered:Connect(function(triggeringPlayer)
-        if triggeringPlayer.UserId ~= record.OwnerUserId then
-            LootRemote:FireClient(triggeringPlayer, "Error", "That loot belongs to another player.")
+        local allowed = triggeringPlayer.UserId == record.OwnerUserId
+            or (record.PartyKey ~= nil and PartyService:GetPartyKey(triggeringPlayer) == record.PartyKey)
+        if not allowed then
+            LootRemote:FireClient(triggeringPlayer, "Error", "That loot is protected for another player or party.")
             return
         end
         if bags[id] ~= record or not model.Parent then return end
@@ -231,8 +237,10 @@ function Service:Collect(player, bagId, selectedNames, takeCoins)
         LootRemote:FireClient(player, "CollectResult", false, "That loot bag is no longer available.")
         return
     end
-    if record.OwnerUserId ~= player.UserId then
-        LootRemote:FireClient(player, "CollectResult", false, "That loot belongs to another player.")
+    local allowed = record.OwnerUserId == player.UserId
+        or (record.PartyKey ~= nil and PartyService:GetPartyKey(player) == record.PartyKey)
+    if not allowed then
+        LootRemote:FireClient(player, "CollectResult", false, "That loot is protected for another player or party.")
         return
     end
 
@@ -359,7 +367,7 @@ function Service:Init()
     folder.Name = "LootBags"
     folder.Parent = world
 
-    LootRemote.OnServerEvent:Connect(function(player, action, value)
+    RemoteGuard.Connect(LootRemote, "Loot", function(player, action, value)
         if action == "Collect" then
             local payload = type(value) == "table" and value or {}
             Service:Collect(player, payload.BagId, payload.Items, payload.TakeCoins)

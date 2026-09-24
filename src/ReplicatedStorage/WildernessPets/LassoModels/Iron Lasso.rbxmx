@@ -1,0 +1,196 @@
+<roblox xmlns:xmime="http://www.w3.org/2005/05/xmlmime" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://www.roblox.com/roblox.xsd" version="4">
+	<External>null</External>
+	<External>nil</External>
+	<Item class="Model" referent="RBX_LASSO_MODEL_3">
+		<Properties>
+			<string name="Name">Iron Lasso</string>
+			<Ref name="PrimaryPart">RBX_LASSO_3_2</Ref>
+		</Properties>
+		<Item class="MeshPart" referent="RBX_LASSO_3_1">
+			<Properties>
+				<bool name="Anchored">true</bool>
+				<CoordinateFrame name="CFrame">
+					<X>134.070984</X>
+					<Y>29.7520466</Y>
+					<Z>-836.27655</Z>
+					<R00>0.94748354</R00>
+					<R01>0</R01>
+					<R02>0.319804817</R02>
+					<R10>0</R10>
+					<R11>1.00000012</R11>
+					<R12>0</R12>
+					<R20>-0.319804817</R20>
+					<R21>0</R21>
+					<R22>0.94748354</R22>
+				</CoordinateFrame>
+				<bool name="CanCollide">false</bool>
+				<bool name="CanQuery">false</bool>
+				<bool name="CanTouch">false</bool>
+				<Color3 name="Color"><R>0.639215708</R><G>0.635294139</G><B>0.647058845</B></Color3>
+				<bool name="DoubleSided">false</bool>
+				<bool name="Massless">true</bool>
+				<Content name="MeshId"><url>rbxassetid://138794666243540</url></Content>
+				<string name="Name">rope coil inner_geom</string>
+				<float name="Reflectance">0</float>
+				<Vector3 name="Size"><X>0.275145471</X><Y>0.99258852</Y><Z>0.126165837</Z></Vector3>
+				<float name="Transparency">0</float>
+				<Content name="TextureID"><url>rbxassetid://78227201829357</url></Content>
+			</Properties>
+		</Item>
+		<Item class="MeshPart" referent="RBX_LASSO_3_2">
+			<Properties>
+				<bool name="Anchored">true</bool>
+				<CoordinateFrame name="CFrame">
+					<X>134.067139</X>
+					<Y>29.7843723</Y>
+					<Z>-836.275024</Z>
+					<R00>0.94748354</R00>
+					<R01>0</R01>
+					<R02>0.319804817</R02>
+					<R10>0</R10>
+					<R11>1.00000012</R11>
+					<R12>0</R12>
+					<R20>-0.319804817</R20>
+					<R21>0</R21>
+					<R22>0.94748354</R22>
+				</CoordinateFrame>
+				<bool name="CanCollide">false</bool>
+				<bool name="CanQuery">false</bool>
+				<bool name="CanTouch">false</bool>
+				<Color3 name="Color"><R>0.639215708</R><G>0.635294139</G><B>0.647058845</B></Color3>
+				<bool name="DoubleSided">false</bool>
+				<bool name="Massless">true</bool>
+				<Content name="MeshId"><url>rbxassetid://84981445805694</url></Content>
+				<string name="Name">rope coil middle_geom</string>
+				<float name="Reflectance">0</float>
+				<Vector3 name="Size"><X>0.194713354</X><Y>0.0927033573</Y><Z>0.194671571</Z></Vector3>
+				<float name="Transparency">0</float>
+				<Content name="TextureID"><url>rbxassetid://118946907267229</url></Content>
+			</Properties>
+		</Item>
+		<Item class="MeshPart" referent="RBX_LASSO_3_3">
+			<Properties>
+				<bool name="Anchored">true</bool>
+				<CoordinateFrame name="CFrame">
+					<X>134.069061</X>
+					<Y>29.7577934</Y>
+					<Z>-836.275574</Z>
+					<R00>0.94748354</R00>
+					<R01>0</R01>
+					<R02>0.319804817</R02>
+					<R10>0</R10>
+					<R11>1.00000012</R11>
+					<R12>0</R12>
+					<R20>-0.319804817</R20>
+					<R21>0</R21>
+					<R22>0.94748354</R22>
+				</CoordinateFrame>
+				<bool name="CanCollide">false</bool>
+				<bool name="CanQuery">false</bool>
+				<bool name="CanTouch">false</bool>
+				<Color3 name="Color"><R>0.639215708</R><G>0.635294139</G><B>0.647058845</B></Color3>
+				<bool name="DoubleSided">false</bool>
+				<bool name="Massless">true</bool>
+				<Content name="MeshId"><url>rbxassetid://77469009454011</url></Content>
+				<string name="Name">rope coil outer_geom</string>
+				<float name="Reflectance">0</float>
+				<Vector3 name="Size"><X>0.373152137</X><Y>1.10152447</Y><Z>0.0938261524</Z></Vector3>
+				<float name="Transparency">0</float>
+				<Content name="TextureID"><url>rbxassetid://127914268489051</url></Content>
+			</Properties>
+		</Item>
+		<Item class="MeshPart" referent="RBX_LASSO_3_4">
+			<Properties>
+				<bool name="Anchored">true</bool>
+				<CoordinateFrame name="CFrame">
+					<X>134.069214</X>
+					<Y>29.7537441</Y>
+					<Z>-836.275513</Z>
+					<R00>0.94748354</R00>
+					<R01>0</R01>
+					<R02>0.319804817</R02>
+					<R10>0</R10>
+					<R11>1.00000012</R11>
+					<R12>0</R12>
+					<R20>-0.319804817</R20>
+					<R21>0</R21>
+					<R22>0.94748354</R22>
+				</CoordinateFrame>
+				<bool name="CanCollide">false</bool>
+				<bool name="CanQuery">false</bool>
+				<bool name="CanTouch">false</bool>
+				<Color3 name="Color"><R>0.639215708</R><G>0.635294139</G><B>0.647058845</B></Color3>
+				<bool name="DoubleSided">false</bool>
+				<bool name="Massless">true</bool>
+				<Content name="MeshId"><url>rbxassetid://129299294559926</url></Content>
+				<string name="Name">rope coil upper_geom</string>
+				<float name="Reflectance">0</float>
+				<Vector3 name="Size"><X>0.291892529</X><Y>1.01628935</Y><Z>0.132426366</Z></Vector3>
+				<float name="Transparency">0</float>
+				<Content name="TextureID"><url>rbxassetid://106116473503042</url></Content>
+			</Properties>
+		</Item>
+		<Item class="MeshPart" referent="RBX_LASSO_3_5">
+			<Properties>
+				<bool name="Anchored">true</bool>
+				<CoordinateFrame name="CFrame">
+					<X>133.899704</X>
+					<Y>30.393013</Y>
+					<Z>-836.21936</Z>
+					<R00>0.94748354</R00>
+					<R01>0</R01>
+					<R02>0.319804817</R02>
+					<R10>0</R10>
+					<R11>1.00000012</R11>
+					<R12>0</R12>
+					<R20>-0.319804817</R20>
+					<R21>0</R21>
+					<R22>0.94748354</R22>
+				</CoordinateFrame>
+				<bool name="CanCollide">false</bool>
+				<bool name="CanQuery">false</bool>
+				<bool name="CanTouch">false</bool>
+				<Color3 name="Color"><R>0.639215708</R><G>0.635294139</G><B>0.647058845</B></Color3>
+				<bool name="DoubleSided">false</bool>
+				<bool name="Massless">true</bool>
+				<Content name="MeshId"><url>rbxassetid://133641052763162</url></Content>
+				<string name="Name">rope end_geom</string>
+				<float name="Reflectance">0</float>
+				<Vector3 name="Size"><X>0.0742965788</X><Y>0.128035873</Y><Z>0.0629036129</Z></Vector3>
+				<float name="Transparency">0</float>
+				<Content name="TextureID"><url>rbxassetid://127316590858110</url></Content>
+			</Properties>
+		</Item>
+		<Item class="MeshPart" referent="RBX_LASSO_3_6">
+			<Properties>
+				<bool name="Anchored">true</bool>
+				<CoordinateFrame name="CFrame">
+					<X>133.953445</X>
+					<Y>30.0828705</Y>
+					<Z>-836.238525</Z>
+					<R00>0.94748354</R00>
+					<R01>0</R01>
+					<R02>0.319804817</R02>
+					<R10>0</R10>
+					<R11>1.00000012</R11>
+					<R12>0</R12>
+					<R20>-0.319804817</R20>
+					<R21>0</R21>
+					<R22>0.94748354</R22>
+				</CoordinateFrame>
+				<bool name="CanCollide">false</bool>
+				<bool name="CanQuery">false</bool>
+				<bool name="CanTouch">false</bool>
+				<Color3 name="Color"><R>0.639215708</R><G>0.635294139</G><B>0.647058845</B></Color3>
+				<bool name="DoubleSided">false</bool>
+				<bool name="Massless">true</bool>
+				<Content name="MeshId"><url>rbxassetid://70494995912636</url></Content>
+				<string name="Name">rope tail_geom</string>
+				<float name="Reflectance">0</float>
+				<Vector3 name="Size"><X>0.138954073</X><Y>0.549972355</Y><Z>0.030458454</Z></Vector3>
+				<float name="Transparency">0</float>
+				<Content name="TextureID"><url>rbxassetid://91789280203827</url></Content>
+			</Properties>
+		</Item>
+	</Item>
+</roblox>

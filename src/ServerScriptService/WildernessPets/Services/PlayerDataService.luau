@@ -2,6 +2,7 @@ local Players = game:GetService("Players")
 local DataStoreService = game:GetService("DataStoreService")
 local RunService = game:GetService("RunService")
 local Config = require(game.ReplicatedStorage.WildernessPets.Shared.Config)
+local SkinConfig = require(game.ReplicatedStorage.WildernessPets.Shared.LassoSkinConfig)
 
 -- Unpublished Studio places cannot access DataStoreService. In that case,
 -- keep player data in memory for the current test session instead.
@@ -15,53 +16,11 @@ end
 local Service = {}
 Service.Data = {}
 
-local function newData()
-    return {
-        Coins = Config.StartCoins,
-        Gems = Config.StartGems,
-        Lasso = "Rough Rope",
-        MaxLassoStrengthUnlocked = 15,
-        Inventory = {
-            {Type = "Lasso", Name = "Rough Rope", Quantity = 1}
-        },
-        InventoryCapacity = Config.MaxInventory or 25,
-        BackpackName = "Starter Bag",
-        LootInventory = {},
-        PetBuyback = {},
-        LassoBuyback = {},
-        ActiveEffects = {
-            XPBoostUntil = 0,
-            XPBoostPercent = 0,
-            SpeedBoostUntil = 0,
-            PlayerSpeedMultiplier = 1,
-            PetSpeedMultiplier = 1,
-            NextCaptureTranquiliser = false,
-            NextCaptureLuck = false
-        },
-        Pets = {},
-        Mounts = {},
-        MountCollection = {},
-        PetCollection = {},
-        CollectionRewardsClaimed = {},
-        QuestProgress = {},
-        Achievements = {},
-        AuctionListings = {},
-        AuctionStats = {Listed = 0, Sold = 0, Bought = 0, FeesPaid = 0},
-        AuctionMailClaims = {},
-        VillageUpgrades = {HealingBarn = 1, TrainingArea = 1, TrainingSlots = 1},
-        TrainingAssignments = {},
-        SelectedPlot = 0,
-        DefencePetId = "",
-        EquippedPetId = "",
-        EquippedMountId = "",
-        PodiumPetId = "",
-        ArenaRating = 1000,
-        ArenaWins = 0,
-        ArenaLosses = 0,
-        WeeklyWins = 0,
-        LastWeeklyReward = 0
-    }
-end
+local Schema = require(script.Parent.ProfileSchema)
+local Persistence = require(script.Parent.ProfilePersistence)
+local HttpService = game:GetService("HttpService")
+local sessions, loading, saving, released = {}, {}, {}, {}
+local closing = false
 
 local function makeLeaderstats(player, data)
     local ls = Instance.new("Folder")
@@ -105,269 +64,161 @@ local function syncLeaderstats(player)
 end
 
 function Service:Load(player)
-    local data = newData()
-
+    if self.Data[player] then return self.Data[player] end
+    if loading[player] or closing then return nil end
+    loading[player] = true
+    player:SetAttribute("ProfileStatus", "Loading")
+    local data, err
     if useDataStore and Store then
-        local success, saved = pcall(function()
-            return Store:GetAsync("Player_" .. player.UserId)
-        end)
-
-        if success and type(saved) == "table" then
-            for k, v in pairs(saved) do
-                data[k] = v
-            end
-        end
+        local session = Persistence.new(Store, game.JobId .. ":" .. HttpService:GenerateGUID(false))
+        data, err = session:Acquire("Player_" .. player.UserId)
+        if data then sessions[player] = session end
+    else
+        data = Schema.New()
     end
-
-    if type(data.Inventory) ~= "table" then
-        data.Inventory = {}
+    if not data then
+        loading[player] = nil
+        player:SetAttribute("ProfileStatus", "LoadFailed")
+        warn("[PlayerData] Load refused for " .. player.UserId .. ": " .. tostring(err))
+        player:Kick("Your saved progress could not be safely loaded. Please rejoin shortly.")
+        return nil
     end
-    if type(data.LootInventory) ~= "table" then
-        data.LootInventory = {}
+    if player.Parent ~= Players or closing then
+        if sessions[player] then sessions[player]:Save("Player_" .. player.UserId, data, true) end
+        sessions[player], loading[player] = nil, nil
+        return nil
     end
-
-    data.InventoryCapacity = math.max(
-        tonumber(Config.MaxInventory) or 25,
-        math.floor(tonumber(data.InventoryCapacity) or tonumber(Config.MaxInventory) or 25)
-    )
-    data.BackpackName = type(data.BackpackName) == "string" and data.BackpackName or "Starter Bag"
-
-    -- Migrate the previous unlimited material dictionary into ordinary,
-    -- slot-limited stackable Loot inventory entries without deleting any
-    -- previously collected material.
-    local migratedLoot = {}
-    for itemName, quantity in pairs(data.LootInventory) do
-        local amount = math.max(0, math.floor(tonumber(quantity) or 0))
-        if type(itemName) == "string" and itemName ~= "" and amount > 0 then
-            migratedLoot[itemName] = (migratedLoot[itemName] or 0) + amount
-        end
+    local normalizer = require(script.Parent.ProfileNormalizer)
+    local normalized, result = pcall(normalizer, Schema.Copy(data))
+    if not normalized then
+        loading[player] = nil
+        if sessions[player] then sessions[player]:Save("Player_" .. player.UserId, data, true) end
+        sessions[player] = nil
+        player:SetAttribute("ProfileStatus", "LoadFailed")
+        warn("[PlayerData] Profile normalization failed for " .. player.UserId .. ": " .. tostring(result))
+        player:Kick("Your saved progress needs attention. Please rejoin shortly.")
+        return nil
     end
-
-    for _, item in ipairs(data.Inventory) do
-        if type(item) == "table" then
-            item.Quantity = math.max(1, math.floor(tonumber(item.Quantity) or 1))
-            if item.Type == "Loot" and type(item.Name) == "string" then
-                migratedLoot[item.Name] = (migratedLoot[item.Name] or 0) + item.Quantity
-                item._MergedLegacyLoot = true
-            end
-        end
-    end
-
-    for index = #data.Inventory, 1, -1 do
-        local item = data.Inventory[index]
-        if type(item) == "table" and item._MergedLegacyLoot then
-            table.remove(data.Inventory, index)
-        end
-    end
-
-    local lootNames = {}
-    for itemName in pairs(migratedLoot) do table.insert(lootNames, itemName) end
-    table.sort(lootNames)
-    for _, itemName in ipairs(lootNames) do
-        table.insert(data.Inventory, {
-            Type = "Loot",
-            Name = itemName,
-            Quantity = migratedLoot[itemName],
-        })
-    end
-    data.LootInventory = {}
-    if type(data.Pets) ~= "table" then
-        data.Pets = {}
-    end
-    if type(data.Mounts) ~= "table" then
-        data.Mounts = {}
-    end
-    if type(data.MountCollection) ~= "table" then
-        data.MountCollection = {}
-    end
-    if type(data.PetCollection) ~= "table" then
-        data.PetCollection = {}
-    end
-    if type(data.CollectionRewardsClaimed) ~= "table" then
-        data.CollectionRewardsClaimed = {}
-    end
-    if type(data.QuestProgress) ~= "table" then
-        data.QuestProgress = {}
-    end
-    if type(data.PetBuyback) ~= "table" then
-        data.PetBuyback = {}
-    end
-    if type(data.LassoBuyback) ~= "table" then
-        data.LassoBuyback = {}
-    end
-    if type(data.ActiveEffects) ~= "table" then
-        data.ActiveEffects = {}
-    end
-    if type(data.Achievements) ~= "table" then data.Achievements = {} end
-    if type(data.AuctionListings) ~= "table" then data.AuctionListings = {} end
-    if type(data.AuctionStats) ~= "table" then data.AuctionStats = {} end
-    if type(data.AuctionMailClaims) ~= "table" then data.AuctionMailClaims = {} end
-    if type(data.VillageUpgrades) ~= "table" then data.VillageUpgrades = {} end
-    if type(data.TrainingAssignments) ~= "table" then data.TrainingAssignments = {} end
-
-    data.AuctionStats.Listed = math.max(0, math.floor(tonumber(data.AuctionStats.Listed) or 0))
-    data.AuctionStats.Sold = math.max(0, math.floor(tonumber(data.AuctionStats.Sold) or 0))
-    data.AuctionStats.Bought = math.max(0, math.floor(tonumber(data.AuctionStats.Bought) or 0))
-    data.AuctionStats.FeesPaid = math.max(0, math.floor(tonumber(data.AuctionStats.FeesPaid) or 0))
-    data.VillageUpgrades.HealingBarn = math.clamp(math.floor(tonumber(data.VillageUpgrades.HealingBarn) or 1), 1, 5)
-    data.VillageUpgrades.TrainingArea = math.clamp(math.floor(tonumber(data.VillageUpgrades.TrainingArea) or 1), 1, 5)
-    data.VillageUpgrades.TrainingSlots = math.clamp(math.floor(tonumber(data.VillageUpgrades.TrainingSlots) or 1), 1, 5)
-
-    data.Coins = math.max(0, math.floor(tonumber(data.Coins) or tonumber(Config.StartCoins) or 0))
-    data.Gems = math.max(0, math.floor(tonumber(data.Gems) or tonumber(Config.StartGems) or 0))
-
-    data.ActiveEffects.XPBoostUntil = tonumber(data.ActiveEffects.XPBoostUntil) or 0
-    data.ActiveEffects.XPBoostPercent = tonumber(data.ActiveEffects.XPBoostPercent) or 0
-    data.ActiveEffects.SpeedBoostUntil = tonumber(data.ActiveEffects.SpeedBoostUntil) or 0
-    data.ActiveEffects.PlayerSpeedMultiplier = tonumber(data.ActiveEffects.PlayerSpeedMultiplier) or 1
-    data.ActiveEffects.PetSpeedMultiplier = tonumber(data.ActiveEffects.PetSpeedMultiplier) or 1
-    data.ActiveEffects.NextCaptureTranquiliser = data.ActiveEffects.NextCaptureTranquiliser == true
-    data.ActiveEffects.NextCaptureLuck = data.ActiveEffects.NextCaptureLuck == true
-
-    local function seedCollection(species)
-        local info = type(species) == "string" and Config.Pets[species] or nil
-        if info and info.Legacy ~= true and info.SpawnMode ~= "Legacy" then
-            data.PetCollection[species] = true
-        end
-    end
-
-    -- Migrate existing profiles into the lifetime collection database.
-    for _, pet in ipairs(data.Pets) do
-        if type(pet) == "table" then
-            seedCollection(pet.Species)
-        end
-    end
-    for _, entry in ipairs(data.PetBuyback) do
-        if type(entry) == "table" and type(entry.Pet) == "table" then
-            seedCollection(entry.Pet.Species)
-        end
-    end
-
-    for _, mount in ipairs(data.Mounts) do
-        if type(mount) == "table" and type(mount.Species) == "string" and Config.Mounts[mount.Species] then
-            mount.Id = type(mount.Id) == "string" and mount.Id or game:GetService("HttpService"):GenerateGUID(false)
-            mount.Name = type(mount.Name) == "string" and mount.Name or mount.Species
-            mount.Rarity = tostring(mount.Rarity or Config.Mounts[mount.Species].Rarity or "Common")
-            mount.Imprint = math.clamp(math.floor(tonumber(mount.Imprint) or 20), 20, 100)
-            data.MountCollection[mount.Species] = true
-        end
-    end
-    data.EquippedMountId = type(data.EquippedMountId) == "string" and data.EquippedMountId or ""
-
-    local equippedLasso = type(data.Lasso) == "string" and data.Lasso or "Rough Rope"
-    data.Lasso = equippedLasso
-
-    local unlockedStrength = math.max(0, tonumber(data.MaxLassoStrengthUnlocked) or 0)
-    local function noteLasso(name)
-        local info = type(name) == "string" and Config.Lassos[name] or nil
-        unlockedStrength = math.max(unlockedStrength, tonumber(info and info.Strength) or 0)
-    end
-    noteLasso(equippedLasso)
-    for _, item in ipairs(data.Inventory) do
-        if type(item) == "table" and item.Type == "Lasso" and (tonumber(item.Quantity) or 0) > 0 then
-            noteLasso(item.Name)
-        end
-    end
-    data.MaxLassoStrengthUnlocked = unlockedStrength
-
-    local ownsEquippedLasso = false
-    for _, item in ipairs(data.Inventory) do
-        if type(item) == "table" and item.Type == "Lasso" and item.Name == equippedLasso then
-            item.Quantity = math.max(1, tonumber(item.Quantity) or 1)
-            ownsEquippedLasso = true
-            break
-        end
-    end
-
-    if not ownsEquippedLasso and #data.Inventory < data.InventoryCapacity then
-        table.insert(data.Inventory, {
-            Type = "Lasso",
-            Name = equippedLasso,
-            Quantity = 1
-        })
-    end
-
+    data = result
     self.Data[player] = data
 
     makeLeaderstats(player, data)
+    loading[player] = nil
+    released[player] = nil
+    player:SetAttribute("ProfileStatus", useDataStore and "Ready" or "StudioSession")
 
     return data
 end
 
 function Service:Get(player)
+    if released[player] or closing then return nil end
+    local session = sessions[player]
+    if session and session.expiresAt and session.expiresAt <= os.time() then
+        released[player] = true
+        player:Kick("Saving is temporarily unavailable. Please rejoin to protect your progress.")
+        return nil
+    end
     return self.Data[player]
 end
 
-function Service:Save(player)
-    local data = self.Data[player]
-    if not data then return end
-
-    if not useDataStore or not Store then
-        return
+function Service:Save(player, release)
+    while saving[player] do task.wait(.05) end
+    local profile = self.Data[player]
+    if not profile or released[player] then return false, "ProfileNotLoaded" end
+    if not useDataStore then return true, "StudioSession" end
+    local session = sessions[player]
+    if not session then return false, "SessionMissing" end
+    saving[player] = true
+    local callOk, ok, reason = pcall(session.Save, session, "Player_" .. player.UserId, profile, release)
+    saving[player] = nil
+    if not callOk then reason, ok = tostring(ok), false end
+    if ok then
+        player:SetAttribute("LastProfileSave", os.time())
+        player:SetAttribute("ProfileStatus", release and "Released" or "Ready")
+        if release then released[player] = true end
+    else
+        player:SetAttribute("ProfileStatus", "SaveFailed")
+        warn("[PlayerData] Save failed for " .. player.UserId .. ": " .. tostring(reason))
+        if reason == "SessionLost" then
+            released[player] = true
+            player:Kick("Your profile session changed. Please rejoin to protect your progress.")
+        end
     end
-
-    pcall(function()
-        Store:UpdateAsync("Player_" .. player.UserId, function()
-            return data
-        end)
-    end)
+    return ok, reason
 end
 
 function Service:AddCoins(player, amount)
-    local data = self:Get(player)
-    if not data then return nil end
-
-    local value = math.max(0, math.floor(tonumber(amount) or 0))
-    data.Coins = math.max(0, math.floor(tonumber(data.Coins) or 0)) + value
+    local profile = self:Get(player)
+    if not profile or not Schema.ValidAmount(amount) then return nil end
+    if not Schema.ValidAmount(profile.Coins) or amount > Schema.MaxCurrency - profile.Coins then return nil end
+    profile.Coins += amount
     syncLeaderstats(player)
-    return data.Coins
+    return profile.Coins
 end
 
 function Service:AddGems(player, amount)
-    local data = self:Get(player)
-    if not data then return nil end
-
-    local value = math.max(0, math.floor(tonumber(amount) or 0))
-    data.Gems = math.max(0, math.floor(tonumber(data.Gems) or 0)) + value
+    local profile = self:Get(player)
+    if not profile or not Schema.ValidAmount(amount) then return nil end
+    if not Schema.ValidAmount(profile.Gems) or amount > Schema.MaxCurrency - profile.Gems then return nil end
+    profile.Gems += amount
     syncLeaderstats(player)
-    return data.Gems
+    return profile.Gems
 end
 
 function Service:SpendCoins(player, amount)
-    local data = self:Get(player)
-    if not data or data.Coins < amount then
-        return false
-    end
-
-    data.Coins -= amount
+    local profile = self:Get(player)
+    if not profile or not Schema.ValidAmount(amount) or not Schema.ValidAmount(profile.Coins)
+        or profile.Coins < amount then return false end
+    profile.Coins -= amount
     syncLeaderstats(player)
-
     return true
 end
 
 function Service:SpendGems(player, amount)
-    local data = self:Get(player)
-    if not data or data.Gems < amount then
-        return false
-    end
-
-    data.Gems -= amount
+    local profile = self:Get(player)
+    if not profile or not Schema.ValidAmount(amount) or not Schema.ValidAmount(profile.Gems)
+        or profile.Gems < amount then return false end
+    profile.Gems -= amount
     syncLeaderstats(player)
-
     return true
 end
 
 function Service:Cleanup(player)
-    self:Save(player)
-    self.Data[player] = nil
+    local ok = self:Save(player, true)
+    if ok or released[player] or not self.Data[player] then
+        self.Data[player], sessions[player], released[player] = nil, nil, nil
+    else
+        -- Keep the profile available for autosave/shutdown retries after a disconnect.
+        warn("[PlayerData] Retaining unsaved profile for retry: " .. player.UserId)
+    end
 end
 
--- GameServer owns the player lifecycle so each profile is loaded and cleaned up once.
+task.spawn(function()
+    while not closing do
+        task.wait(45)
+        if closing then break end
+        for player in pairs(Service.Data) do
+            task.spawn(function()
+                if player.Parent == Players then Service:Save(player)
+                else Service:Cleanup(player) end
+            end)
+            task.wait(.2)
+        end
+    end
+end)
 
 game:BindToClose(function()
-    for _, player in ipairs(Players:GetPlayers()) do
-        Service:Save(player)
+    closing = true
+    local pending = 0
+    for player in pairs(Service.Data) do
+        pending += 1
+        task.spawn(function()
+            Service:Cleanup(player)
+            pending -= 1
+        end)
     end
+    local deadline = os.clock() + 25
+    while (pending > 0 or next(loading) ~= nil) and os.clock() < deadline do task.wait(.1) end
 end)
 
 return Service

@@ -1,19 +1,6 @@
 local Players = game:GetService("Players")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local ServerStorage = game:GetService("ServerStorage")
 
-local Config = require(ReplicatedStorage.WildernessPets.Shared.Config)
-
-local sourceTool = ServerStorage:WaitForChild("WildernessPets"):WaitForChild("Lasso")
-local sourceHandle = sourceTool:WaitForChild("Handle")
-
-local materialMap = {
-    Fabric = Enum.Material.Fabric,
-    Metal = Enum.Material.Metal,
-    Neon = Enum.Material.Neon,
-    Wood = Enum.Material.Wood,
-    Plastic = Enum.Material.SmoothPlastic
-}
+local VisualService = require(script.Parent.LassoVisualService)
 
 local function removeDisplay(character)
     local existing = character and character:FindFirstChild("EquippedLassoDisplay")
@@ -27,69 +14,48 @@ local function mountDisplay(player, character)
 
     removeDisplay(character)
 
+    -- While the Tool is equipped, its hand-held LassoVisual is the only visible copy.
+    -- Otherwise keep a passive rope bundle in the left hand so lassos are never back-mounted.
+    if character:FindFirstChild("Lasso") then
+        return
+    end
+
     local lassoName = player:GetAttribute("EquippedLassoName")
     if type(lassoName) ~= "string" or lassoName == "" then
         lassoName = "Rough Rope"
     end
-
-    local info = Config.Lassos[lassoName]
-    if not info then return end
-
-    local torso = character:FindFirstChild("UpperTorso")
-        or character:FindFirstChild("Torso")
-        or character:FindFirstChild("HumanoidRootPart")
-
-    if not torso or not torso:IsA("BasePart") then
-        torso = character:WaitForChild("HumanoidRootPart", 5)
-    end
-    if not torso or not torso:IsA("BasePart") then return end
-
-    local display = sourceHandle:Clone()
-    display.Name = "EquippedLassoDisplay"
-    display.Anchored = false
-    display.CanCollide = false
-    display.CanTouch = false
-    display.CanQuery = false
-    display.Massless = true
-    display.CastShadow = true
-
-    if typeof(info.DisplayColor) == "Color3" then
-        display.Color = info.DisplayColor
+    local skinId = player:GetAttribute("EquippedLassoSkin")
+    if type(skinId) ~= "string" then
+        skinId = ""
     end
 
-    local materialName = tostring(info.DisplayMaterial or "Fabric")
-    display.Material = materialMap[materialName] or Enum.Material.Fabric
+    local hand = character:FindFirstChild("LeftHand")
+        or character:FindFirstChild("Left Arm")
 
-    display:SetAttribute("LassoName", lassoName)
-    display:SetAttribute("CollectibleDisplay", true)
-    display.Parent = character
+    if not hand or not hand:IsA("BasePart") then
+        hand = character:WaitForChild("LeftHand", 2)
+            or character:FindFirstChild("Left Arm")
+    end
+    if not hand or not hand:IsA("BasePart") then return end
 
-    local isR15 = torso.Name == "UpperTorso"
-    local offset
-
-    if isR15 then
-        offset = CFrame.new(1.15, -0.15, 0.58)
-            * CFrame.Angles(math.rad(18), math.rad(-8), math.rad(72))
+    local gripCFrame = hand.CFrame
+    if hand.Name == "Left Arm" then
+        gripCFrame = hand.CFrame * CFrame.new(0, -0.86, -0.02)
     else
-        offset = CFrame.new(1.15, -0.35, 0.62)
-            * CFrame.Angles(math.rad(18), math.rad(-8), math.rad(72))
+        gripCFrame = hand.CFrame * CFrame.new(0, -0.025, -0.025)
     end
+    gripCFrame *= CFrame.Angles(0, math.rad(-5), math.rad(4))
 
-    display.CFrame = torso.CFrame * offset
-
-    local weld = Instance.new("WeldConstraint")
-    weld.Name = "LassoDisplayWeld"
-    weld.Part0 = torso
-    weld.Part1 = display
-    weld.Parent = display
-
-    if display.Material == Enum.Material.Neon then
-        local light = Instance.new("PointLight")
-        light.Name = "CollectibleGlow"
-        light.Brightness = 0.45
-        light.Range = 5
-        light.Color = display.Color
-        light.Parent = display
+    local display = VisualService:Mount(
+        character,
+        hand,
+        lassoName,
+        skinId,
+        "EquippedLassoDisplay",
+        gripCFrame
+    )
+    if display then
+        display:SetAttribute("CollectibleDisplay", true)
     end
 end
 
@@ -103,15 +69,29 @@ local function bindPlayer(player)
         end
     end
 
-    player.CharacterAdded:Connect(function(character)
+    local function bindCharacter(character)
+        character.ChildAdded:Connect(function(child)
+            if child:IsA("Tool") and child.Name == "Lasso" then
+                refresh()
+            end
+        end)
+        character.ChildRemoved:Connect(function(child)
+            if child:IsA("Tool") and child.Name == "Lasso" then
+                refresh()
+            end
+        end)
+
         task.wait(0.25)
         mountDisplay(player, character)
-    end)
+    end
+
+    player.CharacterAdded:Connect(bindCharacter)
 
     player:GetAttributeChangedSignal("EquippedLassoName"):Connect(refresh)
+    player:GetAttributeChangedSignal("EquippedLassoSkin"):Connect(refresh)
 
     if player.Character then
-        refresh()
+        task.spawn(bindCharacter, player.Character)
     end
 end
 

@@ -1,3 +1,9 @@
+local Registry=require(script.Parent.Services.ServiceRegistry)
+local ContentDefinitions=require(game.ReplicatedStorage.WildernessPets.Shared.ContentDefinitions)
+Registry.Validate()
+ContentDefinitions.Validate()
+require(script.Parent.Services.ReceiptService):Init()
+local RemoteGuard = require(game.ServerScriptService.WildernessPets.Services.RemoteGuard)
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -25,6 +31,7 @@ local CaptureService = require(script.Parent.Services.CaptureService)
 local ActionLockService = require(script.Parent.Services.ActionLockService)
 local BeastTraderService = require(script.Parent.Services.BeastTraderService)
 local LassoKeeperService = require(script.Parent.Services.LassoKeeperService)
+local LassoSkinService = require(script.Parent.Services.LassoSkinService)
 local PetMerchantService = require(script.Parent.Services.PetMerchantService)
 local PotionService = require(script.Parent.Services.PotionService)
 local BarnService = require(script.Parent.Services.BarnService)
@@ -39,6 +46,7 @@ local TestCommandService = require(script.Parent.Services.TestCommandService)
 local AchievementService = require(script.Parent.Services.AchievementService)
 local VillageUpgradeService = require(script.Parent.Services.VillageUpgradeService)
 local AuctionService = require(script.Parent.Services.AuctionService)
+local PartyService = require(script.Parent.Services.PartyService)
 MonsterService:Init()
 MountService:Init()
 LootService:Init()
@@ -48,6 +56,7 @@ TradeService:Init()
 AchievementService:Init()
 VillageUpgradeService:Init()
 AuctionService:Init()
+PartyService:Init()
 QuestService:Init()
 BossTravelService:Init()
 BeastTraderService:Init()
@@ -83,7 +92,9 @@ end
 
 local function setupPlayer(player)
     local data = DataService:Load(player)
+    if not data then return end
     player:SetAttribute("EquippedLassoName", data and data.Lasso or "Rough Rope")
+    player:SetAttribute("EquippedLassoSkin", data and data.EquippedLassoSkin or "")
     PetService:RefreshHealing(player)
     ActionLockService:Initialize(player)
     QuestService:PlayerReady(player)
@@ -125,6 +136,7 @@ Players.PlayerRemoving:Connect(function(player)
     TradeService:PlayerRemoving(player)
     VillageUpgradeService:PlayerRemoving(player)
     AuctionService:PlayerRemoving(player)
+    PartyService:PlayerRemoving(player)
     BossTravelService:PlayerRemoving(player)
     QuestService:PlayerRemoving(player)
     PlotService:Release(player)
@@ -136,6 +148,7 @@ end)
 ----------------------------------------------------------------
 
 GetState.OnServerInvoke = function(player)
+    if not RemoteGuard.Allow(player, "GetState") then return nil end
     local data = DataService:Get(player)
 
     if not data then
@@ -148,6 +161,8 @@ GetState.OnServerInvoke = function(player)
         Coins = data.Coins,
         Gems = data.Gems,
         Lasso = data.Lasso,
+        LassoSkinsOwned = data.LassoSkinsOwned or {},
+        EquippedLassoSkin = data.EquippedLassoSkin or "",
         Inventory = data.Inventory or {},
         InventoryCapacity = math.max(tonumber(Config.MaxInventory) or 25, tonumber(data.InventoryCapacity) or tonumber(Config.MaxInventory) or 25),
         BackpackName = data.BackpackName or "Starter Bag",
@@ -178,7 +193,7 @@ end
 -- PETS
 ----------------------------------------------------------------
 
-PetsRemote.OnServerEvent:Connect(function(player, action, ...)
+RemoteGuard.Connect(PetsRemote, "Pets", function(player, action, ...)
     local args = {...}
 
     if action == "Rename" then
@@ -262,6 +277,14 @@ PetsRemote.OnServerEvent:Connect(function(player, action, ...)
             args[2] == true
         )
         PetsRemote:FireClient(player, "MountUpdated", success, message)
+
+    elseif action == "EquipLassoSkin" then
+        local success, message = LassoSkinService:Equip(player, tostring(args[1] or ""))
+        PetsRemote:FireClient(player, "LassoSkinUpdated", success, message)
+
+    elseif action == "UnequipLassoSkin" then
+        local success, message = LassoSkinService:Unequip(player)
+        PetsRemote:FireClient(player, "LassoSkinUpdated", success, message)
 
     elseif action == "ClaimCollectionReward" then
         local data = DataService:Get(player)
@@ -354,7 +377,7 @@ end)
 -- SHOPS
 ----------------------------------------------------------------
 
-ShopRemote.OnServerEvent:Connect(function(player, action, ...)
+RemoteGuard.Connect(ShopRemote, "Shop", function(player, action, ...)
     local args = {...}
     local value = args[1]
 
@@ -565,7 +588,7 @@ end)
 -- ARENA
 ----------------------------------------------------------------
 
-ArenaRemote.OnServerEvent:Connect(function(player, action, value)
+RemoteGuard.Connect(ArenaRemote, "Arena", function(player, action, value)
     if action == "SetDefence" then
         local success = ArenaService:SetDefence(player, value)
 
@@ -967,6 +990,11 @@ local function makeExperienceOrbs(origin, destination)
     end
 end
 local function rewardCombatKill(player, session, target)
+    local contributors = {}
+    for _, member in ipairs(Players:GetPlayers()) do
+        if target:GetAttribute("PartyDamage_" .. member.UserId) == true then contributors[member] = true end
+    end
+    contributors[player] = true
     if rewardGuard[target] then return end
     rewardGuard[target] = true
 
@@ -975,7 +1003,7 @@ local function rewardCombatKill(player, session, target)
         WorldBossRewardService:ResolveBossDeath(target)
         combatTell(player, "Reward", 0, "World Boss")
 
-        local respawnSeconds = math.max(30, tonumber(target:GetAttribute("RespawnSeconds")) or 180)
+        local respawnSeconds = math.max(30, tonumber(target:GetAttribute("RespawnSeconds")) or 14400)
         task.delay(respawnSeconds + 1, function()
             if target.Parent and target:GetAttribute("Dead") ~= true then
                 rewardGuard[target] = nil
@@ -1021,9 +1049,22 @@ local function rewardCombatKill(player, session, target)
     -- player-owned loot bag that appears at the defeated creature.
     local _, _, awardedXP = PetService:AddXP(player, session.petId, baseXP)
     awardedXP = awardedXP or baseXP
-    LootService:SpawnBag(player, target, baseCoins)
+    for _, member in ipairs(PartyService:GetMembers(player)) do
+        if member ~= player then
+            local memberPetId = member:GetAttribute("EquippedPetId")
+            if type(memberPetId) == "string" and memberPetId ~= "" then
+                local amount = contributors[member] and baseXP or math.max(1, math.floor(baseXP * 0.30 + 0.5))
+                PetService:AddXP(member, memberPetId, amount)
+            end
+        end
+    end
+    LootService:SpawnBag(player, target, baseCoins, PartyService:GetPartyKey(player))
+    LassoSkinService:RollDrop(player, target)
 
     QuestService:OnMonsterKilled(player, target, session.petId)
+    for _, member in ipairs(PartyService:GetMembers(player)) do
+        if member ~= player then QuestService:OnMonsterKilled(member, target, member:GetAttribute("EquippedPetId")) end
+    end
     combatTell(player, "Reward", awardedXP, rarity)
 
     local refresh = script.Parent.Systems:FindFirstChild("PetDisplayRefresh")
@@ -1634,7 +1675,7 @@ BossCombatService:Configure({
 })
 BossCombatService:Init()
 
-GameRemote.OnServerEvent:Connect(function(player, action, value)
+RemoteGuard.Connect(GameRemote, "Game", function(player, action, value)
     if action == "CombatSelect" then
         selectCombatTarget(player, value)
     elseif action == "CombatAction" then

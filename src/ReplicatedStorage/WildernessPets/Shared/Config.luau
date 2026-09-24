@@ -46,7 +46,7 @@ Config.Combat = {
 }
 
 -- First rename is free. Further renames spend gems; gem packs can later be sold for Robux.
-Config.PetRenameGemCost = 50
+Config.PetRenameGemCost = 500
 
 Config.CaptureMinigame = {
     RoundDurationSeconds = 4.5,

@@ -18,6 +18,8 @@ local GetState = Remotes:WaitForChild("GetState")
 local Shared = Root:WaitForChild("Shared")
 local Config = require(Shared:WaitForChild("Config"))
 local LootConfig = require(Shared:WaitForChild("LootConfig"))
+local LassoSkinConfig = require(Shared:WaitForChild("LassoSkinConfig"))
+local LassoSkinsUI = require(Shared:WaitForChild("LassoSkinsUI"))
 
 local state
 local petsOpen=false
@@ -126,7 +128,7 @@ end
 --------------------------------------------------------------
 
 showPets = function(tab)
-    if tab == "Pets" or tab == "Mounts" or tab == "Inventory" then
+    if tab == "Pets" or tab == "Mounts" or tab == "Inventory" or tab == "Skins" then
         backpackTab = tab
     end
 
@@ -172,32 +174,47 @@ showPets = function(tab)
         panel,
         "🐾  PETS   "..tostring(#pets).."/"..tostring(Config.MaxPets or 60),
         UDim2.fromOffset(22,54),
-        UDim2.fromOffset(244,50)
+        UDim2.fromOffset(184,50)
     )
     petTab.TextScaled=false
-    petTab.TextSize=12
+    petTab.TextSize=11
 
     local mountTab=button(
         panel,
         "♞  MOUNTS   "..tostring(#mounts).."/"..tostring(Config.MaxMounts or 40),
-        UDim2.fromOffset(274,54),
-        UDim2.fromOffset(244,50)
+        UDim2.fromOffset(214,54),
+        UDim2.fromOffset(184,50)
     )
     mountTab.TextScaled=false
-    mountTab.TextSize=12
+    mountTab.TextSize=11
 
     local inventoryTab=button(
         panel,
         "🎒  INVENTORY   "..tostring(#inventory).."/"..tostring(inventoryCapacity),
-        UDim2.fromOffset(526,54),
-        UDim2.fromOffset(242,50)
+        UDim2.fromOffset(406,54),
+        UDim2.fromOffset(184,50)
     )
     inventoryTab.TextScaled=false
-    inventoryTab.TextSize=12
+    inventoryTab.TextSize=11
+
+    local ownedSkinCount=0
+    for _, owned in pairs(state.LassoSkinsOwned or {}) do
+        if owned==true then ownedSkinCount+=1 end
+    end
+
+    local skinTab=button(
+        panel,
+        "✦  LASSO SKINS   "..tostring(ownedSkinCount).."/"..tostring(#LassoSkinConfig.Order),
+        UDim2.fromOffset(598,54),
+        UDim2.fromOffset(184,50)
+    )
+    skinTab.TextScaled=false
+    skinTab.TextSize=10
 
     petTab.BackgroundColor3=backpackTab=="Pets" and Color3.fromRGB(75,92,117) or Color3.fromRGB(45,51,61)
     mountTab.BackgroundColor3=backpackTab=="Mounts" and Color3.fromRGB(75,92,117) or Color3.fromRGB(45,51,61)
     inventoryTab.BackgroundColor3=backpackTab=="Inventory" and Color3.fromRGB(75,92,117) or Color3.fromRGB(45,51,61)
+    skinTab.BackgroundColor3=backpackTab=="Skins" and Color3.fromRGB(75,92,117) or Color3.fromRGB(45,51,61)
 
     petTab.MouseButton1Click:Connect(function()
         showPets("Pets")
@@ -208,6 +225,16 @@ showPets = function(tab)
     inventoryTab.MouseButton1Click:Connect(function()
         showPets("Inventory")
     end)
+    skinTab.MouseButton1Click:Connect(function()
+        showPets("Skins")
+    end)
+
+    if backpackTab=="Skins" then
+        LassoSkinsUI.Render(panel,state,function(action,skinId)
+            PetsRemote:FireServer(action,skinId)
+        end)
+        return
+    end
 
     if backpackTab=="Mounts" then
         local status=text(
@@ -2271,7 +2298,7 @@ else
         end
     end)
 end
-PetsRemote.OnClientEvent:Connect(function(action, success, message)
+PetsRemote.OnClientEvent:Connect(function(action, success, message, extra)
     if action == "TestCommand" then
         if petsOpen then showPets(backpackTab) end
         notify(message or (success and "Test command complete." or "Test command failed."))
@@ -2281,6 +2308,13 @@ PetsRemote.OnClientEvent:Connect(function(action, success, message)
     elseif action == "MountUpdated" then
         if success and petsOpen then showPets("Mounts") end
         notify(message or (success and "Mount updated." or "Could not update this mount."))
+    elseif action == "LassoSkinUpdated" then
+        if success and petsOpen then showPets("Skins") end
+        notify(message or (success and "Lasso skin updated." or "Could not update that lasso skin."))
+    elseif action == "LassoSkinDrop" then
+        if petsOpen and backpackTab=="Skins" then showPets("Skins") end
+        notify("LASSO SKIN DROP  ·  "..tostring(message or success or "Unknown")
+            .." ["..tostring(extra or "Unknown").."]")
     elseif action == "CollectionReward" then
         if success then
             showHUD()

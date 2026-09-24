@@ -1,3 +1,4 @@
+local RemoteGuard = require(game.ServerScriptService.WildernessPets.Services.RemoteGuard)
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -402,10 +403,11 @@ function Service:Init()
         plots.ChildAdded:Connect(function(plot) task.defer(buildPlotFeatures, plot) end)
     end
     Query.OnServerInvoke = function(player)
+        if not RemoteGuard.Allow(player, "VillageQuery") then return nil end
         if not getOwnedPlot(player) then return nil end
         return self:GetState(player)
     end
-    Remote.OnServerEvent:Connect(function(player, action, ...)
+    RemoteGuard.Connect(Remote, "VillageUpgrade", function(player, action, ...)
         if not sessionValid(player) then
             Remote:FireClient(player, "Result", false, "Use your village workbench or training area first.")
             return

@@ -1,3 +1,4 @@
+local RemoteGuard = require(game.ServerScriptService.WildernessPets.Services.RemoteGuard)
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local DataStoreService = game:GetService("DataStoreService")
@@ -551,6 +552,7 @@ function Service:ClaimMail(player, entryId)
     end
     if not target then return false, "That mail has already been claimed." end
     if data.AuctionMailClaims[entryId] then
+        if not DataService:Save(player) then return false, "Reward save is still pending." end
         removeMailEntry(player.UserId, entryId)
         return true, "Mail already delivered."
     end
@@ -570,7 +572,10 @@ function Service:ClaimMail(player, entryId)
     end
 
     data.AuctionMailClaims[entryId] = true
-    DataService:Save(player)
+    local saved = DataService:Save(player)
+    if not saved then
+        return false, "Your reward is pending a safe save. Please try again shortly."
+    end
     if not removeMailEntry(player.UserId, entryId) then
         return true, "Reward delivered; mailbox will refresh shortly."
     end
@@ -602,13 +607,14 @@ function Service:Init()
         plots.ChildAdded:Connect(function(plot) task.defer(buildMailbox, plot) end)
     end
     Query.OnServerInvoke = function(player, action)
+        if not RemoteGuard.Allow(player, "AuctionQuery") or (action ~= nil and type(action) ~= "string") then return nil end
         if not sessionValid(player) then return nil end
         if action == "Browse" then return browseListings()
         elseif action == "MyListings" then return self:GetMyListings(player)
         elseif action == "Mail" then return self:GetMailbox(player)
         else return self:GetSnapshot(player) end
     end
-    Remote.OnServerEvent:Connect(function(player, action, ...)
+    RemoteGuard.Connect(Remote, "Auction", function(player, action, ...)
         if not sessionValid(player) then
             Remote:FireClient(player, "Result", false, "Use your Auction Mailbox first.")
             return

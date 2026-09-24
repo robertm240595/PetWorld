@@ -26,7 +26,18 @@ local function ensurePetDefaults(pet)
 
     pet.Dead = pet.Dead == true
     pet.HealReadyAt = tonumber(pet.HealReadyAt) or 0
-    pet.RenameCount = math.max(0, tonumber(pet.RenameCount) or 0)
+
+    -- RenameCount is part of the pet record and travels with the pet during trades.
+    -- Older records may not have it, so infer history from a non-default stored name.
+    local speciesName = tostring(pet.Species or "")
+    if type(pet.Name) ~= "string" or pet.Name == "" then
+        pet.Name = speciesName
+    end
+    if pet.RenameCount == nil then
+        pet.RenameCount = pet.Name ~= speciesName and 1 or 0
+    else
+        pet.RenameCount = math.max(0, math.floor(tonumber(pet.RenameCount) or 0))
+    end
     pet.Imprint = math.clamp(math.floor(tonumber(pet.Imprint) or 20), 20, 100)
     pet.Level = math.max(1, math.floor(tonumber(pet.Level) or 1))
     pet.XP = math.max(0, math.floor(tonumber(pet.XP) or 0))
@@ -348,7 +359,7 @@ function Service:AddXP(player, petId, amount, ignoreBoost)
     local data = DataService:Get(player)
     if not pet or not data or pet.Dead then return false end
 
-    amount = math.max(0, math.floor(tonumber(amount) or 0))
+    if not require(script.Parent.ProfileSchema).ValidAmount(amount) or amount > 10000000 then return false end
 
     local effects = type(data.ActiveEffects) == "table" and data.ActiveEffects or {}
     if ignoreBoost ~= true and (tonumber(effects.XPBoostUntil) or 0) > nowUnix() then
@@ -471,6 +482,9 @@ function Service:Rename(player, petId, name)
         filteredName = string.sub(result, 1, Config.MaxPetNameLength)
     end
 
+    if self:Find(player, petId) ~= pet then
+        return false, "That pet is no longer in your collection."
+    end
     local renameCount = math.max(0, tonumber(pet.RenameCount) or 0)
     local cost = renameCount >= 1 and math.max(0, tonumber(Config.PetRenameGemCost) or 0) or 0
 

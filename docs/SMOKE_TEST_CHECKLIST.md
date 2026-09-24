@@ -84,5 +84,24 @@ Run this after gameplay/UI/data changes. Use a fresh Studio play session unless 
 - Check prompts/shops/quests/achievement/mastery/auction/village spelling and encoding.
 - Final console has no game-script errors.
 
+## 13. Lasso tiers, casting and skins
+- Equip Rough Rope, Hunter's Lasso, Iron Lasso, Steel Lasso, Mystic Lasso and Ancient Lasso one at a time; each shows its own 3D model.
+- Cast each tier at a valid wild target; arm cast motion blends without stopping movement.
+- Rope travels from the lasso rope-end to the target, settles cleanly, and fades without snapping or clipping.
+- Start and complete a capture; existing capture strength/probability behavior is unchanged.
+- Lasso Skins tab shows all 12 starter skins, owned/unowned state, rarity, exact drop chance and 3D preview.
+- Award/obtain a skin, equip it, unequip it, and verify tier strength remains unchanged.
+- Duplicate skin ownership remains boolean and does not award currency or an extra item.
+- Verify Common/Rare/Epic/Legendary/Mythic/Ancient configured rates are 5% / 3% / 2% / 1% / 0.1% / 0.01%.
+- Rejoin/save validation: owned skins and equipped skin persist in a non-Studio DataStore-enabled session.
+
+## 14. Temporary asset inspection platform
+- TEMP_ASSET_INSPECTION_PLATFORM_REMOVE_AFTER_REVIEW exists high above the village.
+- Expected creature display count equals the current live ServerStorage creature-template count (including intentionally retained legacy templates).
+- Expected NPC display count equals the current live NPC-template count.
+- ActualDisplayCount and ActualLabelCount both equal ExpectedTotalDisplays.
+- All displayed models are clones, anchored/frozen, generously spaced and have readable labels.
+- Spot-check pets, mounts, quest NPCs and service NPCs; source templates remain unchanged.
+
 ## Release gate
-Sections 1–9 and 12 must pass, Hollowfang must pass, and Jormungdyrr must pass or be explicitly BLOCKED with a reproducible reason.
+Sections 1–9 and 12–14 must pass, Hollowfang must pass, and Jormungdyrr must pass or be explicitly BLOCKED with a reproducible reason.

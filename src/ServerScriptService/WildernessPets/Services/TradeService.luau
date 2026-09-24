@@ -1,3 +1,4 @@
+local RemoteGuard = require(game.ServerScriptService.WildernessPets.Services.RemoteGuard)
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local HttpService = game:GetService("HttpService")
@@ -743,7 +744,7 @@ function Service:Init()
     if started then return end
     started = true
 
-    TradeRemote.OnServerEvent:Connect(function(player, action, ...)
+    RemoteGuard.Connect(TradeRemote, "Trade", function(player, action, ...)
         local args = {...}
 
         if action == "Request" then

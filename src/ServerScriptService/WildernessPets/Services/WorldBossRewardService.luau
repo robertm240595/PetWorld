@@ -1,3 +1,4 @@
+local RemoteGuard = require(game.ServerScriptService.WildernessPets.Services.RemoteGuard)
 local HttpService = game:GetService("HttpService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -556,7 +557,7 @@ function Service:Init()
     folder.Name = "WorldBossLootPouches"
     folder.Parent = world
 
-    BossLootRemote.OnServerEvent:Connect(function(player, action, first, second)
+    RemoteGuard.Connect(BossLootRemote, "BossLoot", function(player, action, first, second)
         if action == "Collect" then
             Service:Collect(player, first)
         elseif action == "UseRewardItem" then

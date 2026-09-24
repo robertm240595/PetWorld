@@ -4,9 +4,11 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Root = ReplicatedStorage:WaitForChild("WildernessPets")
 local Config = require(Root.Shared.Config)
 local LootConfig = require(Root.Shared.LootConfig)
+local LassoSkinConfig = require(Root.Shared.LassoSkinConfig)
 local PetsRemote = Root.Remotes:WaitForChild("Pets")
 
 local DataService = require(script.Parent.PlayerDataService)
+local LassoSkinService = require(script.Parent.LassoSkinService)
 local ShopService = require(script.Parent.ShopService)
 local PetService = require(script.Parent.PetService)
 local MountService = require(script.Parent.MountService)
@@ -43,6 +45,18 @@ local function canonicalName(dictionary, requested)
     for name in pairs(dictionary or {}) do
         if lower(name) == wanted then
             return name
+        end
+    end
+    return nil
+end
+
+local function canonicalSkinId(requested)
+    local wanted = lower(requested)
+    if wanted == "" then return nil end
+
+    for skinId, info in pairs(LassoSkinConfig.Skins or {}) do
+        if lower(skinId) == wanted or lower(info and info.Name) == wanted then
+            return skinId
         end
     end
     return nil
@@ -130,6 +144,96 @@ local function grantInventoryItem(player, requested, quantity)
     end
 
     return false, "Unknown inventory item '" .. tostring(requested) .. "'. Use exact loot, potion, or lasso names."
+end
+
+local function grantAllLassos(player)
+    local data = DataService:Get(player)
+    if not data then
+        return false, "Player data unavailable."
+    end
+
+    data.Inventory = type(data.Inventory) == "table" and data.Inventory or {}
+
+    local ordered = {}
+    local missing = 0
+    for name, info in pairs(Config.Lassos or {}) do
+        table.insert(ordered, {
+            Name = name,
+            Strength = tonumber(info and info.Strength) or 0,
+        })
+        if ShopService:CountInventoryItem(player, "Lasso", name) <= 0 then
+            missing += 1
+        end
+    end
+
+    table.sort(ordered, function(a, b)
+        if a.Strength == b.Strength then
+            return a.Name < b.Name
+        end
+        return a.Strength < b.Strength
+    end)
+
+    if #ordered == 0 then
+        return false, "No lasso tiers are configured."
+    end
+
+    -- Studio helper commands should always be able to grant their requested
+    -- test items, even if the player's normal bag happens to be full.
+    local neededCapacity = #data.Inventory + missing
+    data.InventoryCapacity = math.max(
+        tonumber(data.InventoryCapacity) or tonumber(Config.MaxInventory) or 25,
+        neededCapacity
+    )
+
+    local added = 0
+    local highestStrength = tonumber(data.MaxLassoStrengthUnlocked) or 0
+    for _, entry in ipairs(ordered) do
+        if ShopService:CountInventoryItem(player, "Lasso", entry.Name) <= 0 then
+            local ok, reason = ShopService:AddInventoryItem(player, "Lasso", entry.Name, 1)
+            if not ok then
+                return false, reason or ("Could not grant " .. entry.Name .. ".")
+            end
+            added += 1
+        end
+        highestStrength = math.max(highestStrength, entry.Strength)
+    end
+
+    data.MaxLassoStrengthUnlocked = highestStrength
+
+    local strongest = ordered[#ordered].Name
+    local equipped, equipMessage = ShopService:EquipLasso(player, strongest)
+    QuestService:PushState(player)
+
+    if not equipped then
+        return false, equipMessage or "All lassos were granted, but the strongest could not be equipped."
+    end
+
+    return true, "All " .. tostring(#ordered) .. " lassos acquired"
+        .. (added > 0 and (" (" .. tostring(added) .. " new)") or " (already owned)")
+        .. ". " .. strongest .. " equipped."
+end
+
+local function grantLassoSkin(player, requested)
+    local skinId = canonicalSkinId(requested)
+    local info = skinId and LassoSkinConfig.Get(skinId)
+    local data = DataService:Get(player)
+    if not skinId or not info then
+        return false, "Unknown lasso skin '" .. tostring(requested) .. "'."
+    end
+    if not data then
+        return false, "Player data unavailable."
+    end
+
+    data.LassoSkinsOwned = type(data.LassoSkinsOwned) == "table" and data.LassoSkinsOwned or {}
+    local alreadyOwned = data.LassoSkinsOwned[skinId] == true
+    data.LassoSkinsOwned[skinId] = true
+
+    local equipped, message = LassoSkinService:Equip(player, skinId)
+    if not equipped then
+        return false, message or "Could not equip that lasso skin."
+    end
+
+    return true, info.Name .. (alreadyOwned and " was already owned and is now equipped." or " added and equipped.")
 end
 
 local function setSpeed(player, raw)
@@ -279,7 +383,7 @@ local function advanceTraining(player, raw)
 end
 
 local function helpText()
-    return ";speed 50 | ;give Wolf Hide 5 | ;givepet Wolf 100 | ;petxp 5000 | ;killpet | ;traintick 900 | ;givemount Trail Horse 100 | ;coins 5000 | ;gems 100 | ;bag Trail Pack"
+    return ";help = acquire all lassos | ;speed 50 | ;give Wolf Hide 5 | ;giveskin Meadow Twine | ;givepet Wolf 100 | ;petxp 5000 | ;killpet | ;traintick 900 | ;givemount Trail Horse 100 | ;coins 5000 | ;gems 100 | ;bag Trail Pack"
 end
 
 function Service:Handle(player, message)
@@ -292,7 +396,9 @@ function Service:Handle(player, message)
     rest = trim(rest)
 
     local ok, response
-    if command == "help" or command == "commands" then
+    if command == "help" then
+        ok, response = grantAllLassos(player)
+    elseif command == "commands" then
         ok, response = true, helpText()
     elseif command == "speed" then
         ok, response = setSpeed(player, rest)
@@ -302,6 +408,12 @@ function Service:Handle(player, message)
             ok, response = false, "Usage: ;give <loot/potion/lasso name> [quantity]"
         else
             ok, response = grantInventoryItem(player, requested, quantity)
+        end
+    elseif command == "giveskin" or command == "skin" then
+        if rest == "" then
+            ok, response = false, "Usage: ;giveskin <skin id or name>"
+        else
+            ok, response = grantLassoSkin(player, rest)
         end
     elseif command == "givepet" or command == "pet" then
         ok, response = givePet(player, rest)

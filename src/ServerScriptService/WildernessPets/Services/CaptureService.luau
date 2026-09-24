@@ -1,8 +1,11 @@
+local RemoteGuard = require(game.ServerScriptService.WildernessPets.Services.RemoteGuard)
 local PetAnimator = require(script.Parent.Parent.Systems.PetAnimator)
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Debris = game:GetService("Debris")
 local HttpService = game:GetService("HttpService")
+local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
 
 local Root = ReplicatedStorage:WaitForChild("WildernessPets")
 local Remotes = Root:WaitForChild("Remotes")
@@ -15,6 +18,7 @@ local MountService = require(Services:WaitForChild("MountService"))
 local ActionLockService = require(Services:WaitForChild("ActionLockService"))
 local QuestService = require(Services:WaitForChild("QuestService"))
 local Config = require(Root:WaitForChild("Shared"):WaitForChild("Config"))
+local Motion = require(Root.Shared.LassoMotion)
 
 local CaptureService = {}
 
@@ -24,6 +28,7 @@ local FAILURE_DAMAGE = 999999
 
 local lastAttempt = {}
 local challenges = setmetatable({}, {__mode = "k"})
+local activeRopeEffects = setmetatable({}, {__mode = "k"})
 local rng = Random.new()
 
 local function serverNow()
@@ -129,37 +134,58 @@ local function isValidMonster(monster)
 	return getMonsterPart(monster) ~= nil
 end
 
-local function createRopeEffect(player, monster)
-	local character = player.Character
-	if not character then return end
+-- Replicate a compact presentation state. Every client renders the same rope
+-- and arm choreography from the server clock; no per-frame networked parts.
+local function clearRopeEffect(player)
+    activeRopeEffects[player] = nil
+    local character = player.Character
+    if character then
+        character:SetAttribute("LassoPhase", "Idle")
+        local target = character:FindFirstChild("LassoTarget")
+        if target then target.Value = nil end
+    end
+end
 
-	local hand = character:FindFirstChild("RightHand")
-		or character:FindFirstChild("Right Arm")
-		or character:FindFirstChild("HumanoidRootPart")
-	local target = getMonsterPart(monster)
-	if not hand or not target then return end
+local function createRopeEffect(player, monster, requiredHits, started)
+    local character = player.Character
+    if not character then return end
+    local target = character:FindFirstChild("LassoTarget")
+    if not target then
+        target = Instance.new("ObjectValue")
+        target.Name = "LassoTarget"
+        target.Parent = character
+    end
+    target.Value = monster
+    character:SetAttribute("LassoHits", 0)
+    character:SetAttribute("LassoRequiredHits", requiredHits)
+    character:SetAttribute("LassoCastStart", started)
+    character:SetAttribute("LassoPhase", "Casting")
+    activeRopeEffects[player] = {character = character, started = started}
+end
 
-	local a0 = Instance.new("Attachment")
-	a0.Name = "LassoStart"
-	a0.Parent = hand
+local function tightenRopeEffect(player)
+    local effect = activeRopeEffects[player]
+    if effect and effect.character.Parent then
+        effect.character:SetAttribute("LassoHits", (effect.character:GetAttribute("LassoHits") or 0) + 1)
+        effect.character:SetAttribute("LassoTugTime", serverNow())
+    end
+end
 
-	local a1 = Instance.new("Attachment")
-	a1.Name = "LassoTarget"
-	a1.Parent = target
-
-	local beam = Instance.new("Beam")
-	beam.Name = "LassoRope"
-	beam.Attachment0 = a0
-	beam.Attachment1 = a1
-	beam.Width0 = 0.16
-	beam.Width1 = 0.10
-	beam.FaceCamera = true
-	beam.LightEmission = 0.1
-	beam.Parent = hand
-
-	Debris:AddItem(beam, 1.2)
-	Debris:AddItem(a0, 1.2)
-	Debris:AddItem(a1, 1.2)
+local function finishRopeEffect(player, success)
+    local effect = activeRopeEffects[player]
+    if not effect then return end
+    activeRopeEffects[player] = nil
+    local character = effect.character
+    if not character.Parent then return end
+    character:SetAttribute("LassoFinishTime", serverNow())
+    character:SetAttribute("LassoPhase", success and "Success" or "Failed")
+    task.delay(Motion.Recovery + 0.15, function()
+        if character.Parent and character:GetAttribute("LassoCastStart") == effect.started then
+            character:SetAttribute("LassoPhase", "Idle")
+            local target = character:FindFirstChild("LassoTarget")
+            if target then target.Value = nil end
+        end
+    end)
 end
 
 local function createCapturedCreature(player, creatureType, species, imprint)
@@ -239,10 +265,12 @@ end
 local function finishFailure(player, challenge, reason)
 	local monster = challenge.monster
 	if not monster or not monster.Parent then
+        finishRopeEffect(player, false)
 		ActionLockService:End(player, "Capture")
 		return false, reason or "The creature escaped."
 	end
 
+    finishRopeEffect(player, false)
 	clearMonsterCaptureState(player, monster)
 	monster:SetAttribute("InCombat", true)
 	monster:SetAttribute("CombatOwnerUserId", player.UserId)
@@ -301,6 +329,10 @@ function CaptureService:Resolve(player, challengeId, clickTime, timedOut, roundT
 		return false, "That lasso attempt is no longer active."
 	end
 
+	if not timedOut and not challenge.ready then
+		return false, "Wait for the rope to land."
+	end
+
 	if timedOut and roundToken and roundToken ~= challenge.round then
 		return false, "Stale lasso round."
 	end
@@ -310,6 +342,7 @@ function CaptureService:Resolve(player, challengeId, clickTime, timedOut, roundT
 	local monster = challenge.monster
 	if not monster or not monster.Parent or monster:GetAttribute("Dead") or monster:GetAttribute("Captured") then
 		challenges[player] = nil
+        finishRopeEffect(player, false)
 		clearMonsterCaptureState(player, monster)
 		ActionLockService:End(player, "Capture")
 		CaptureRemote:FireClient(player, "Error", "The creature escaped before the lasso landed.")
@@ -340,6 +373,7 @@ function CaptureService:Resolve(player, challengeId, clickTime, timedOut, roundT
 	challenge.hits += 1
 
 	if challenge.hits < challenge.requiredHits then
+        tightenRopeEffect(player)
 		challenge.round += 1
 		challenge.zoneStart = randomZoneStart(challenge.zoneWidth)
 		challenge.startTime = serverNow() + 0.25
@@ -374,6 +408,7 @@ function CaptureService:Resolve(player, challengeId, clickTime, timedOut, roundT
 	local creatureType = tostring(challenge.creatureType or monster:GetAttribute("CreatureType") or "Pet")
 	local captured, createMessage = createCapturedCreature(player, creatureType, challenge.species, imprint)
 	if not captured then
+        finishRopeEffect(player, false)
 		monster:SetAttribute("Captured", false)
 		PetAnimator:PlayIdle(monster)
 		ActionLockService:End(player, "Capture")
@@ -396,6 +431,8 @@ function CaptureService:Resolve(player, challengeId, clickTime, timedOut, roundT
 		QuestService:OnPlayerAction(player, "CapturePet", {PetId = captured.Id})
 	end
 	player:SetAttribute("CombatTarget", "")
+
+    finishRopeEffect(player, true)
 
 	CaptureRemote:FireClient(
 		player,
@@ -501,7 +538,8 @@ function CaptureService:Capture(player, monster)
 	end
 
 	local zoneStart = randomZoneStart(zoneWidth)
-	local startTime = serverNow() + 0.40
+	local castStarted = serverNow() + 0.12
+	local startTime = castStarted + Motion.ReadyTime
 
 	local challenge = {
 		id = HttpService:GenerateGUID(false),
@@ -521,11 +559,13 @@ function CaptureService:Capture(player, monster)
 		deadline = startTime + roundDuration,
 		clockTolerance = clockTolerance,
 		resolving = false,
+		character = player.Character,
+		ready = false,
 	}
 	challenges[player] = challenge
 
 	ActionLockService:Begin(player, "Capture")
-	createRopeEffect(player, monster)
+	createRopeEffect(player, monster, requiredHits, castStarted)
 	monster:SetAttribute("BeingCaptured", true)
 	monster:SetAttribute("CaptureOwnerUserId", player.UserId)
 
@@ -533,6 +573,10 @@ function CaptureService:Capture(player, monster)
 		PetAnimator:PlayStruggle(monster, math.min(roundDuration, 1.2))
 	end)
 
+	task.delay(math.max(0, castStarted + Motion.LandTime - serverNow()), function()
+		if challenges[player] ~= challenge or not monster.Parent then return end
+		challenge.ready = true
+		if player.Character then player.Character:SetAttribute("LassoPhase", "Holding") end
 	CaptureRemote:FireClient(
 		player,
 		"Challenge",
@@ -549,13 +593,14 @@ function CaptureService:Capture(player, monster)
 		requiredHits,
 		0
 	)
+	end)
 
 	scheduleRoundTimeout(player, challenge)
 
 	return true, "Lasso challenge started.", true
 end
 
-CaptureRemote.OnServerEvent:Connect(function(player, action, ...)
+RemoteGuard.Connect(CaptureRemote, "Capture", function(player, action, ...)
 	local args = {...}
 
 	if action == "Throw" then
@@ -564,6 +609,7 @@ CaptureRemote.OnServerEvent:Connect(function(player, action, ...)
 			return CaptureService:Capture(player, monster)
 		end)
 		if not ok then
+            finishRopeEffect(player, false)
 			warn("[WildernessPets] Capture start error: " .. tostring(success))
 			CaptureRemote:FireClient(player, "Error", "The lasso could not start. Please try again.")
 		elseif not success and not alreadyNotified then
@@ -577,6 +623,7 @@ CaptureRemote.OnServerEvent:Connect(function(player, action, ...)
 			CaptureService:Resolve(player, challengeId, clickTime, false)
 		end)
 		if not ok then
+            finishRopeEffect(player, false)
 			warn("[WildernessPets] Capture resolve error: " .. tostring(err))
 			local challenge = challenges[player]
 			if challenge then
@@ -603,7 +650,25 @@ CaptureRemote.OnServerEvent:Connect(function(player, action, ...)
 	end
 end)
 
+-- Cancel cleanly on death, respawn, target removal, or walking beyond the tether.
+RunService.Heartbeat:Connect(function()
+    for player, challenge in pairs(challenges) do
+        local humanoid = getHumanoid(player)
+        local root = getCharacterRoot(player)
+        local targetPosition = challenge.monster.Parent and getPosition(challenge.monster)
+        if player.Character ~= challenge.character or not humanoid or humanoid.Health <= 0
+            or not root or not targetPosition or (root.Position-targetPosition).Magnitude > MAX_RANGE + 10 then
+            challenges[player] = nil
+            finishRopeEffect(player, false)
+            clearMonsterCaptureState(player, challenge.monster)
+            ActionLockService:End(player, "Capture")
+            CaptureRemote:FireClient(player, "Error", "The lasso was released.")
+        end
+    end
+end)
+
 Players.PlayerRemoving:Connect(function(player)
+    clearRopeEffect(player)
 	local challenge = challenges[player]
 	if challenge then
 		clearMonsterCaptureState(player, challenge.monster)
