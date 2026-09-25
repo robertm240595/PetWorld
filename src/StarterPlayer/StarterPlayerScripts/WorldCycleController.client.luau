@@ -1,3 +1,5 @@
+[Reading 1191 lines from start (total: 1191 lines, 0 remaining)]
+
 local Lighting=game:GetService("Lighting")
 local RunService=game:GetService("RunService")
 local TweenService=game:GetService("TweenService")
@@ -568,7 +570,7 @@ player:GetAttributeChangedSignal("EquippedMountId"):Connect(function()
  if id~="" then preferredMountId=id end
 end)
 local function toggleMount()
- local mounted=(player:GetAttribute("EquippedMountId") or "")~=""
+ local mounted=player:GetAttribute("IsMounted")==true
  if mounted then remotes.Pets:FireServer("UnequipMount") return end
  local st=remotes.GetState:InvokeServer()
  local mountId=preferredMountId
@@ -1189,3 +1191,5 @@ RunService.RenderStepped:Connect(function(dt)
   end
  end
 end)
+
+[executed on device: DESKTOP-2DRH662 (dca896b2-d00d-4b2d-b53d-d5e192cf74e5)]

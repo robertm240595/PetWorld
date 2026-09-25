@@ -1,3 +1,5 @@
+[Reading 2372 lines from start (total: 2378 lines, 6 remaining)]
+
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -130,7 +132,7 @@ end
 --------------------------------------------------------------
 
 showPets = function(tab)
-    if tab == "Pets" or tab == "Mounts" or tab == "Inventory" or tab == "Skins" then
+    if tab == "Pets" or tab == "Mounts" or tab == "Inventory" then
         backpackTab = tab
     end
 
@@ -199,28 +201,15 @@ showPets = function(tab)
     inventoryTab.TextScaled=false
     inventoryTab.TextSize=11
 
-    local ownedSkinCount=0
-    for _, owned in pairs(state.LassoSkinsOwned or {}) do
-        if owned==true then ownedSkinCount+=1 end
-    end
-
-    local skinTab=button(
-        panel,
-        "✦  LASSO SKINS   "..tostring(ownedSkinCount).."/"..tostring(#LassoSkinConfig.Order),
-        UDim2.fromOffset(598,54),
-        UDim2.fromOffset(184,50)
-    )
-    skinTab.TextScaled=false
-    skinTab.TextSize=10
-    skinTab.Visible=false
-    petTab.Position=UDim2.fromOffset(116,54) petTab.Size=UDim2.fromOffset(190,42)
-    mountTab.Position=UDim2.fromOffset(315,54) mountTab.Size=UDim2.fromOffset(190,42)
-    inventoryTab.Position=UDim2.fromOffset(514,54) inventoryTab.Size=UDim2.fromOffset(190,42)
-
-    petTab.BackgroundColor3=backpackTab=="Pets" and Color3.fromRGB(75,92,117) or Color3.fromRGB(45,51,61)
-    mountTab.BackgroundColor3=backpackTab=="Mounts" and Color3.fromRGB(75,92,117) or Color3.fromRGB(45,51,61)
-    inventoryTab.BackgroundColor3=backpackTab=="Inventory" and Color3.fromRGB(75,92,117) or Color3.fromRGB(45,51,61)
-    skinTab.BackgroundColor3=backpackTab=="Skins" and Color3.fromRGB(75,92,117) or Color3.fromRGB(45,51,61)
+    petTab.Position=UDim2.fromOffset(116,54)
+    petTab.Size=UDim2.fromOffset(190,42)
+    mountTab.Position=UDim2.fromOffset(315,54)
+    mountTab.Size=UDim2.fromOffset(190,42)
+    inventoryTab.Position=UDim2.fromOffset(514,54)
+    inventoryTab.Size=UDim2.fromOffset(190,42)
+    UITheme.Button(petTab,backpackTab=="Pets")
+    UITheme.Button(mountTab,backpackTab=="Mounts")
+    UITheme.Button(inventoryTab,backpackTab=="Inventory")
 
     petTab.MouseButton1Click:Connect(function()
         showPets("Pets")
@@ -231,16 +220,6 @@ showPets = function(tab)
     inventoryTab.MouseButton1Click:Connect(function()
         showPets("Inventory")
     end)
-    skinTab.MouseButton1Click:Connect(function()
-        showPets("Skins")
-    end)
-
-    if backpackTab=="Skins" then
-        LassoSkinsUI.Render(panel,state,function(action,skinId)
-            PetsRemote:FireServer(action,skinId)
-        end)
-        return
-    end
 
     if backpackTab=="Mounts" then
         local status=text(
@@ -2370,9 +2349,5 @@ BossLootRemote.OnClientEvent:Connect(function(action, success, message)
             if petsOpen then
                 showPets(backpackTab)
             else
-                showHUD()
-            end
-        end
-        notify(message or (success and "Creature relic used." or "Could not use that creature relic."))
-    end
-end)
+
+[executed on device: DESKTOP-2DRH662 (dca896b2-d00d-4b2d-b53d-d5e192cf74e5)]

@@ -1,3 +1,5 @@
+[Reading 297 lines from start (total: 297 lines, 0 remaining)]
+
 local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local HttpService = game:GetService("HttpService")
@@ -295,3 +297,5 @@ function Service:Init()
 end
 
 return Service
+
+[executed on device: DESKTOP-2DRH662 (dca896b2-d00d-4b2d-b53d-d5e192cf74e5)]
