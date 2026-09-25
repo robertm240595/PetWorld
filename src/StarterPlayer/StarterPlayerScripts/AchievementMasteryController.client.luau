@@ -2,12 +2,14 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local player = Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
 local Root = ReplicatedStorage:WaitForChild("WildernessPets")
 local Remotes = Root:WaitForChild("Remotes")
 local GetState = Remotes:WaitForChild("GetState")
 local PetsRemote = Remotes:WaitForChild("Pets")
 local AchievementRemote = Remotes:WaitForChild("Achievement")
 local MasteryConfig = require(Root.Shared.MasteryConfig)
+local UITheme = require(Root.Shared.UITheme)
 
 local palette = {
     bg = Color3.fromRGB(27, 31, 36),
@@ -73,6 +75,8 @@ end
 
 local achievementsButton = button(gui, "ACHIEVEMENTS", UDim2.fromOffset(112, 34), UDim2.fromOffset(12, 116))
 local masteryButton = button(gui, "PET MASTERY", UDim2.fromOffset(112, 34), UDim2.fromOffset(12, 156))
+achievementsButton.Visible=false
+masteryButton.Visible=false
 
 local panel
 local modalPanels = {
@@ -140,11 +144,12 @@ local function makePanel(title)
     panel.AnchorPoint = Vector2.new(0.5, 0.5)
     panel.Position = UDim2.fromScale(0.5, 0.5)
     panel.Size = UDim2.fromOffset(760, 540)
-    panel.BackgroundColor3 = palette.bg
+    panel.BackgroundColor3 = UITheme.Colors.Parchment
     panel.BorderSizePixel = 0
     panel.Parent = gui
     round(panel, 12)
     stroke(panel, 0.2)
+    UITheme.RopeBorder(panel,4)
     local scale = Instance.new("UIScale")
     local viewport = workspace.CurrentCamera and workspace.CurrentCamera.ViewportSize or Vector2.new(1280,720)
     scale.Scale = math.min(1, (viewport.X - 24) / 760, (viewport.Y - 40) / 540)
@@ -266,6 +271,18 @@ end
 
 achievementsButton.Activated:Connect(openAchievements)
 masteryButton.Activated:Connect(openMastery)
+
+local function bindOpenEvent(name,callback)
+    local event=playerGui:FindFirstChild(name)
+    if not event then
+        event=Instance.new("BindableEvent")
+        event.Name=name
+        event.Parent=playerGui
+    end
+    if event:IsA("BindableEvent") then event.Event:Connect(callback) end
+end
+bindOpenEvent("OpenCollectionAchievements",openAchievements)
+bindOpenEvent("OpenCollectionMastery",openMastery)
 
 PetsRemote.OnClientEvent:Connect(function(action)
     if action == "Updated" and panel and panel.Parent and panel:FindFirstChildWhichIsA("UIScale") then

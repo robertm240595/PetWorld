@@ -62,10 +62,12 @@ local player=Players.LocalPlayer
 local remotes=RS.WildernessPets.Remotes
 local config=require(RS.WildernessPets.Shared.Config)
 local petAbilities=require(RS.WildernessPets.Shared.PetAbilities)
+local UITheme=require(RS.WildernessPets.Shared.UITheme)
+local TC=UITheme.Colors
 local playerGui=player:WaitForChild("PlayerGui")
 local backpack=player:WaitForChild("Backpack")
 local wild=world:WaitForChild("WildMonsters")
-local palette={bg=Color3.fromRGB(22,27,31),slot=Color3.fromRGB(37,44,47),gold=Color3.fromRGB(180,151,90),text=Color3.fromRGB(242,232,206),muted=Color3.fromRGB(152,163,164)}
+local palette={bg=TC.LeatherDark,slot=TC.Leather,gold=TC.Gold,text=TC.Cream,muted=TC.ParchmentDark}
 local hud=Instance.new("ScreenGui")
 hud.Name="CompanionHUD" hud.ResetOnSpawn=false hud.DisplayOrder=15 hud.Parent=playerGui
 local function round(o,r)
@@ -97,7 +99,7 @@ getOpenBag()
 
 local bar=Instance.new("Frame") bar.Name="ActionBar" bar.AnchorPoint=Vector2.new(.5,1)
 bar.Position=UDim2.new(.5,0,1,-18) bar.Size=UDim2.fromOffset(480,84)
-bar.BackgroundColor3=palette.bg bar.BorderSizePixel=0 bar.Parent=hud round(bar,12) border(bar)
+bar.BackgroundColor3=palette.bg bar.BorderSizePixel=0 bar.Parent=hud round(bar,12) border(bar) UITheme.RopeBorder(bar,4)
 local layout=Instance.new("UIListLayout") layout.FillDirection=Enum.FillDirection.Horizontal
 layout.Padding=UDim.new(0,7) layout.HorizontalAlignment=Enum.HorizontalAlignment.Center layout.VerticalAlignment=Enum.VerticalAlignment.Center layout.SortOrder=Enum.SortOrder.LayoutOrder layout.Parent=bar
 local scale=Instance.new("UIScale") scale.Parent=bar
@@ -121,7 +123,12 @@ homeButton.TextColor3=palette.text
 homeButton.Font=Enum.Font.GothamBold
 homeButton.TextSize=31
 homeButton.AutoButtonColor=true
-homeButton.Parent=hud
+homeButton.Parent=bar
+homeButton.AnchorPoint=Vector2.new(0,0)
+homeButton.Position=UDim2.new()
+homeButton.Size=UDim2.fromOffset(70,66)
+homeButton.LayoutOrder=90
+homeButton.TextSize=25
 round(homeButton,12)
 border(homeButton)
 local homeTutorialStroke=Instance.new("UIStroke")
@@ -191,19 +198,23 @@ local captureGame
 
 local collectionButton=Instance.new("TextButton")
 collectionButton.Name="PetCollectionButton"
-collectionButton.AnchorPoint=Vector2.new(0,1)
-collectionButton.Position=UDim2.new(0,12,1,-82)
-collectionButton.Size=UDim2.fromOffset(58,58)
+collectionButton.AnchorPoint=Vector2.new(1,0)
+collectionButton.Position=UDim2.new(1,-18,0,260)
+collectionButton.Size=UDim2.fromOffset(138,50)
 collectionButton.BackgroundColor3=palette.slot
 collectionButton.BorderSizePixel=0
-collectionButton.Text="▦"
+collectionButton.Text="COLLECTION"
 collectionButton.TextColor3=palette.text
 collectionButton.Font=Enum.Font.GothamBold
-collectionButton.TextSize=27
+collectionButton.TextSize=14
 collectionButton.AutoButtonColor=true
 collectionButton.Parent=hud
 round(collectionButton,12)
 border(collectionButton)
+local gemShopButton=Instance.new("TextButton")
+gemShopButton.Name="GemShopButton" gemShopButton.AnchorPoint=Vector2.new(1,0) gemShopButton.Position=UDim2.new(1,-18,0,202) gemShopButton.Size=UDim2.fromOffset(138,50)
+gemShopButton.BackgroundColor3=TC.Leather gemShopButton.BorderSizePixel=0 gemShopButton.Text="GEM SHOP" gemShopButton.TextColor3=TC.Cream gemShopButton.Font=Enum.Font.GothamBold gemShopButton.TextSize=14 gemShopButton.Parent=hud
+round(gemShopButton,10) border(gemShopButton)
 
 local collectionOpen=false
 local collectionPanel
@@ -354,7 +365,7 @@ local function showCollection()
  collectionPanel.AnchorPoint=Vector2.new(.5,.5)
  collectionPanel.Position=UDim2.new(.5,0,.5,0)
  collectionPanel.Size=UDim2.fromOffset(900,640)
- collectionPanel.BackgroundColor3=palette.bg
+ collectionPanel.BackgroundColor3=TC.Parchment
  collectionPanel.BackgroundTransparency=.02
  collectionPanel.BorderSizePixel=0
  collectionPanel.Parent=hud
@@ -366,8 +377,14 @@ local function showCollection()
  fit.Scale=math.min(1,(cameraSize.X-28)/900,(cameraSize.Y-34)/640)
  fit.Parent=collectionPanel
 
- local title=label(collectionPanel,"Title","PET COLLECTION DATABASE",UDim2.fromOffset(22,14),UDim2.fromOffset(650,30),22,palette.text)
+ local title=label(collectionPanel,"Title","COLLECTION",UDim2.fromOffset(22,14),UDim2.fromOffset(650,30),22,palette.text)
  title.TextXAlignment=Enum.TextXAlignment.Left
+ title.TextColor3=TC.Ink
+ local tabs={{"PETS",nil},{"ACHIEVEMENTS","OpenCollectionAchievements"},{"MASTERY","OpenCollectionMastery"}}
+ for i,tab in ipairs(tabs) do
+  local tb=Instance.new("TextButton") tb.Text=tab[1] tb.Position=UDim2.fromOffset(270+(i-1)*145,14) tb.Size=UDim2.fromOffset(136,32) tb.BackgroundColor3=i==1 and TC.ParchmentLight or TC.Leather tb.TextColor3=i==1 and TC.Ink or TC.Cream tb.Font=Enum.Font.GothamBold tb.TextSize=11 tb.BorderSizePixel=0 tb.Parent=collectionPanel round(tb,7) border(tb)
+  if tab[2] then tb.Activated:Connect(function() closeCollection(); local ev=playerGui:FindFirstChild(tab[2]); if ev and ev:IsA("BindableEvent") then ev:Fire() end end) end
+ end
 
  local closeButton=Instance.new("TextButton")
  closeButton.Name="Close"
@@ -501,6 +518,24 @@ end
 
 collectionButton.Activated:Connect(showCollection)
 
+local gemShopPanel
+local function closeGemShop() if gemShopPanel then gemShopPanel:Destroy() gemShopPanel=nil end end
+local function openGemShop()
+ if gemShopPanel then closeGemShop() return end
+ local mainUI=playerGui:FindFirstChild("WildernessPetsUI")
+ if mainUI and mainUI:GetAttribute("InventoryOpen")==true then message("Close the current menu before opening the Gem Shop.") return end
+ local state=remotes.GetState:InvokeServer()
+ gemShopPanel=Instance.new("Frame") gemShopPanel.Name="GemShopPanel" gemShopPanel.AnchorPoint=Vector2.new(.5,.5) gemShopPanel.Position=UDim2.fromScale(.5,.5) gemShopPanel.Size=UDim2.fromOffset(820,520) gemShopPanel.BackgroundColor3=TC.Parchment gemShopPanel.BorderSizePixel=0 gemShopPanel.Parent=hud
+ round(gemShopPanel,12) border(gemShopPanel) UITheme.RopeBorder(gemShopPanel,4)
+ local title=label(gemShopPanel,"Title","GEM SHOP",UDim2.fromOffset(22,14),UDim2.fromOffset(300,32),22,TC.Ink) title.Font=Enum.Font.GothamBold title.TextXAlignment=Enum.TextXAlignment.Left
+ local balance=label(gemShopPanel,"Balance","◆  "..tostring(state and state.Gems or 0).." Gems",UDim2.fromOffset(550,18),UDim2.fromOffset(180,24),14,TC.Ink) balance.TextXAlignment=Enum.TextXAlignment.Right
+ local close=Instance.new("TextButton") close.Text="×" close.Position=UDim2.fromOffset(762,10) close.Size=UDim2.fromOffset(38,34) close.BackgroundColor3=TC.Leather close.TextColor3=TC.Cream close.Font=Enum.Font.GothamBold close.TextSize=22 close.BorderSizePixel=0 close.Parent=gemShopPanel round(close,7) border(close) close.Activated:Connect(closeGemShop)
+ for i,n in ipairs({"FEATURED","GEMS","LASSOS","MOUNTS","COSMETICS"}) do local b=Instance.new("TextButton") b.Text=n b.Position=UDim2.fromOffset(28+(i-1)*151,62) b.Size=UDim2.fromOffset(143,34) b.BackgroundColor3=i==1 and TC.ParchmentLight or TC.Leather b.TextColor3=i==1 and TC.Ink or TC.Cream b.Font=Enum.Font.GothamBold b.TextSize=10 b.BorderSizePixel=0 b.Parent=gemShopPanel round(b,7) border(b) end
+ local info=label(gemShopPanel,"Info","Premium bundles are not on sale yet. Roblox Product IDs must be configured before real-money purchases can be enabled.",UDim2.fromOffset(36,120),UDim2.fromOffset(748,58),14,TC.Ink) info.TextWrapped=true
+ local earn=label(gemShopPanel,"EarnTitle","EARN GEMS IN GAME",UDim2.fromOffset(36,205),UDim2.fromOffset(300,28),18,TC.Ink) earn.Font=Enum.Font.GothamBold earn.TextXAlignment=Enum.TextXAlignment.Left
+ for i,w in ipairs({"Complete achievements","Reach collection milestones","Progress through quests and world activities"}) do local row=label(gemShopPanel,"Earn"..i,"★  "..w,UDim2.fromOffset(48,245+(i-1)*48),UDim2.fromOffset(700,38),14,TC.Ink) row.TextXAlignment=Enum.TextXAlignment.Left row.BackgroundColor3=TC.ParchmentLight row.BackgroundTransparency=.15 round(row,7) end
+end
+gemShopButton.Activated:Connect(openGemShop)
 local tooltip=label(hud,"Tooltip","",UDim2.new(.5,-235,1,-193),UDim2.fromOffset(470,44),13)
 tooltip.BackgroundColor3=palette.bg tooltip.BackgroundTransparency=.05 tooltip.Visible=false tooltip.TextWrapped=true round(tooltip)
 local function button(name,key,icon,title,order,callback,tip)
@@ -526,6 +561,21 @@ local handle=Instance.new("Frame") handle.Size=UDim2.fromOffset(11,8) handle.Pos
 local pocket=Instance.new("Frame") pocket.Size=UDim2.fromOffset(15,8) pocket.Position=UDim2.fromOffset(4,12) pocket.BackgroundColor3=palette.slot pocket.BorderSizePixel=0 pocket.Parent=bagBody round(pocket,2)
 button("Lasso","1","◎","Lasso",1,function() command("Lasso") end,"Throw your lasso at the selected creature. Your companion stays passive.")
 local attackButton=button("Attack","2","⚔","Attack",2,function() command("Attack") end,"Command your companion to approach and automatically attack your selected target.")
+local mountButton
+local preferredMountId=player:GetAttribute("EquippedMountId") or ""
+player:GetAttributeChangedSignal("EquippedMountId"):Connect(function()
+ local id=player:GetAttribute("EquippedMountId") or ""
+ if id~="" then preferredMountId=id end
+end)
+local function toggleMount()
+ local mounted=(player:GetAttribute("EquippedMountId") or "")~=""
+ if mounted then remotes.Pets:FireServer("UnequipMount") return end
+ local st=remotes.GetState:InvokeServer()
+ local mountId=preferredMountId
+ if mountId=="" and st and st.Mounts and st.Mounts[1] then mountId=st.Mounts[1].Id end
+ if mountId~="" then remotes.Pets:FireServer("EquipMount",mountId) else message("Equip a mount from Backpack first.") end
+end
+mountButton=button("Mount","M","♞","Mount",80,toggleMount,"Ride your equipped mount. Other action-bar controls lock while mounted.")
 -- Companion abilities use keys 3/4/5. Cooldowns are authoritative on
 -- the server; the client only mirrors the remaining time for presentation.
 local abilityButtons={}
@@ -947,7 +997,10 @@ UIS.InputBegan:Connect(function(input,processed)
  if not player:GetAttribute("VillageReady") then return end
  if collectionOpen then return end
  local key=input.KeyCode
- if key==Enum.KeyCode.B then getOpenBag():Fire()
+ if key==Enum.KeyCode.G then openGemShop()
+ elseif key==Enum.KeyCode.C then showCollection()
+ elseif key==Enum.KeyCode.M or key==Enum.KeyCode.ButtonX then toggleMount()
+ elseif key==Enum.KeyCode.B or key==Enum.KeyCode.ButtonY then getOpenBag():Fire()
  elseif key==Enum.KeyCode.One then command("Lasso")
  elseif key==Enum.KeyCode.Two then command("Attack")
  elseif key==Enum.KeyCode.Three or key==Enum.KeyCode.Four or key==Enum.KeyCode.Five then
@@ -1088,6 +1141,17 @@ RunService.RenderStepped:Connect(function(dt)
   targetPanel.Visible=true
  end
 
+ local mounted=(player:GetAttribute("EquippedMountId") or "")~=""
+ if mountButton then
+  local cap=mountButton:FindFirstChild("Caption")
+  if cap then cap.Text=mounted and "Dismount" or "Mount" end
+  mountButton.BackgroundColor3=mounted and TC.Forest or palette.slot
+ end
+ for _,control in ipairs(bar:GetChildren()) do
+  if control:IsA("TextButton") and control~=mountButton then
+   control.Active=not mounted control.AutoButtonColor=not mounted control.BackgroundTransparency=mounted and .48 or 0
+  end
+ end
  local currentServerTime=workspace:GetServerTimeNow()
  for index,b in ipairs(abilityButtons) do
   local remaining=math.max(0,(abilityCooldownEnds[index] or 0)-currentServerTime)

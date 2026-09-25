@@ -20,6 +20,8 @@ local Config = require(Shared:WaitForChild("Config"))
 local LootConfig = require(Shared:WaitForChild("LootConfig"))
 local LassoSkinConfig = require(Shared:WaitForChild("LassoSkinConfig"))
 local LassoSkinsUI = require(Shared:WaitForChild("LassoSkinsUI"))
+local UITheme = require(Shared:WaitForChild("UITheme"))
+local ThemeColors = UITheme.Colors
 
 local state
 local petsOpen=false
@@ -60,8 +62,8 @@ local function frame(size, position)
     local f = Instance.new("Frame")
     f.Size = size
     f.Position = position
-    f.BackgroundColor3 = Color3.fromRGB(25,25,30)
-    f.BackgroundTransparency = 0.08
+    f.BackgroundColor3 = ThemeColors.Parchment
+    f.BackgroundTransparency = 0.02
     f.BorderSizePixel = 0
     f.Parent = gui
 
@@ -77,8 +79,8 @@ local function button(parent, text, position, size)
     b.Text = text
     b.Size = size or UDim2.fromOffset(170,45)
     b.Position = position or UDim2.new()
-    b.BackgroundColor3 = Color3.fromRGB(55,70,90)
-    b.TextColor3 = Color3.new(1,1,1)
+    b.BackgroundColor3 = ThemeColors.Leather
+    b.TextColor3 = ThemeColors.Cream
     b.Font = Enum.Font.GothamBold
     b.TextScaled = true
     b.BorderSizePixel = 0
@@ -97,7 +99,7 @@ local function text(parent, value, position, size)
     t.Size = size or UDim2.fromOffset(300,40)
     t.Position = position or UDim2.new()
     t.BackgroundTransparency = 1
-    t.TextColor3 = Color3.new(1,1,1)
+    t.TextColor3 = ThemeColors.Ink
     t.Font = Enum.Font.GothamBold
     t.TextScaled = true
     t.Parent = parent
@@ -210,6 +212,10 @@ showPets = function(tab)
     )
     skinTab.TextScaled=false
     skinTab.TextSize=10
+    skinTab.Visible=false
+    petTab.Position=UDim2.fromOffset(116,54) petTab.Size=UDim2.fromOffset(190,42)
+    mountTab.Position=UDim2.fromOffset(315,54) mountTab.Size=UDim2.fromOffset(190,42)
+    inventoryTab.Position=UDim2.fromOffset(514,54) inventoryTab.Size=UDim2.fromOffset(190,42)
 
     petTab.BackgroundColor3=backpackTab=="Pets" and Color3.fromRGB(75,92,117) or Color3.fromRGB(45,51,61)
     mountTab.BackgroundColor3=backpackTab=="Mounts" and Color3.fromRGB(75,92,117) or Color3.fromRGB(45,51,61)
@@ -2020,7 +2026,7 @@ showHUD = function()
     state = GetState:InvokeServer()
     if not state then return end
 
-    local top=frame(UDim2.fromOffset(220,68),UDim2.new(1,-238,0,45))
+    local top=frame(UDim2.fromOffset(250,104),UDim2.fromOffset(18,42))
     top.Name="PlayerStats"
 
     local title=text(top,player.DisplayName,UDim2.fromOffset(10,7),UDim2.fromOffset(200,20))
